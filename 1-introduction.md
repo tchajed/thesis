@@ -16,28 +16,21 @@ Testing can help find bugs, but exploring all possible interleavings and crash
 points is generally infeasible.
 
 In this thesis, we explore formal verification as an approach to building a
-correct file system. Our contributions are the techniques and tools that make
-this possible. In order to evaluate the techniques, we apply them to a
-reasonably complete artifact: DaisyNFS implements a usable file system as a
-Network File System (NFS) server, and gets good performance on a number of
-benchmarks and storage technologies. Verifying this particular file system is
-not an end in itself for this thesis, but a driving force to make sure that the
-verification techniques can scale to many optimizations and an implementation of
-non-trivial size.
+correct file system. The artifact resulting from this work is DaisyNFS, which is
+a usable Network File System (NFS) server with an efficient, concurrent
+implementation on top of a raw disk. We prove that DaisyNFS implements every
+file system operation atomically, even if the computer crashes at any time. A
+performance evaluation shows that DaisyNFS gets comparable performance to the
+Linux NFS server.
 
-Crash safety requires new techniques, so this thesis contributes not just a
-verified implementation but new infrastructure in which to carry out the
-verification. While developing infrastructure we were able to explore the entire
-verification pipeline, starting from code in a production language (Go), giving
-it a semantics, all the way to connecting that semantics to a high-level
-specification. In addition, the particular structure of DaisyNFS combines
-different verification tools, so another contribution is an approach that
-combines the tools. While this particular combination might not be useful to
-many systems (since it relies on a transaction system that supports all the code
-running in Dafny), we believe the use of refinement to combine different
-verification tools is a general idea and our proof gives a template for how that
-might work. _Seems most useful if some crash safety/concurrency could be handled
-in Dafny - maybe just related work?_
+The proof of DaisyNFS is divided into two components: a verified transaction
+system makes multiple reads and writes in a transaction atomic, and then we
+implement a verified file system using a transaction per operation. This thesis
+demonstrates how to use this design to use more automated, sequential
+verification techniques to reason about the file-system code, even though the
+overall system is concurrent. The transaction system has an easy-to-use API but
+a complex, highly concurrent implementation. In this thesis we also develop new
+techniques and tools to reason about the transaction system.
 
 Prior to the work described in this thesis, there was little formal methods
 support for reasoning about the combination of crash safety and concurrency.
