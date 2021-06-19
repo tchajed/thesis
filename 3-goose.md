@@ -77,3 +77,32 @@ sufficient to remember that it is a C-like imperative language. This overview
 makes some reference to GooseLang; similarly we won't need any specifics about
 how GooseLang works other than that it is a general imperative language with
 pointers and concurrency.
+
+Each function is translated to a single Coq definition, which is a GooseLang
+function. For concurrency, Goose supports the `go` statement and the synchronization
+primitives `*sync.Mutex` and `sync.Cond`.
+
+Go's primitive uint64, uint32, uint8 (byte), and boolean types are all
+supported, as well as most of the pure functions on those types. Goose also
+supports pointers, structs, and methods on structs. Finally, Goose supports Go's
+built-in data structures, slices and maps.
+
+Notably missing in Goose but prominent in Go is support for interfaces and
+channels. We believe both are easy enough to support, but interfaces were not
+necessary for our implementation, and rather than channels we use mutexes and
+condition variables for more low-level control over synchronization.
+
+Control flow is also slightly tricky since a Go function is translated to a
+single GooseLang expression that should evaluate to the function's return value.
+We can support many specific patterns, especially common cases like early
+returns inside `if` statements and loops with `break` and `continue`, but more
+complex control flow - particularly returning from within a loop - is not
+supported. If we wanted to fix this the right solution would probably be to
+represent all functions in continuation-passing style, though this would
+complicate the translation of every function call.
+
+We do not support Go's defer statement. It would be nice to support some common
+and simple patterns, particularly for unlocking, by translating `defer`
+statically; Go's general `defer` is much more complicated since it can actually
+be issued anywhere in a function and pushes to a stack of calls that are
+executed in reverse order at return time.
