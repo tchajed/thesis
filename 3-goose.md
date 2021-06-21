@@ -166,3 +166,85 @@ package as a set of mutually recursive definitions. In such a model it would be
 necessary to first give specifications to every definition that may be assumed
 by other proofs, and to ensure the proof isn't circular each function would have
 to be proven in some order that only assumes previous results.
+
+## Modeling pointers
+
+Pointers turn out to be slightly subtle because of concurrency. In short,
+GooseLang disallows concurrent reads and writes to the same location by making
+such racy access undefined behavior (any specification for a program implies
+that if the precondition holds, the program never exhibits undefined behavior).
+The hardware provides some guarantees, but they are relatively weak: for
+example, different cores can observe writes at different times. Go's own memory
+model specifies even weaker guarantees. Rather than attempt to formalize Go's
+rules (which are complex and involve defining a partial order over all program
+instructions), we side step the issue and make any races undefined, which works
+for our intended use cases since we always synchronize concurrent access with
+locks.
+
+To disallow concurrent reads and writes we first need to detect them. The
+GooseLang semantics does this by augmenting the heap with extra information
+giving the number of current readers. Rather than making reads a single atomic
+step, we split them into two primitives. The first increments the number of readers
+and the second decrements the count and returns the current value. The semantics
+of a write are only defined if there are no readers and undefined otherwise.
+
+Next, we need reasoning principles to abstract away this complexity from program
+verification. Separation logic turns out to provide the right language to reason
+about racy access. When a thread owns $l \mapsto v$, we know no other thread can
+have access to location $l$, so the specifications for reads and writes are
+unaffected by the operations being non-atomic (although their proofs are a bit
+more complicated to deal with the new semantics). The only change is that
+the Read operation is no longer an atomic primitive but a function that takes
+two execution steps. In Iris this means that two threads cannot share memory
+with an invariant and must mediate access with a lock, which transfers ownership
+of the $l \mapsto v$ for multiple execution steps.
+
+## Structs
+
+One of the first features needed when writing any Go is support for structs. We
+treat a struct value as just a tuple of its fields, while the struct definition
+gives the names of those fields. This data is enough to implement constructing a
+struct from its fields and accessing a field by name, which we implement in
+Gallina.
+
+Structs in memory are more interesting than struct values. Structs could be
+stored in a single location; due to our non-atomic semantics for memory, this
+would be sound even for structs larger than a machine word. However, this model
+would be too restrictive: it is safe for threads to concurrently access
+_different fields_, just not the same field, and we actually take advantage of
+this property (largely to write more natural Go code; working around this
+restriction requires splitting structs up if they are stored in memory).
+
+To support this concurrency, we model a struct in memory with a flattened
+representation, with each base element in a separate memory cell. The flattening
+applies recursively to fields that are themselves structs, until a base literal
+is reached (like an integer or boolean); base elements are at most a machine
+word, but can be smaller. When allocating a new pointer, the semantics flattens
+composite values and stores the elements in a sequence of contiguous addresses.
+
+With a flattened representation we need non-trivial code to read a struct field
+through a pointer, especially if the field is itself a struct. We implemented
+this code by augmenting the "schema" that represents a struct type with not only
+the fields, but their types as well. The exact types are not important, but we
+do need the entire tree of how big each field is and the shape of each field in
+order to determine the location and extent of any given field. Using types to
+represent these shapes makes the translation much simpler, since we have access
+to the type of every sub-expression from the Go type checker. Any load of a
+value from memory is translated to a Gallina LoadTyped macro that takes a Coq
+representation of the type being loaded and uses it to determine what offsets to
+load.
+
+In order to hide this complexity from the proof, we represent a pointer with a
+typed points-to fact of the form $l \mapsto_t v$. This definition expands to a
+number of primitive points-to facts, one for each base element. The
+specification for loading says $\{l \mapsto_t v\} LoadTyped(t, l) \{RET v, l
+\mapsto_t v\}$, which (much like the non-atomic primitive Load) hides the fact
+that something non-atomic is happening and looks like an ordinary dereference.
+Similarly, StoreTyped also takes a type, although the specification requires the
+caller to prove that the value has the right shape (in reality it always will
+because the Go code we translate from is well-typed).
+
+## TODO
+
+Make a point about model being close to implementation of Go (eg, struct
+flattening, model of slices, mutable variables).
