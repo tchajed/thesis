@@ -124,19 +124,6 @@ allocating a pointer that will only be read). As a result, factoring out a
 sub-expression to a variable has little impact on proofs, since it just adds one
 more pure step.
 
-_a little too much detail for high-level overview_
-This one-to-one correspondence does not support mutual recursion between Go
-functions, and additionally requires the translation to be in the right order.
-The subtlety here is that definition management in Go, as in most imperative
-languages, conceptually treats all top-level definitions as simultaneous,
-whereas Coq processes definitions sequentially. Using Coq definition management
-to model Go definition management imposes a limitation compared to Go, but is
-much simpler to work with compared to modeling a Go package as a set of mutually
-recursive definitions. In such a model it would be necessary to first give
-specifications to every definition that may be assumed by other proofs, and to
-ensure the proof isn't circular each function would have to be proven in some
-order that only assumes previous results.
-
 ## Supported and unsupported features
 
 Each function is translated to a single Coq definition, which is a GooseLang
@@ -167,3 +154,15 @@ and simple patterns, particularly for unlocking, by translating `defer`
 statically; Go's general `defer` is much more complicated since it can actually
 be issued anywhere in a function and pushes to a stack of calls that are
 executed in reverse order at return time.
+
+We do not support mutual recursion between Go functions, and additionally
+require the translation to be in the right order so definitions appear before
+they are used. The subtlety here is that definition management in Go, as in most
+imperative languages, conceptually treats all top-level definitions as
+simultaneous, whereas Coq processes definitions sequentially. Using Coq
+definition management to model Go definition management imposes a limitation
+compared to Go, but is much simpler to work with compared to modeling a Go
+package as a set of mutually recursive definitions. In such a model it would be
+necessary to first give specifications to every definition that may be assumed
+by other proofs, and to ensure the proof isn't circular each function would have
+to be proven in some order that only assumes previous results.
