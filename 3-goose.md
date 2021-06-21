@@ -67,16 +67,77 @@ essentially translates syntax would still leave the task of giving a semantics
 to the output code and proving the right specifications in Perennial to reason
 about various parts of the semantics.
 
+Most closely related work is Robbert Krebbers's thesis, on a semantics for C
+that includes both operational semantics and an "axiomatic semantics" which is a
+separation logic for interactive proofs (it also has an interpreter to test and
+debug, which produces all of the behaviors of a program).
+
+VST also models C for the purpose of interactive proofs.
+
 _Much more to say here_
 
-## The Goose subset of Go
+## High-level overview
 
-To give an overview of Goose, it is helpful to informally lay out what the
-supported subset of Go is. We assume no specific knowledge of Go; it is
-sufficient to remember that it is a C-like imperative language. This overview
-makes some reference to GooseLang; similarly we won't need any specifics about
-how GooseLang works other than that it is a general imperative language with
-pointers and concurrency.
+The goal of the translation is to model a Go program using GooseLang, which is a
+programming language defined in Coq for this purpose. When we say GooseLang is a
+programming language, we mean it in a theoretical sense: GooseLang consists of a
+type of programs in Coq and a small-step semantics of these programs. Since
+GooseLang programs support references to model the Go heap, the semantics is
+written in terms of transitions of (program, heap) pairs where the heap maps
+pointers to values. The intention of the translation is that the semantics of
+the translated function should cover all the behaviors of the Go code, in terms
+of return values and effect on the heap. As long as this is true, a proof that
+the translated code always satisfies some specification means that the real
+running code will, too.
+
+GooseLang is a low-level language, so many constructs in Go translate to (small)
+implementations in GooseLang. This implementation choice proved to be much more
+convenient than adding primitives to the language for every Go construct. For
+example, a slice is represented as a tuple of pointer, length, and capacity, and
+appending to a slice requires checking for available capacity and copying if
+none is available. Appending to a slice is a complicated operation, and it was
+easier to write it correctly as a program rather than directly as a transition
+in the semantics. The one cost to this design strategy is that an arbitrary
+GooseLang program is much more general than translated Go programs. This has no
+impact on verifying any _specific_ Go program, and so far has not been a burden
+for the proofs we do have for arbitrary GooseLang programs.
+
+An important aspect of GooseLang is supporting interactive proofs on top of the
+translated code. The interactive proofs use separation logic, a variant of Hoare
+logic, so specifications describe the behavior of each individual function. In
+order to support verification of any translated code, GooseLang comes with a
+specification for any primitive or function that the translated code might refer
+to, including libraries like slices used to model more sophisticated Go
+features. GooseLang has many "pure" operations that have no effect on the heap,
+due to many primitive data types and operations (for example, there are both
+8-, 32-, and 64-bit integers, and arithmetic and logical operations for each).
+The specifications for these operations are handled with a single lemma, which
+is applied automatically with a tactic `wp_pures`.
+
+Since our goal is to support interactive rather than automated proofs, it is
+helpful to make the model simple to work with. We try to maintain a strong
+correspondence between the model and source code: each Go package translates to
+a single Coq file, and each top-level declaration in the Go code maps to a
+Gallina definition (a GooseLang constant or function). Goose has a special case
+for translating immutable variables to let bindings in GooseLang (rather than
+allocating a pointer that will only be read). As a result, factoring out a
+sub-expression to a variable has little impact on proofs, since it just adds one
+more pure step.
+
+_a little too much detail for high-level overview_
+This one-to-one correspondence does not support mutual recursion between Go
+functions, and additionally requires the translation to be in the right order.
+The subtlety here is that definition management in Go, as in most imperative
+languages, conceptually treats all top-level definitions as simultaneous,
+whereas Coq processes definitions sequentially. Using Coq definition management
+to model Go definition management imposes a limitation compared to Go, but is
+much simpler to work with compared to modeling a Go package as a set of mutually
+recursive definitions. In such a model it would be necessary to first give
+specifications to every definition that may be assumed by other proofs, and to
+ensure the proof isn't circular each function would have to be proven in some
+order that only assumes previous results.
+
+## Supported and unsupported features
 
 Each function is translated to a single Coq definition, which is a GooseLang
 function. For concurrency, Goose supports the `go` statement and the synchronization
