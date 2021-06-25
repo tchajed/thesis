@@ -124,6 +124,17 @@ allocating a pointer that will only be read). As a result, factoring out a
 sub-expression to a variable has little impact on proofs, since it just adds one
 more pure step.
 
+While the model is simple in terms of control flow and structure, we can safely
+translate any given Go operation to a sophisticated model as long as the proof
+abstracts it away. The subsequent sections in this chapter walk through several
+features of Go. In each case we first implement the feature in GooseLang, which
+as a model of its behavior primarily aims to be faithful to Go. Next, we develop
+reasoning principles for the features, in the form of separation logic
+assertions (for example, to represent a slice) and Hoare triples (for example,
+to specify the behavior of Append). The key is that the model is trusted to
+capture Go's behavior so some sophistication is useful, whereas the reasoning
+principles aim to hide that complexity to make proofs practical.
+
 ## Supported and unsupported features
 
 Each function is translated to a single Coq definition, which is a GooseLang
@@ -222,8 +233,9 @@ is reached (like an integer or boolean); base elements are at most a machine
 word, but can be smaller. When allocating a new pointer, the semantics flattens
 composite values and stores the elements in a sequence of contiguous addresses.
 
-With a flattened representation we need non-trivial code to read a struct field
-through a pointer, especially if the field is itself a struct. We implemented
+With a flattened representation we need non-trivial code to read a struct
+through a pointer, particularly when some of its fields are themselves flattened
+structs. We implemented
 this code by augmenting the "schema" that represents a struct type with not only
 the fields, but their types as well. The exact types are not important, but we
 do need the entire tree of how big each field is and the shape of each field in
@@ -234,7 +246,7 @@ value from memory is translated to a Gallina LoadTyped macro that takes a Coq
 representation of the type being loaded and uses it to determine what offsets to
 load.
 
-In order to hide this complexity from the proof, we represent a pointer with a
+For the purpose of proofs we represent a pointer to an arbitrary type $t$ with a
 typed points-to fact of the form $l \mapsto_t v$. This definition expands to a
 number of primitive points-to facts, one for each base element. The
 specification for loading says $\{l \mapsto_t v\} LoadTyped(t, l) \{RET v, l
@@ -244,7 +256,55 @@ Similarly, StoreTyped also takes a type, although the specification requires the
 caller to prove that the value has the right shape (in reality it always will
 because the Go code we translate from is well-typed).
 
+The payoff of structs being many independent locations is that it is possible to
+model references to individual struct fields. From a pointer to the root of the
+struct, a field pointer is simply an offset from that pointer (skipping the
+flattened representations of the previous fields). This offset calculation is
+much like the code to read a struct from memory, except that it merely computes
+a single offset rather than iterating over all the fields and offsets.
+
+Recall that $l \mapsto_t v$ is internally composed of untyped points-to facts
+for all the base elements of $v$. In order to reason about $v$'s fields, we
+introduce a new struct field points-to fact, written $l \mapsto_{t.f} v$, which
+asserts ownership of just field $f$ of a struct of type $t$ rooted at $l$, and
+gives that field's value as $v$. A recursive function gives an "exploded" set of
+struct fields by iterating over $t$'s fields and $v$ simultaneously. Then, we
+give a proof that $l \mapsto_t v$ is equivalent to the separating conjunction of
+this exploded list. The result is a convenient lemma for reasoning about a
+struct using its fields: in the forward direction, the equivalence breaks a
+large typed points-to into individual fields (with the values computed from
+$v$), while in the other direction it allows to prove a $l \mapsto_t v$ by
+gathering up all the fields.
+
+The struct field points-to is indispensible in proofs, because the pattern of
+`x.f` in Go when $x$ is a pointer is in fact a field load (in C, this would be
+written `x->f`). The model for loading a struct field is a function
+`loadField(x, t, f)` which is implemented in two steps, first computing the
+offset to field $f$ and the other to load it (in both cases the struct type $t$
+describes how to interpret field $f$). Having a field points-to gives a natural
+specification for this type of load: $\{ l \mapsto_{t.f} v \}
+\mathtt{loadField}(x, t, f) \{ RET v, l \mapsto_{t.f} v\}$.
+
+The lemmas about breaking apart and recombining structs are all proven against a
+simpler model of structs that only requires flattening and offset calculations.
+In a sense the model is the trusted code, but the fact that the struct maps-to
+exploding lemma is true that all of the expected Hoare triples hold provides
+strong evidence that the model is also doing the right thing. For example, the
+exploding lemma shows that field offsets are disjoint, since the struct maps-to
+can be broken into field points-to facts for each field.
+
+Something to emphasize above: all of the struct code is generic for struct type
+$t$, which in the code is concretely the "schema" described above, a list of
+fields and types (the code calls this a "descriptor" and uses $d$ as the
+metavariable, to avoid confusion with a generic type $t$).
+
 ## TODO
 
 Make a point about model being close to implementation of Go (eg, struct
 flattening, model of slices, mutable variables).
+
+Talk about interpreter for testing
+
+Describe slice model and reasoning principles
+
+Describe map model
