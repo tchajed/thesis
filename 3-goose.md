@@ -298,13 +298,124 @@ $t$, which in the code is concretely the "schema" described above, a list of
 fields and types (the code calls this a "descriptor" and uses $d$ as the
 metavariable, to avoid confusion with a generic type $t$).
 
+## Slices
+
+One of the most commonly used data structures in Go is the slice `[]T`, which is
+a dynamically-sized array of values of type `T`. Goose supports a wide range of
+operations on slices, including appending and sub-slicing; it turns out that the
+semantics of mutable slices is non-trivial in Go, resulting in an interesting
+semantics and reasoning principles.
+
+A slice is a combination of a pointer, length, and capacity. Slices are views
+into a contiguous memory allocation; this view can be narrowed with sub-slicing
+operations of the form `s[i:j]`, resulting in aliased slices. The elements
+between the length and capacity are not directly accessible but are used to
+support efficient amortized appends. Go's built-in slice operations include
+bounds checks on all slice operations and panic if a memory access or sub-slice
+operation goes out of bounds.
+
+GooseLang has a primitive for contiguous memory, which we use to model the
+allocation underlying a slice (though these are not directly accessible to Go
+code, since they do not carry enough information for bounds checking). On top of
+these we model slices as a tuple of a base pointer, length, and capacity.
+
+The GooseLang slice model is directly inspired by the implementation of slices,
+including modeling slice capacity. Initially we had a more abstract model that
+ignored capacity (which would appear to be just an optimization), but were
+surprised to find that this was insufficient to even accurately model subslicing
+and appending. Directly modeling slice capacity was the simplest solution to
+obtain a model that is faithful to the Go implementation. The Go language
+reference isn't specific about what the slice capacity after various operations
+should be, so our GooseLang model picks a non-deterministic capacity in several
+places (within appropriate bounds).
+
+The most basic operations on slices are indexing and storing. The GooseLang
+model of $s$ is a three-tuple, but for clarity we will refer to its elements as
+$ptr(s)$, $len(s)$, and $cap(s)$. The translation of `s[i]` is essentially a
+load from $ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
+Similarly `s[i] = x` stores to the same location. We translate Go's `len(s)`
+directly to $len(s)$. Go also supports accessing a slice's capacity, but this is
+rarely used and Goose does not support it.
+
+The Go `append` operation is the most sophisticated to model. The behavior of
+`append(s, x)` where `s: []T` and `x: T` depends on whether there is extra
+capacity to store the new element `x`. If there is capacity, then `x` is stored
+there and the append returns a new slice with the same pointer but a larger
+length. If there is no capacity, then `append` must allocate a new slice, copy
+the existing elements to it, and then store `x`. In the latter case `append`
+returns a slice with a fresh pointer.
+
+The difficulty with Go slices arise when supporting subslicing. Consider
+`s[:i]`, where `i` is less than `len(s)`. Clearly this slice should have the
+same pointer and length `i`, but what should its capacity be? Surprisingly, the
+capacity of this prefix is the full capacity of `s`, which means that the unused
+elements of `s[:i]` _include the elements of `s`_ beyond the index `i`. As a
+result, `append(s[:i], x)` in fact modifies `s[i]`. GooseLang takes care to
+model this behavior by implementing `append` exactly as above, taking into
+account that `append(s, x)` might be an in-place operation.
+
+The GooseLang model is specifically designed to be sound by sticking to the Go
+implementation as closely as possible, but we want reasoning about slices to be
+convenient and high-level, without worrying about slice capacity directly. The
+design of GooseLang nicely separates the model from the reasoning principles ---
+we verify specifications against the concrete model, so that only the model is
+trusted and not the separation logic specifications.
+
+The GooseLang model of slices is based on two abstract predicates: $sliceRep(s,
+l)$ and $sliceCap(s)$. To model the slice values themselves we use $s : Slice$
+where $Slice$ is a Gallina record; a function $SliceVal(s) : Val$ converts the
+Gallina representation to the GooseLang tuple that the slice model uses. We will
+only present the _untyped_ version of this specification where $l : list val$,
+but GooseLang also has a typed version where $l : list T$ where there is some
+(Gallina) function $to\_val : T -> Val$. The typed version is practically
+convenient in proofs but is only a small extension to the untyped version.
+
+The first predicate $sliceRep(s, l)$ gives the abstract value of $s$, the list
+of values it contains, excluding additional capacity. It also represents
+ownership over all these elements, in terms of the underlying struct points-to
+facts. We use this predicate to specify loads and stores:
+
+$\{sliceRep(s, l) * i < |l|\} s[i] \{RET v. v = l !! i * sliceRep(s, l)\}$
+
+$\{sliceRep(s, l) * i < |l|\} s[i] = v \{RET v. v = l !! i * sliceRep(s, l[i := v])\}$
+
+Next, $sliceCap(s)$ is an abstract predicate that represents _ownership over the
+capacity_ of $s$. It is necessary to append, since appending might need to write
+to the capacity, but unneeded to read and write to a slice.
+
+$\{sliceRep(s, l) * sliceCap(s)\} \mathtt{append(s, x)} \{RET s', sliceRep(s', l
+++ [x]) * sliceCap(s')\}$
+
+This specification is fairly simple. In fact, we often use a shorthand
+$sliceFull(s, l) = sliceRep(s, l) * sliceCap(s)$ when the proof will always
+retain ownership of slice capacity, in which case the spec looks even simpler.
+However, the proof is non-trivial, since in one case it moves ownership from
+$sliceCap(s)$ to $sliceRep(s', l ++ [x])$ (where $ptr(s') = ptr(s)$), while in
+the other it constructs a completely new allocation for $s'$.
+
+The most interesting rules are for subslicing and how they interact with
+capacity. Consider `s[:i]` again. While Go has no formal notion of ownership,
+our specifications do. We can model the _value_ for `s[:i]` easily enough; call
+it $sliceTake(s, i)$ (it simply reduces the length and keeps the capacity of
+$s$, as specified by Go). Now we need to decide how ownership of $sliceRep(s,
+l) * sliceCap(s)$ should relate to ownership of $sliceRep(sliceTake(s, i),
+take(l, i))$. It turns out there are two possibilities: we can either give up
+ownership of the remainder of $s$ in exchange for $sliceCap(sliceTake(s, i))$,
+or we can ignore the capacity of the subslice and keep $sliceRep(sliceDrop(s,
+i), drop(l, i))$. These are incomparable and unexpressed in the code: the
+decision is based on whether we intend to append to the subslice but stop using
+the old slice, or whether we want to continue using the remainder of `s`.
+
+Concretely, GooseLang verifies the following entailments for reasoning about
+subslicing in terms of the slice model:
+
+TODO: write these as entailments, find/prove the most general bidirectional ones
+
 ## TODO
 
 Make a point about model being close to implementation of Go (eg, struct
 flattening, model of slices, mutable variables).
 
 Talk about interpreter for testing
-
-Describe slice model and reasoning principles
 
 Describe map model
