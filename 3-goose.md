@@ -406,10 +406,22 @@ i), drop(l, i))$. These are incomparable and unexpressed in the code: the
 decision is based on whether we intend to append to the subslice but stop using
 the old slice, or whether we want to continue using the remainder of `s`.
 
-Concretely, GooseLang verifies the following entailments for reasoning about
+Concretely, GooseLang verifies the following entailment for reasoning about
 subslicing in terms of the slice model:
 
-TODO: write these as entailments, find/prove the most general bidirectional ones
+$sliceFull(s, l) \vdash sliceFull(sliceTake(s, i), take(l, i))$
+
+This entailment precisely captures how retaining ownerhsip of the capacity of
+$sliceTake(s, i)$ requires giving up the remainder of $s$.
+
+$sliceRep(s, l) \dashv\vdash sliceRep(sliceTake(s, i), take(l, i)) *
+sliceRep(sliceDrop(s, i), drop(l, i))$
+
+This alternative bidirectional entailment splits $s$ into two parts, but gives
+up ownership over $sliceTake(s, i)$'s capacity in exchange for using those
+elements in `s[i:]`. From this point it will not be possible to prove the safety
+of appending to `s[:i]`, since this would conflict with the separate ownership
+over `s[i:]`.
 
 ## TODO
 
