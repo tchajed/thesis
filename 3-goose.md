@@ -459,6 +459,31 @@ produces only one possible execution, but the non-determinism is only due to the
 choice of what locations to use for pointers, which should not affect any
 visible behavior.
 
+The technical challenge with implementing and verifying the interpreter is that
+the semantics uses a convenient but non-executable way of expressing the order
+of evaluation. GooseLang is a lambda calculus, so its semantics is expressed as
+a transition system between expressions. It is easy to give the semantics of a
+primitive at the _head_ of an expression; for example, we can say what $Store(l,
+v)$ does in a given heap if $l$ and $v$ are already values (it stores $v$ in the
+heap and evaluates to `#()`, the unit value). It is also easy to interpret
+_pure_ reductions like `x + y` where `x` and `y` are values since the semantics
+of these pure expressions is already given as a Gallina function.
+
+The challenge in the interpreter comes from _context_ reductions, which specify
+how to find a sub-expression within `e` to reduce if the head is not immediately
+a value. The code follows a standard presentation of context reduction using
+_evaluation contexts_. The idea is to define a type of evaluation contexts `K`
+that represent an expression with a hole; a function $fill(K, e)$, usually
+written $K[e]$, fills the hole with $e$. The possible evaluation contexts give
+all the context reductions in one compact rule: if $e$ can step to $e'$, then
+$K[e]$ can step to $K[e']$. Thus the semantics has a rule that works when any
+such $K$ exists, while the interpreter recurses through an expression (in the
+right order) and evaluates a sub-expression, then fills it into the context. We
+prove this correct, showing that the interpeter and semantics agree on an
+evaluation order. (Specifically, the proof shows that the interpreter produces
+one of the valid evaluation orders; the semantics is intended to have a
+deterministic order, but this is not proven.)
+
 The test suite is structured as a number of test functions that should produce a boolean
 true output when run correctly. In Go we test that each test actually produces
 true (since we sometimes make mistakes in the tests themselves), and in
