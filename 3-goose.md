@@ -423,11 +423,59 @@ elements in `s[i:]`. From this point it will not be possible to prove the safety
 of appending to `s[:i]`, since this would conflict with the separate ownership
 over `s[i:]`.
 
+## Testing Goose
+
+Goose is a trusted component in the entire verification process. For the overall
+system's proof to be sound, we rely on the model to produce all of the behaviors
+of the Go code; that is, the behaviors of the Go code (in practice, using the Go
+compiler) should be a subset of the behaviors of its translated GooseLang
+(according to the Coq semantics). As long as this is case, the proof is sound in
+that if the modeled system always satisfies some property the code will, too.
+
+One subtlety in the trust we place in Goose is that it only applies when Goose
+translates code succesfully, that code compiles in Coq, and the model has no
+undefined behavior. If any of these fail, then the proof of the system would
+either not be possible or not go through. Therefore the most important bugs are
+those where the translation's behavior differs from that of Go; these can
+compromise soundness of the system and lead to a proof that is not borne out in
+practice.
+
+To increase out confidence in Goose, we implemented a large suite of unit tests.
+While these tests check that Goose continues to translate existing code (and
+check that the translation has not unexpectedly change), for soundness the
+relevant test is to compare Go to the Goose output. Unfortunately GooseLang is
+not natively an executable language. Its semantics is expressed as a Coq
+relation that specifies how an expression is evaluated (or gets stuck,
+indicating undefined behavior). To test GooseLang code, we implemented an
+interpreter in Coq, which can run GooseLang code and produce either an error due
+to undefined behavior or a result. While the interpreter is not very efficient,
+it has good enough performance to run the Goose unit tests.
+
+The interpreter is an important part of the testing strategy, but ultimately the
+comparison is intended to be between Go and the GooseLang semantics. Thus we
+verified that the interpreter produces executions in accordance with the
+semantics. The correctness theorem is slightly subtle in that the interpreter
+produces only one possible execution, but the non-determinism is only due to the
+choice of what locations to use for pointers, which should not affect any
+visible behavior.
+
+The test suite is structured as a number of test functions that should produce a boolean
+true output when run correctly. In Go we test that each test actually produces
+true (since we sometimes make mistakes in the tests themselves), and in
+GooseLang we check that the interpreter returns true. While we could compare
+more sophisticated results like integers or structs between the two, this
+strategy is especially easy to implement, since there is no need to correlate Go
+and GooseLang outputs and compare structured data.
+
+The interpreter and test framework was designed and implemented by Sydney
+Gibson, and is described in greater detail in her master's thesis. The thesis
+includes more details on evaluating the interpreter itself, for example
+documenting bugs caught by the test suite and other bugs that are now part of
+our regression tests.
+
 ## TODO
 
 Make a point about model being close to implementation of Go (eg, struct
 flattening, model of slices, mutable variables).
-
-Talk about interpreter for testing
 
 Describe map model
