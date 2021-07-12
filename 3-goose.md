@@ -465,6 +465,53 @@ elements in `s[i:]`. From this point it will not be possible to prove the safety
 of appending to `s[:i]`, since this would conflict with the separate ownership
 over `s[i:]`.
 
+## Maps
+
+After slices, maps are the next most commonly used collection type in Go. We
+implement maps as lists of key-value pairs, stored in a single memory location
+in reverse insertion order. Go's builtin maps are _not_ thread-safe, so the
+model enforces single-threaded access by marking the map as being read while
+reading from it; this re-uses the race detection for other pointers to ensure
+that racy access to a map is undefined behavior, while allowing concurrent
+read-read access. Maps support all the Go operations: insertions, reads
+(including returning whether the key is present), `len` to get the number of
+elements in the map, deletion, and iteration. Go map iteration is
+non-deterministic and in practice random, but we did not model this since it
+would be challenging to do so; however, the reasoning principles for map
+iteration do not expose an iteration order.
+
+The implementation of maps is the most involved out of any of the Go primitives.
+It required directly implementing maps (albeit inefficiently, using an
+association list) using recursive GooseLang code. GooseLang is an untyped
+language, so our first attempts had basic errors like missing arguments. We
+improved our confidence in this implementation both by testing it and by
+verifying it. Both of these essentially rule out type errors, and the
+specification is simple enough to be a reliable test of behavior. Both simple
+tests and verification cover easy mistakes like reading the oldest write to a
+key rather than the latest, or duplicate keys during iteration (the
+implementation must skip over a key after observing it once).
+
+The proof and specification for maps is relatively easy since they are
+non-concurrent, so the proof assumes ownership over the entire map. We treat a
+map as a pointer to an abstract map value, a GooseLang value that encodes the
+entire map data as a list of key-value pairs. The specification is based on a
+pure relation $mapVal(v, m)$ that relates this encoded value to a Gallina map
+$m$, which uses `gmap` from stdpp; for simplicity we use `gmap uint64 val` and
+limit map keys to integers. Values are not a visible notion to the Go code,
+since it always interacts with maps via their pointer, so the specifications all
+use $mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)$. The indirection is
+important, since the Go map value `m : map[uint64]V` is in fact a reference to a
+map that is mutated in-place (unlike a slice, which has both pure data ---
+pointer, length, and capacity --- and heap data).
+
+For example,
+
+$\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}$
+
+Map iteration has a more sophisticated specification [citation needed]:
+
+TODO: write down iteration spec
+
 ## Testing Goose
 
 Goose is a trusted component in the entire verification process. For the overall
@@ -539,7 +586,3 @@ Gibson, and is described in greater detail in her master's thesis. The thesis
 includes more details on evaluating the interpreter itself, for example
 documenting bugs caught by the test suite and other bugs that are now part of
 our regression tests.
-
-## TODO
-
-Describe map model
