@@ -210,6 +210,38 @@ two execution steps. In Iris this means that two threads cannot share memory
 with an invariant and must mediate access with a lock, which transfers ownership
 of the $l \mapsto v$ for multiple execution steps.
 
+## Modeling locks
+
+As is typical in Goose, locks are not built-in to GooseLang but modeled using an
+implementation based on simpler primitives. Since locks are the only
+synchronization primitive, implementing them requires shared concurrent access,
+which ordinary pointers do not have in GooseLang. Instead, the language also
+includes a primitive atomic compare-and-swap operation that is only used to
+implement a model of locks. We could also use the same operation to model Go's
+low-level atomic operations, like `atomic.CompareAndSwapUint64` and
+`atomic.LoadUint64`, but have not implemented this yet since we don't have code
+that uses these low-level synchronization primitives.
+
+The GooseLang lock model is a simple spin lock, represented as a boolean that is
+true if the lock is held. The acquire operation $Acquire(l)$ repeatedly executes
+$CAS(l, false, true)$ to atomically test that the lock is false and set it to
+true if so, while release stores false to the lock. The implementation as a spin
+lock is merely an operational model that captures what the lock does: acquire
+blocks until the lock is free and sets it to locked, while release frees the
+lock. The real locks we use, Go's builtin `*sync.Mutex`, are more efficient than
+spin locks, because the runtime understands how to schedule threads that are
+waiting on locks. This scheduling and performance difference is not visible from
+the model, which allows any thread to be scheduled after any atomic operation.
+
+The reasoning principles for locks are more sophisticated than the spin lock
+implementation. As is typical in concurrent separation logic, we associate a
+_lock invariant_ to the lock, which is a predicate that holds when the lock is
+free. Because this is a separation logic, we can also interpret the lock
+invariant as ownership over some data (for example, some region of memory); the
+lock mediates access to this ownership, handing it out when the lock is acquired
+and requiring it back when the lock is released. We prove this specification
+sound against the GooseLang spin-lock implementation.
+
 ## Structs
 
 One of the first features needed when writing any Go is support for structs. We
