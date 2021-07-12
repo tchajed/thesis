@@ -263,6 +263,16 @@ flattened representations of the previous fields). This offset calculation is
 much like the code to read a struct from memory, except that it merely computes
 a single offset rather than iterating over all the fields and offsets.
 
+The Go language reference specifies that each field acts like an independent
+"variable" (which is stored in the GooseLang heap when it is mutable in Go), so
+this model should accurately reflect the specification. Moreover modeling
+structs as independent locations is also justified as being similar to how the
+implementation works. Structs in memory are in reality represented by contiguous
+memory, and field access is implemented by computing a pointer from the base of
+the struct. The main difference between the physical implementation and the
+model is that we use a single, abstract memory location for each field, whereas
+the implementation encodes all data into bytes.
+
 Recall that $l \mapsto_t v$ is internally composed of untyped points-to facts
 for all the base elements of $v$. In order to reason about $v$'s fields, we
 introduce a new struct field points-to fact, written $l \mapsto_{t.f} v$, which
@@ -484,13 +494,13 @@ evaluation order. (Specifically, the proof shows that the interpreter produces
 one of the valid evaluation orders; the semantics is intended to have a
 deterministic order, but this is not proven.)
 
-The test suite is structured as a number of test functions that should produce a boolean
-true output when run correctly. In Go we test that each test actually produces
-true (since we sometimes make mistakes in the tests themselves), and in
-GooseLang we check that the interpreter returns true. While we could compare
-more sophisticated results like integers or structs between the two, this
-strategy is especially easy to implement, since there is no need to correlate Go
-and GooseLang outputs and compare structured data.
+The test suite is structured as a number of test functions, each producing a
+boolean. If the test is written correctly, it should produce `true`, which we
+test in Go. Then to check the semantics of the translation, in GooseLang we
+check that the interpreter returns true for each test function. While we could
+compare more sophisticated results like integers or structs between the two,
+this strategy is especially easy to implement, since there is no need to
+correlate Go and GooseLang outputs and compare structured data.
 
 The interpreter and test framework was designed and implemented by Sydney
 Gibson, and is described in greater detail in her master's thesis. The thesis
@@ -499,8 +509,5 @@ documenting bugs caught by the test suite and other bugs that are now part of
 our regression tests.
 
 ## TODO
-
-Make a point about model being close to implementation of Go (eg, struct
-flattening, model of slices, mutable variables).
 
 Describe map model
