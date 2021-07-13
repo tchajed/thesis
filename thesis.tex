@@ -1,0 +1,158 @@
+\documentclass[fontsize=12pt,paper=letter,cleardoublepage=plain]{scrbook}
+
+% adapted from https://github.com/jonhoo/thesis/
+
+% for 1.5 line spacing
+\usepackage{setspace}
+\onehalfspacing
+% single spacing for table of contents
+\AfterTOCHead{\singlespacing}
+
+% recompute page layout based on the above
+\recalctypearea
+
+% more colors (like RedOrange)
+\usepackage[dvipsnames]{xcolor}
+
+% qualitative colors
+% subset of https://jfly.uni-koeln.de/color/
+% that is also distinctive in grayscale
+\definecolor{set1}{HTML}{0071b2} % blue
+\definecolor{set2}{HTML}{e59c00} % orange
+\definecolor{set3}{HTML}{009e73} % green
+\definecolor{set4}{HTML}{efe440} % yellow
+
+% so we can splice in PDFs
+\usepackage{pdfpages}
+
+% set up bibliography
+\usepackage[square,comma,numbers,sort&compress]{natbib}
+
+% enumerate* and itemize*
+\usepackage[inline]{enumitem}
+
+% for \begin{comment}
+\usepackage{verbatim}
+
+% for source-code listings
+\usepackage[newfloat,draft=false]{minted}
+
+% for formulas
+\usepackage{mathtools}
+
+% to split lists into multiple columns
+\usepackage{multicol}
+
+% for "on page NN" reference
+\usepackage[nospace]{varioref}
+
+% for \sfrac
+\usepackage{xfrac}
+
+% for \ifoptionfinal
+\usepackage{ifdraft}
+
+\usepackage[breaklinks, pdfborder={0 0 0}]{hyperref}
+
+% do not reset page numbers at \mainmatter
+\let\mainmatterorig\mainmatter
+\renewcommand\mainmatter
+ {\edef\p{\arabic{page}}%
+  \mainmatterorig
+  % we need to compute the actual current page number. we know the page number
+  % from _before_ we called \mainmatter. but what is it now? well, it is
+  % certainly that +1. but we also need to account for the next chapter starting
+  % on a "right" (odd) page. we do this by adding the page number modulo two.
+  % TODO: double check before final version
+  \setcounter{page}{\p+1+(\p-\p/2*2)}%
+ }
+
+% an environment for todos
+\newenvironment{inprogress}
+  {\vspace{.5em} \color{set2} \noindent \textbf{TODO}}
+  {\vspace{.5em}}
+
+% a command to indicate current editing progress
+\newcommand{\resume}{
+  \begin{center}
+    \color{set2}
+    \hrule
+    \vspace{1pt}
+    \hrule
+    \hrule
+    \vspace{10pt}
+    \textbf{This section is not yet complete.}
+    \vspace{10pt}
+    \hrule
+    \hrule
+    \vspace{1pt}
+    \hrule
+  \end{center}
+}
+
+% an environment for invariants
+\newcounter{invn}
+\renewcommand{\theinvn}{\Roman{invn}}
+\newenvironment{invariant}
+  {\vspace{.5em} \color{set1} \refstepcounter{invn} \noindent \textbf{\color{set1} Invariant \Roman{invn}.}}
+  {\vspace{.5em}}
+
+% for handy reference
+%
+% paragraph without spacing:
+% \setparsizes{0pt}{0pt}{0pt plus 1fil}
+
+% in thesis: titlehead, subject, title, subtitle
+\title{Verifying a concurrent, crash-safe file system}
+\author{Tej Chajed}
+\begin{document}
+
+\frontmatter
+
+% always arabic page numbering (default is roman in \frontmatter)
+\pagenumbering{arabic}
+
+\section*{Acknowledgments}
+\begin{spacing}{1}
+  \ifoptionfinal{\input{00-acknowledgements.tex}}{Will be included in the final submission.}
+\end{spacing}
+\cleardoublepage
+
+\section*{Prior Publication}
+Parts of this thesis were previously published in a conference
+paper~\cite{chajed:gojournal}.
+\cleardoublepage
+
+\tableofcontents
+
+\mainmatter
+
+\chapter{Introduction}%
+\label{sec:introduction}
+
+\input{01-introduction.tex}
+
+\chapter{Related Work}
+\label{sec:related}
+
+\input{02-related-work.tex}
+
+\chapter{Goose}
+\label{sec:goose}
+
+\input{03-goose.tex}
+
+\chapter{Conclusion}
+\label{sec:conclusion}
+
+\input{99-conclusion.tex}
+
+\backmatter
+
+% single spacing for bibliography
+\begin{spacing}{1}
+\bibliography{n-str,paper,n,n-conf}{}
+\bibliographystyle{abbrvnat}
+\end{spacing}
+
+\end{document}
