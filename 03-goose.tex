@@ -1,6 +1,3 @@
-\hypertarget{goose}{%
-\section{Goose}\label{goose}}
-
 The transaction system is implemented in Go and verified in Perennial.
 To carry this out, we need a way to connect the implementation to
 something Perennial can reason about. The approach we take is to
@@ -28,8 +25,7 @@ execution and wiping out all of the state except for the disk. The next
 chapter on Perennial talks about how to reason about crashes as
 specified in this way.
 
-\hypertarget{why-go}{%
-\subsection{Why Go?}\label{why-go}}
+\section{Why Go?}
 
 Go turns out to be a very convenient language for building verification
 infrastructure. The goose translator effectively gives a semantics to
@@ -64,8 +60,7 @@ and profiling is extremely good, making it easy to fix bugs (before
 verification or in unverified code) and find performance problems while
 optimizing.
 
-\hypertarget{related-work}{%
-\subsection{Related work}\label{related-work}}
+\section{Related work}
 
 There are many approaches and systems people have used to verify
 implementations.
@@ -86,8 +81,7 @@ VST also models C for the purpose of interactive proofs.
 
 \emph{Much more to say here}
 
-\hypertarget{high-level-overview}{%
-\subsection{High-level overview}\label{high-level-overview}}
+\section{High-level overview}
 
 The goal of the translation is to model a Go program using GooseLang,
 which is a programming language defined in Coq for this purpose. When we
@@ -127,7 +121,7 @@ used to model more sophisticated Go features. GooseLang has many
 primitive data types and operations (for example, there are both 8-,
 32-, and 64-bit integers, and arithmetic and logical operations for
 each). The specifications for these operations are handled with a single
-lemma, which is applied automatically with a tactic \texttt{wp\_pures}.
+lemma, which is applied automatically with a tactic \cc{wp\_pures}.
 
 Since our goal is to support interactive rather than automated proofs,
 it is helpful to make the model simple to work with. We try to maintain
@@ -151,14 +145,13 @@ behavior of Append). The key is that the model is trusted to capture
 Go's behavior so some sophistication is useful, whereas the reasoning
 principles aim to hide that complexity to make proofs practical.
 
-\hypertarget{supported-and-unsupported-features}{%
-\subsection{Supported and unsupported
-features}\label{supported-and-unsupported-features}}
+\section{Supported and unsupported
+features}
 
 Each function is translated to a single Coq definition, which is a
-GooseLang function. For concurrency, Goose supports the \texttt{go}
-statement and the synchronization primitives \texttt{*sync.Mutex} and
-\texttt{sync.Cond}.
+GooseLang function. For concurrency, Goose supports the \cc{go}
+statement and the synchronization primitives \cc{*sync.Mutex} and
+\cc{sync.Cond}.
 
 Go's primitive uint64, uint32, uint8 (byte), and boolean types are all
 supported, as well as most of the pure functions on those types. Goose
@@ -174,8 +167,8 @@ synchronization.
 Control flow is also slightly tricky since a Go function is translated
 to a single GooseLang expression that should evaluate to the function's
 return value. We can support many specific patterns, especially common
-cases like early returns inside \texttt{if} statements and loops with
-\texttt{break} and \texttt{continue}, but more complex control flow -
+cases like early returns inside \cc{if} statements and loops with
+\cc{break} and \cc{continue}, but more complex control flow -
 particularly returning from within a loop - is not supported. If we
 wanted to fix this the right solution would probably be to represent all
 functions in continuation-passing style, though this would complicate
@@ -183,7 +176,7 @@ the translation of every function call.
 
 We do not support Go's defer statement. It would be nice to support some
 common and simple patterns, particularly for unlocking, by translating
-\texttt{defer} statically; Go's general \texttt{defer} is much more
+\cc{defer} statically; Go's general \cc{defer} is much more
 complicated since it can actually be issued anywhere in a function and
 pushes to a stack of calls that are executed in reverse order at return
 time.
@@ -202,8 +195,7 @@ assumed by other proofs, and to ensure the proof isn't circular each
 function would have to be proven in some order that only assumes
 previous results.
 
-\hypertarget{modeling-pointers}{%
-\subsection{Modeling pointers}\label{modeling-pointers}}
+\section{Modeling pointers}
 
 Pointers turn out to be slightly subtle because of concurrency. In
 short, GooseLang disallows concurrent reads and writes to the same
@@ -239,8 +231,7 @@ share memory with an invariant and must mediate access with a lock,
 which transfers ownership of the \(l \mapsto v\) for multiple execution
 steps.
 
-\hypertarget{modeling-locks}{%
-\subsection{Modeling locks}\label{modeling-locks}}
+\section{Modeling locks}
 
 As is typical in Goose, locks are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
@@ -249,7 +240,7 @@ concurrent access, which ordinary pointers do not have in GooseLang.
 Instead, the language also includes a primitive atomic compare-and-swap
 operation that is only used to implement a model of locks. We could also
 use the same operation to model Go's low-level atomic operations, like
-\texttt{atomic.CompareAndSwapUint64} and \texttt{atomic.LoadUint64}, but
+\cc{atomic.CompareAndSwapUint64} and \cc{atomic.LoadUint64}, but
 have not implemented this yet since we don't have code that uses these
 low-level synchronization primitives.
 
@@ -260,7 +251,7 @@ lock is false and set it to true if so, while release stores false to
 the lock. The implementation as a spin lock is merely an operational
 model that captures what the lock does: acquire blocks until the lock is
 free and sets it to locked, while release frees the lock. The real locks
-we use, Go's builtin \texttt{*sync.Mutex}, are more efficient than spin
+we use, Go's builtin \cc{*sync.Mutex}, are more efficient than spin
 locks, because the runtime understands how to schedule threads that are
 waiting on locks. This scheduling and performance difference is not
 visible from the model, which allows any thread to be scheduled after
@@ -276,8 +267,7 @@ ownership, handing it out when the lock is acquired and requiring it
 back when the lock is released. We prove this specification sound
 against the GooseLang spin-lock implementation.
 
-\hypertarget{structs}{%
-\subsection{Structs}\label{structs}}
+\section{Structs}
 
 One of the first features needed when writing any Go is support for
 structs. We treat a struct value as just a tuple of its fields, while
@@ -361,9 +351,9 @@ the values computed from \(v\)), while in the other direction it allows
 to prove a \(l \mapsto_t v\) by gathering up all the fields.
 
 The struct field points-to is indispensible in proofs, because the
-pattern of \texttt{x.f} in Go when \(x\) is a pointer is in fact a field
-load (in C, this would be written \texttt{x-\textgreater{}f}). The model
-for loading a struct field is a function \texttt{loadField(x,\ t,\ f)}
+pattern of \cc{x.f} in Go when \(x\) is a pointer is in fact a field
+load (in C, this would be written \cc{x-\textgreater{}f}). The model
+for loading a struct field is a function \cc{loadField(x,\ t,\ f)}
 which is implemented in two steps, first computing the offset to field
 \(f\) and the other to load it (in both cases the struct type \(t\)
 describes how to interpret field \(f\)). Having a field points-to gives
@@ -385,19 +375,18 @@ described above, a list of fields and types (the code calls this a
 ``descriptor'' and uses \(d\) as the metavariable, to avoid confusion
 with a generic type \(t\)).
 
-\hypertarget{slices}{%
-\subsection{Slices}\label{slices}}
+\section{Slices}
 
 One of the most commonly used data structures in Go is the slice
-\texttt{{[}{]}T}, which is a dynamically-sized array of values of type
-\texttt{T}. Goose supports a wide range of operations on slices,
+\cc{{[}{]}T}, which is a dynamically-sized array of values of type
+\cc{T}. Goose supports a wide range of operations on slices,
 including appending and sub-slicing; it turns out that the semantics of
 mutable slices is non-trivial in Go, resulting in an interesting
 semantics and reasoning principles.
 
 A slice is a combination of a pointer, length, and capacity. Slices are
 views into a contiguous memory allocation; this view can be narrowed
-with sub-slicing operations of the form \texttt{s{[}i:j{]}}, resulting
+with sub-slicing operations of the form \cc{s{[}i:j{]}}, resulting
 in aliased slices. The elements between the length and capacity are not
 directly accessible but are used to support efficient amortized appends.
 Go's built-in slice operations include bounds checks on all slice
@@ -424,33 +413,33 @@ GooseLang model picks a non-deterministic capacity in several places
 The most basic operations on slices are indexing and storing. The
 GooseLang model of \(s\) is a three-tuple, but for clarity we will refer
 to its elements as \(ptr(s)\), \(len(s)\), and \(cap(s)\). The
-translation of \texttt{s{[}i{]}} is essentially a load from
+translation of \cc{s{[}i{]}} is essentially a load from
 \(ptr(s) + i\) (or undefined behavior if this offset is out-of-bounds).
-Similarly \texttt{s{[}i{]}\ =\ x} stores to the same location. We
-translate Go's \texttt{len(s)} directly to \(len(s)\). Go also supports
+Similarly \cc{s{[}i{]}\ =\ x} stores to the same location. We
+translate Go's \cc{len(s)} directly to \(len(s)\). Go also supports
 accessing a slice's capacity, but this is rarely used and Goose does not
 support it.
 
-The Go \texttt{append} operation is the most sophisticated to model. The
-behavior of \texttt{append(s,\ x)} where \texttt{s:\ {[}{]}T} and
-\texttt{x:\ T} depends on whether there is extra capacity to store the
-new element \texttt{x}. If there is capacity, then \texttt{x} is stored
+The Go \cc{append} operation is the most sophisticated to model. The
+behavior of \cc{append(s,\ x)} where \cc{s:\ {[}{]}T} and
+\cc{x:\ T} depends on whether there is extra capacity to store the
+new element \cc{x}. If there is capacity, then \cc{x} is stored
 there and the append returns a new slice with the same pointer but a
-larger length. If there is no capacity, then \texttt{append} must
+larger length. If there is no capacity, then \cc{append} must
 allocate a new slice, copy the existing elements to it, and then store
-\texttt{x}. In the latter case \texttt{append} returns a slice with a
+\cc{x}. In the latter case \cc{append} returns a slice with a
 fresh pointer.
 
 The difficulty with Go slices arise when supporting subslicing. Consider
-\texttt{s{[}:i{]}}, where \texttt{i} is less than \texttt{len(s)}.
-Clearly this slice should have the same pointer and length \texttt{i},
+\cc{s{[}:i{]}}, where \cc{i} is less than \cc{len(s)}.
+Clearly this slice should have the same pointer and length \cc{i},
 but what should its capacity be? Surprisingly, the capacity of this
-prefix is the full capacity of \texttt{s}, which means that the unused
-elements of \texttt{s{[}:i{]}} \emph{include the elements of \texttt{s}}
-beyond the index \texttt{i}. As a result, \texttt{append(s{[}:i{]},\ x)}
-in fact modifies \texttt{s{[}i{]}}. GooseLang takes care to model this
-behavior by implementing \texttt{append} exactly as above, taking into
-account that \texttt{append(s,\ x)} might be an in-place operation.
+prefix is the full capacity of \cc{s}, which means that the unused
+elements of \cc{s{[}:i{]}} \emph{include the elements of \cc{s}}
+beyond the index \cc{i}. As a result, \cc{append(s{[}:i{]},\ x)}
+in fact modifies \cc{s{[}i{]}}. GooseLang takes care to model this
+behavior by implementing \cc{append} exactly as above, taking into
+account that \cc{append(s,\ x)} might be an in-place operation.
 
 The GooseLang model is specifically designed to be sound by sticking to
 the Go implementation as closely as possible, but we want reasoning
@@ -497,9 +486,9 @@ moves ownership from \(sliceCap(s)\) to \(sliceRep(s', l ++ [x])\)
 completely new allocation for \(s'\).
 
 The most interesting rules are for subslicing and how they interact with
-capacity. Consider \texttt{s{[}:i{]}} again. While Go has no formal
+capacity. Consider \cc{s{[}:i{]}} again. While Go has no formal
 notion of ownership, our specifications do. We can model the
-\emph{value} for \texttt{s{[}:i{]}} easily enough; call it
+\emph{value} for \cc{s{[}:i{]}} easily enough; call it
 \(sliceTake(s, i)\) (it simply reduces the length and keeps the capacity
 of \(s\), as specified by Go). Now we need to decide how ownership of
 \(sliceRep(s, l) * sliceCap(s)\) should relate to ownership of
@@ -510,7 +499,7 @@ capacity of the subslice and keep
 \(sliceRep(sliceDrop(s, i), drop(l, i))\). These are incomparable and
 unexpressed in the code: the decision is based on whether we intend to
 append to the subslice but stop using the old slice, or whether we want
-to continue using the remainder of \texttt{s}.
+to continue using the remainder of \cc{s}.
 
 Concretely, GooseLang verifies the following entailment for reasoning
 about subslicing in terms of the slice model:
@@ -525,13 +514,12 @@ capacity of \(sliceTake(s, i)\) requires giving up the remainder of
 
 This alternative bidirectional entailment splits \(s\) into two parts,
 but gives up ownership over \(sliceTake(s, i)\)'s capacity in exchange
-for using those elements in \texttt{s{[}i:{]}}. From this point it will
-not be possible to prove the safety of appending to \texttt{s{[}:i{]}},
+for using those elements in \cc{s{[}i:{]}}. From this point it will
+not be possible to prove the safety of appending to \cc{s{[}:i{]}},
 since this would conflict with the separate ownership over
-\texttt{s{[}i:{]}}.
+\cc{s{[}i:{]}}.
 
-\hypertarget{maps}{%
-\subsection{Maps}\label{maps}}
+\section{Maps}
 
 After slices, maps are the next most commonly used collection type in
 Go. We implement maps as lists of key-value pairs, stored in a single
@@ -541,7 +529,7 @@ marking the map as being read while reading from it; this re-uses the
 race detection for other pointers to ensure that racy access to a map is
 undefined behavior, while allowing concurrent read-read access. Maps
 support all the Go operations: insertions, reads (including returning
-whether the key is present), \texttt{len} to get the number of elements
+whether the key is present), \cc{len} to get the number of elements
 in the map, deletion, and iteration. Go map iteration is
 non-deterministic and in practice random, but we did not model this
 since it would be challenging to do so; however, the reasoning
@@ -564,13 +552,13 @@ non-concurrent, so the proof assumes ownership over the entire map. We
 treat a map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation \(mapVal(v, m)\) that relates
-this encoded value to a Gallina map \(m\), which uses \texttt{gmap} from
-stdpp; for simplicity we use \texttt{gmap\ uint64\ val} and limit map
+this encoded value to a Gallina map \(m\), which uses \cc{gmap} from
+stdpp; for simplicity we use \cc{gmap\ uint64\ val} and limit map
 keys to integers. Values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
 all use \(mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)\). The
 indirection is important, since the Go map value
-\texttt{m\ :\ map{[}uint64{]}V} is in fact a reference to a map that is
+\cc{m\ :\ map{[}uint64{]}V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
 length, and capacity --- and heap data).
 
@@ -583,8 +571,7 @@ needed{]}:
 
 TODO: write down iteration spec
 
-\hypertarget{testing-goose}{%
-\subsection{Testing Goose}\label{testing-goose}}
+\section{Testing Goose}
 
 Goose is a trusted component in the entire verification process. For the
 overall system's proof to be sound, we rely on the model to produce all
@@ -629,16 +616,16 @@ its semantics is expressed as a transition system between expressions.
 It is easy to give the semantics of a primitive at the \emph{head} of an
 expression; for example, we can say what \(Store(l, v)\) does in a given
 heap if \(l\) and \(v\) are already values (it stores \(v\) in the heap
-and evaluates to \texttt{\#()}, the unit value). It is also easy to
-interpret \emph{pure} reductions like \texttt{x\ +\ y} where \texttt{x}
-and \texttt{y} are values since the semantics of these pure expressions
+and evaluates to \cc{\#()}, the unit value). It is also easy to
+interpret \emph{pure} reductions like \cc{x\ +\ y} where \cc{x}
+and \cc{y} are values since the semantics of these pure expressions
 is already given as a Gallina function.
 
 The challenge in the interpreter comes from \emph{context} reductions,
-which specify how to find a sub-expression within \texttt{e} to reduce
+which specify how to find a sub-expression within \cc{e} to reduce
 if the head is not immediately a value. The code follows a standard
 presentation of context reduction using \emph{evaluation contexts}. The
-idea is to define a type of evaluation contexts \texttt{K} that
+idea is to define a type of evaluation contexts \cc{K} that
 represent an expression with a hole; a function \(fill(K, e)\), usually
 written \(K[e]\), fills the hole with \(e\). The possible evaluation
 contexts give all the context reductions in one compact rule: if \(e\)
@@ -653,7 +640,7 @@ to have a deterministic order, but this is not proven.)
 
 The test suite is structured as a number of test functions, each
 producing a boolean. If the test is written correctly, it should produce
-\texttt{true}, which we test in Go. Then to check the semantics of the
+\cc{true}, which we test in Go. Then to check the semantics of the
 translation, in GooseLang we check that the interpreter returns true for
 each test function. While we could compare more sophisticated results
 like integers or structs between the two, this strategy is especially

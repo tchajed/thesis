@@ -8,6 +8,8 @@ them but the bugs involved are subtle
 This thesis: we'll build a file system and verify it. This will also require
 building the tools to do so.
 
+## DaisyNFS
+
 ## Related work
 
 ## Goose
