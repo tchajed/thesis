@@ -1,19 +1,34 @@
-Storage systems are important because applications rely on them to store
-data, and to persist that data even if the computer shuts down (perhaps
-unexpectedly, say due to a power failure) and reboots. However, file
-systems have internally complicated implementations, with optimizations
-and concurrency for high performance, which lead to bugs. Sometimes
-these bugs result in the file system misbehaving, either by incorrectly
-storing data or failing to retrieve it.
+One crucial service in an operating system is its \emph{file system}. The file
+system is important because applications rely on it to store data, and to
+persist that data even if the computer shuts down (perhaps unexpectedly, say due
+to a power failure) and reboots. Due to their importance to nearly all applications, many
+file systems have internally complicated implementations, with optimizations and
+concurrency for high performance. However, due to this complexity, file systems
+sometimes have bugs, especially subtle bugs that only manifest if the system
+crashes at an inopportune time or if concurrent operations interleave in just
+the wrong way. These bugs can result in the file system misbehaving, either by
+incorrectly storing data or failing to retrieve it.
 
-The approach taken in this thesis is to implement a file system with
-good performance and concurrency, then formally verify that it always
-meets its specification. More concretely the verified artifact from this
-thesis is \textbf{DaisyNFS}, which implements the Network File System
-(NFS) protocol on top of a disk. The specification for this file system
-stipulates that each operation is implemented atomically (with respect
-to both other threads and on crash), and behaves according to a formal
-model of the NFS specification as laid out in prose in RFC 1813.
+A file system's developers generally use testing to identify and fix bugs in the
+implementation. Unfortunately, testing is fundamentally difficult due to the
+combination of a concurrent implementation and the requirement that the file
+system be correct even when the computer crashes. Both of these facets of a file
+system mean even a handful of operations can have a large number of possible
+executions, making it difficult to scale testing and have high confidence in the
+implementation.
+
+This thesis takes an alternate approach to testing to obtain a correct file
+system: we formally verify a new file-system implementation against a high-level
+specification of the file system's behavior. More concretely the verified
+artifact from this thesis is \textbf{DaisyNFS}, which implements the Network
+File System (NFS) protocol on top of a disk with block-based access. NFS is a
+widely-used protocol for exporting a file system across a network. We chose to
+implement NFS since the behavior of an NFS server is relatively well-specified
+by the RFC 1813 standard, compared to the requirements on a Linux file system,
+for example. The specification for our file system stipulates that each
+operation is implemented atomically (with respect to both other threads and on
+crash), and behaves according to a formal model of the NFS specification as laid
+out in prose in RFC 1813.
 
 A file system is a large program, so we divided both the implementation
 and proof of DaisyNFS into two layers. First, a \textbf{transaction
@@ -45,12 +60,41 @@ transaction system as a library. Dafny only supports sequential
 reasoning, which is sufficient at this layer because the transaction
 system guarantees that the Dafny code appears to run sequentially.
 
-It is not obvious how to connect a verified transaction system with the
-Dafny proof. This thesis develops an appropriate specification for the
-transaction system and then uses an on-paper proof to argue that the
-entire system is correct. The overall system's correctness then depends
-on some manual audits over the Dafny code to check that the reasoning
-steps are sound.
+Using Perennial for the transaction sytem and Dafny for the file-system
+operations lets us use the sharpest tool for each part of the proof. However, it
+introduces a challenge in the proof: is not obvious how to connect a verified
+transaction system with the Dafny proof. This thesis develops an appropriate
+specification for the transaction system and then uses an on-paper proof to
+argue that the entire system is correct. The on-paper proof stitches together
+the Dafny and Coq proofs, so that most of the proof is machine-checked while the
+overall proof spans two very different proof systems. The overall system's
+correctness then depends on some manual audits over the Dafny code to check that
+the reasoning steps in the on-paper proof are sound.
+
+The contribution of this thesis lies in how we prove DaisyNFS correct; the
+system implementation itself uses standard techniques to achieve good
+performance. We developed new verification techniques to reason about crash
+safety and concurrency, to reason about code written in an efficient language,
+and to take advantage of the transaction system for simpler proofs in the
+file-system layer. In particular this thesis makes the following contributions:
+\begin{itemize}
+  \item Perennial 2.0 is a verification framework for reasoning about crash
+  safety and concurrency. We extend concurrent separation logic with new
+  techniques to bring its power to make proofs modular to programs with crash
+  safety in their specification.
+  \item Goose is a system for reasoning about Go using Perennial. We needed a
+  new and flexible system to support our custom verification infrastructure, and
+  the use of Go improved productivity for implementation and especially
+  performance optimization.
+  \item A verified transaction system built on top of GoJournal gives code the
+  illusion of atomic transactions, with respect to both crashes and other
+  threads. The proof uses Perennial to establish a proof about any client of the
+  transaction system.
+  \item DaisyNFS is a file system that implements each file system operation as
+  a transaction, using the verified transaction system to safely run
+  concurrently. A key contribution is an on-paper soundness proof that shows how
+  the Dafny and Perennial proofs can be composed.
+\end{itemize}
 
 DaisyNFS implements the NFSv3 protocol, a standard protocol for exposing
 a file system over the network. We use DaisyNFS by mounting it with the
