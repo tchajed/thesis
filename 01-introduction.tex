@@ -102,3 +102,14 @@ Linux NFS client and then interacting with the mounted file system using
 the standard system-call API. A performance evaluation of DaisyNFS shows
 that it is competitive with the Linux kernel NFS server exporting an
 ext4 file system.
+
+\subsection{How to read this thesis}
+
+\autoref{sec:daisy-nfs} describes the programming interface, specification,
+implementation, and proof for the overall file system. When describing the
+implementation and proof, a significant component is the transaction system,
+which we only give an interface and specification for. The details of that proof
+are in \autoref{sec:txn}. The transaction system's proof required two
+contributions that are part of this thesis. \autoref{sec:goose} is optional
+reading on how the proof connects to the code. \autoref{sec:perennial} gives
+background needed to understand how the proof itself works.
