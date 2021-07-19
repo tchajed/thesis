@@ -47,7 +47,7 @@ most important is an intermediate abstraction that supports starting and
 committing transactions that consist of a sequence of reads and writes which
 appear to execute atomically, including if the system crashes. The lower level
 of the system is a \emph{transaction system} that implements this abstraction on
-top of a raw disk Next, the \textbf{file-system layer} implements each NFS
+top of a raw disk Next, the \emph{file-system layer} implements each NFS
 operation as a single transaction, using the transaction system to automatically
 make each file-system operation atomic for
 concurrency and crashes. Transactions greatly simplify making a file
@@ -79,7 +79,7 @@ and more productive proofs in this layer.
 
 Using Perennial for the transaction sytem and Dafny for the file-system
 operations lets us use the sharpest tool for each part of the proof. However, it
-introduces a challenge in the proof: is not obvious how to connect a verified
+introduces a challenge in the proof: it is not obvious how to connect a verified
 transaction system with the Dafny proof. This thesis develops an appropriate
 specification for the transaction system and then uses an on-paper proof to
 argue that the entire system is correct. The on-paper proof stitches together
