@@ -43,6 +43,10 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
+\todo{How to add some structure to intro while still giving a short, coherent
+overall view? Or should we not bother and leave that short overview to the
+abstract or end of the intro?}
+
 DaisyNFS is implemented in two main layers, a division which is important to
 situate our contributions. While there are many intermediate abstractions, the
 most important is an intermediate abstraction that supports starting and
@@ -130,10 +134,35 @@ forward reference to related work for state-of-the-art verification techniques
 
 \section{Approach}
 
-What does it mean to give a machine-checked, formal proof of a system?
+What does it mean to give a machine checked, formal proof of a system? At a high
+level, program proofs always have three components: an implementation, a
+specification, and a proof. When doing machine-checked proofs, all three are
+physically represented as code in a verification system. The verification system
+checks the proof against the implementation and specification, ensuring that the
+proof is complete.
 
-\todo{how to add some structure to intro while still giving a short, coherent
-overall view?}
+This thesis integrates interactive, foundational proofs using custom
+infrastructure (in Coq) as well as automated verification using a
+verification-aware programming language (Dafny). These are both machine-checked,
+formal proofs, but the interaction models of the two systems are different
+enough that we explain them separately.
+
+In Coq, the core feature is proofs based on dependent type theory, which is
+expressive enough to represent essentially any math. A first step when using Coq
+is to connect the code to a model in Coq of its semantics. The model encodes any
+assumptions we make about how the program behaves; the rest of the proof will be
+about these behaviors. The semantics is typically structured as a transition
+system, where an execution is a sequence of states and as the program executes,
+along with some notion of observable behavior, like external I/O or return
+values.
+
+Armed with a model of the physical, executable code, we can now carry out
+reasoning about that model. I will refer to this model as simply a program, but
+when thinking about the meaning of verification the distinction is useful. While
+there are many ways to reason about programs in a system as general as Coq, a
+common structure is to use a \emph{program logic}. The program logic is a way of
+expressing and proving statements about the program. \todo{finish this
+explanation up}
 
 \section{How to read this thesis}
 
