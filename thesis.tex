@@ -75,6 +75,9 @@
 \newenvironment{inprogress}
   {\vspace{.5em} \color{set2} \noindent \textbf{TODO}}
   {\vspace{.5em}}
+\newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
+\newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
+\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
 
 % a command to indicate current editing progress
 \newcommand{\resume}{

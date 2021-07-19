@@ -49,7 +49,7 @@ most important is an intermediate abstraction that supports starting and
 committing transactions that consist of a sequence of reads and writes which
 appear to execute atomically, including if the system crashes. The lower level
 of the system is a \emph{transaction system} that implements this abstraction on
-top of a raw disk Next, the \emph{file-system layer} implements each NFS
+top of a raw disk. Next, the \emph{file-system layer} implements each NFS
 operation as a single transaction, using the transaction system to automatically
 make each file-system operation atomic for
 concurrency and crashes. Transactions greatly simplify making a file
@@ -121,6 +121,19 @@ Linux NFS client and then interacting with the mounted file system using
 the standard system-call API. A performance evaluation of DaisyNFS shows
 that it is competitive with the Linux kernel NFS server exporting an
 ext4 file system.
+
+\section{State of the art}
+
+crash testing, fuzzing, symbolic execution
+
+forward reference to related work for state-of-the-art verification techniques
+
+\section{Approach}
+
+What does it mean to give a machine-checked, formal proof of a system?
+
+\todo{how to add some structure to intro while still giving a short, coherent
+overall view?}
 
 \section{How to read this thesis}
 
