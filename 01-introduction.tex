@@ -1,4 +1,6 @@
-One crucial service in an operating system is its \emph{file system}. The file
+One crucial service in an operating system is its \emph{file system}, the piece
+of software that takes a disk (which simply stores a long sequence of bytes) and
+makes it more useful by giving applications the abstraction of files and directories. The file
 system is important because applications rely on it to store data, and to
 persist that data even if the computer shuts down (perhaps unexpectedly, say due
 to a power failure) and reboots. Due to their importance to nearly all applications, many
@@ -6,8 +8,8 @@ file systems have internally complicated implementations, with optimizations and
 concurrency for high performance. However, due to this complexity, file systems
 sometimes have bugs, especially subtle bugs that only manifest if the system
 crashes at an inopportune time or if concurrent operations interleave in just
-the wrong way. These bugs can result in the file system misbehaving, either by
-incorrectly storing data or failing to retrieve it.
+the wrong way. These bugs can result in the file system misbehaving, for example
+losing some or all files when the file system's internals are corrupted.
 
 A file system's developers generally use testing to identify and fix bugs in the
 implementation. Unfortunately, testing is fundamentally difficult due to the
@@ -103,7 +105,7 @@ file-system layer. In particular this thesis makes the following contributions:
   new and flexible system to support our custom verification infrastructure, and
   the use of Go improved productivity for implementation and especially
   performance optimization.
-  \item A verified transaction systemgives code the
+  \item A verified transaction system gives code the
   illusion of atomic transactions, with respect to both crashes and other
   threads. The proof uses Perennial to establish a proof about any client of the
   transaction system.
