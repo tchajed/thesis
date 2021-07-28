@@ -169,10 +169,33 @@ of the program, but such a proof would be monstrous and hard to split up.
 A common structure to tame the complexity of reasoning about a program is to use
 a \emph{program logic}. The program logic is a way of expressing and proving
 statements about the program, including properties about individual functions
-and language constructs like \cc{if}-statements and \cc{while}-loops. It helps
-organize the proof into some structure. The proof in a program logic will often
-mirror the structure of the code, since each function has its own specification
-and groups of related functions have related specs.
+and language constructs like \cc{if}-statements and \cc{while}-loops. The proof
+in a program logic will often mirror the structure of the code, since each
+function has its own specification and groups of related functions have related
+specs.
+
+Program logics for concurrency are still an active area of research; only
+recently have they reached the maturity to give completely mechanized proofs of
+moderate-sized programs. There are few logics that also can reason about crash
+safety. Our approach in this thesis is to build a new program logic with all the
+concurrency-reasoning features of a modern program logic, plus new features for
+reasoning about crashes. What makes this feasible is Iris, which builds a
+concurrent program logic on top of a ``base logic''; we are able to reuse the
+base logic and extend the program logic with crash-safety reasoning, while
+reusing many difficult parts of implementing a new logic.
+
+Using our new program logic, we verified a transaction system. While the proof
+has many interesting details described elsewhere in the thesis, for the purposes
+of the overall approach we can simply take a look at the overall specification.
+What we prove about the transaction system is that any program that uses
+transactions really has transactional behavior: its execution is equivalent to a
+version of the program where the transactions run atomically.
+
+Next, we use the transaction system in Dafny as the basis for a file system.
+The transaction system is implemented as an ordinary Go package, with methods to
+start a transaction, execute reads and writes within it, and finally commit or
+abort it. Using Dafny's \cc{extern} feature we make these methods available with
+specifications that match the specifications proven in Coq.
 
 \todo{finish this up}
 
