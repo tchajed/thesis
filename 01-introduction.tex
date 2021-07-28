@@ -154,15 +154,29 @@ assumptions we make about how the program behaves; the rest of the proof will be
 about these behaviors. The semantics is typically structured as a transition
 system, where an execution is a sequence of states and as the program executes,
 along with some notion of observable behavior, like external I/O or return
-values.
+values. From now I'll generally refer to the model as simply being the program,
+but we'll make a distinction when discussing what it means to have verified
+the system.
 
-Armed with a model of the physical, executable code, we can now carry out
-reasoning about that model. I will refer to this model as simply a program, but
-when thinking about the meaning of verification the distinction is useful. While
-there are many ways to reason about programs in a system as general as Coq, a
-common structure is to use a \emph{program logic}. The program logic is a way of
-expressing and proving statements about the program. \todo{finish this
-explanation up}
+Now that we have a program in Coq, we can reason about it. The goal of
+verification is to prove that the program meets its specification, and
+specifications tend to give the allowed behaviors of the program. Usually its
+also implicit in verification that the program shouldn't ``go wrong'', for
+example by reading an out-of-bounds address in an array. In principle it might
+be possible to prove such a theorem directly, by considering all the behaviors
+of the program, but such a proof would be monstrous and hard to split up.
+
+A common structure to tame the complexity of reasoning about a program is to use
+a \emph{program logic}. The program logic is a way of expressing and proving
+statements about the program, including properties about individual functions
+and language constructs like \cc{if}-statements and \cc{while}-loops. It helps
+organize the proof into some structure. The proof in a program logic will often
+mirror the structure of the code, since each function has its own specification
+and groups of related functions have related specs.
+
+\todo{finish this up}
+
+\section{Challenges}
 
 \section{How to read this thesis}
 
