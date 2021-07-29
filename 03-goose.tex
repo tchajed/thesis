@@ -121,7 +121,7 @@ used to model more sophisticated Go features. GooseLang has many
 primitive data types and operations (for example, there are both 8-,
 32-, and 64-bit integers, and arithmetic and logical operations for
 each). The specifications for these operations are handled with a single
-lemma, which is applied automatically with a tactic \cc{wp\_pures}.
+lemma, which is applied automatically with a tactic \cc{wp_pures}.
 
 Since our goal is to support interactive rather than automated proofs,
 it is helpful to make the model simple to work with. We try to maintain
@@ -168,8 +168,8 @@ Control flow is also slightly tricky since a Go function is translated
 to a single GooseLang expression that should evaluate to the function's
 return value. We can support many specific patterns, especially common
 cases like early returns inside \cc{if} statements and loops with
-\cc{break} and \cc{continue}, but more complex control flow -
-particularly returning from within a loop - is not supported. If we
+\cc{break} and \cc{continue}, but more complex control flow ---
+particularly returning from within a loop --- is not supported. If we
 wanted to fix this the right solution would probably be to represent all
 functions in continuation-passing style, though this would complicate
 the translation of every function call.
@@ -221,14 +221,14 @@ there are no readers and undefined otherwise.
 Next, we need reasoning principles to abstract away this complexity from
 program verification. Separation logic turns out to provide the right
 language to reason about racy access. When a thread owns
-\(l \mapsto v\), we know no other thread can have access to location
-\(l\), so the specifications for reads and writes are unaffected by the
+$l \mapsto v$, we know no other thread can have access to location
+$l$, so the specifications for reads and writes are unaffected by the
 operations being non-atomic (although their proofs are a bit more
 complicated to deal with the new semantics). The only change is that the
 Read operation is no longer an atomic primitive but a function that
 takes two execution steps. In Iris this means that two threads cannot
 share memory with an invariant and must mediate access with a lock,
-which transfers ownership of the \(l \mapsto v\) for multiple execution
+which transfers ownership of the $l \mapsto v$ for multiple execution
 steps.
 
 \section{Modeling locks}
@@ -245,8 +245,8 @@ have not implemented this yet since we don't have code that uses these
 low-level synchronization primitives.
 
 The GooseLang lock model is a simple spin lock, represented as a boolean
-that is true if the lock is held. The acquire operation \(Acquire(l)\)
-repeatedly executes \(CAS(l, false, true)\) to atomically test that the
+that is true if the lock is held. The acquire operation $Acquire(l)$
+repeatedly executes $CAS(l, false, true)$ to atomically test that the
 lock is false and set it to true if so, while release stores false to
 the lock. The implementation as a spin lock is merely an operational
 model that captures what the lock does: acquire blocks until the lock is
@@ -306,10 +306,10 @@ LoadTyped macro that takes a Coq representation of the type being loaded
 and uses it to determine what offsets to load.
 
 For the purpose of proofs we represent a pointer to an arbitrary type
-\(t\) with a typed points-to fact of the form \(l \mapsto_t v\). This
+$t$ with a typed points-to fact of the form $l \mapsto_t v$. This
 definition expands to a number of primitive points-to facts, one for
 each base element. The specification for loading says
-\(\{l \mapsto_t v\} LoadTyped(t, l) \{RET v, l \mapsto_t v\}\), which
+$\{l \mapsto_t v\} LoadTyped(t, l) \{RET v, l \mapsto_t v\}$, which
 (much like the non-atomic primitive Load) hides the fact that something
 non-atomic is happening and looks like an ordinary dereference.
 Similarly, StoreTyped also takes a type, although the specification
@@ -336,29 +336,29 @@ struct. The main difference between the physical implementation and the
 model is that we use a single, abstract memory location for each field,
 whereas the implementation encodes all data into bytes.
 
-Recall that \(l \mapsto_t v\) is internally composed of untyped
-points-to facts for all the base elements of \(v\). In order to reason
-about \(v\)'s fields, we introduce a new struct field points-to fact,
-written \(l \mapsto_{t.f} v\), which asserts ownership of just field
-\(f\) of a struct of type \(t\) rooted at \(l\), and gives that field's
-value as \(v\). A recursive function gives an ``exploded'' set of struct
-fields by iterating over \(t\)'s fields and \(v\) simultaneously. Then,
-we give a proof that \(l \mapsto_t v\) is equivalent to the separating
+Recall that $l \mapsto_t v$ is internally composed of untyped
+points-to facts for all the base elements of $v$. In order to reason
+about $v$'s fields, we introduce a new struct field points-to fact,
+written $l \mapsto_{t.f} v$, which asserts ownership of just field
+$f$ of a struct of type $t$ rooted at $l$, and gives that field's
+value as $v$. A recursive function gives an ``exploded'' set of struct
+fields by iterating over $t$'s fields and $v$ simultaneously. Then,
+we give a proof that $l \mapsto_t v$ is equivalent to the separating
 conjunction of this exploded list. The result is a convenient lemma for
 reasoning about a struct using its fields: in the forward direction, the
 equivalence breaks a large typed points-to into individual fields (with
-the values computed from \(v\)), while in the other direction it allows
-to prove a \(l \mapsto_t v\) by gathering up all the fields.
+the values computed from $v$), while in the other direction it allows
+to prove a $l \mapsto_t v$ by gathering up all the fields.
 
 The struct field points-to is indispensible in proofs, because the
-pattern of \cc{x.f} in Go when \(x\) is a pointer is in fact a field
-load (in C, this would be written \cc{x-\textgreater{}f}). The model
-for loading a struct field is a function \cc{loadField(x,\ t,\ f)}
+pattern of \cc{x.f} in Go when $x$ is a pointer is in fact a field
+load (in C, this would be written \cc{x->f}). The model
+for loading a struct field is a function \cc{loadField(x, t, f)}
 which is implemented in two steps, first computing the offset to field
-\(f\) and the other to load it (in both cases the struct type \(t\)
-describes how to interpret field \(f\)). Having a field points-to gives
+$f$ and the other to load it (in both cases the struct type $t$
+describes how to interpret field $f$). Having a field points-to gives
 a natural specification for this type of load:
-\(\{ l \mapsto_{t.f} v \} \mathtt{loadField}(x, t, f) \{ RET v, l \mapsto_{t.f} v\}\).
+$\{ l \mapsto_{t.f} v \} \mathtt{loadField}(x, t, f) \{ RET v, l \mapsto_{t.f} v\}$.
 
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
@@ -370,15 +370,15 @@ field offsets are disjoint, since the struct maps-to can be broken into
 field points-to facts for each field.
 
 Something to emphasize above: all of the struct code is generic for
-struct type \(t\), which in the code is concretely the ``schema''
+struct type $t$, which in the code is concretely the ``schema''
 described above, a list of fields and types (the code calls this a
-``descriptor'' and uses \(d\) as the metavariable, to avoid confusion
-with a generic type \(t\)).
+``descriptor'' and uses $d$ as the metavariable, to avoid confusion
+with a generic type $t$).
 
 \section{Slices}
 
 One of the most commonly used data structures in Go is the slice
-\cc{{[}{]}T}, which is a dynamically-sized array of values of type
+\cc{[]T}, which is a dynamically-sized array of values of type
 \cc{T}. Goose supports a wide range of operations on slices,
 including appending and sub-slicing; it turns out that the semantics of
 mutable slices is non-trivial in Go, resulting in an interesting
@@ -386,7 +386,7 @@ semantics and reasoning principles.
 
 A slice is a combination of a pointer, length, and capacity. Slices are
 views into a contiguous memory allocation; this view can be narrowed
-with sub-slicing operations of the form \cc{s{[}i:j{]}}, resulting
+with sub-slicing operations of the form \cc{s[i:j]}, resulting
 in aliased slices. The elements between the length and capacity are not
 directly accessible but are used to support efficient amortized appends.
 Go's built-in slice operations include bounds checks on all slice
@@ -411,18 +411,18 @@ GooseLang model picks a non-deterministic capacity in several places
 (within appropriate bounds).
 
 The most basic operations on slices are indexing and storing. The
-GooseLang model of \(s\) is a three-tuple, but for clarity we will refer
-to its elements as \(ptr(s)\), \(len(s)\), and \(cap(s)\). The
-translation of \cc{s{[}i{]}} is essentially a load from
-\(ptr(s) + i\) (or undefined behavior if this offset is out-of-bounds).
-Similarly \cc{s{[}i{]}\ =\ x} stores to the same location. We
-translate Go's \cc{len(s)} directly to \(len(s)\). Go also supports
+GooseLang model of $s$ is a three-tuple, but for clarity we will refer
+to its elements as $ptr(s)$, $len(s)$, and $cap(s)$. The
+translation of \cc{s[i]} is essentially a load from
+$ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
+Similarly \cc{s[i] = x} stores to the same location. We
+translate Go's \cc{len(s)} directly to $len(s)$. Go also supports
 accessing a slice's capacity, but this is rarely used and Goose does not
 support it.
 
 The Go \cc{append} operation is the most sophisticated to model. The
-behavior of \cc{append(s,\ x)} where \cc{s:\ {[}{]}T} and
-\cc{x:\ T} depends on whether there is extra capacity to store the
+behavior of \cc{append(s, x)} where \cc{s: []T} and
+\cc{x: T} depends on whether there is extra capacity to store the
 new element \cc{x}. If there is capacity, then \cc{x} is stored
 there and the append returns a new slice with the same pointer but a
 larger length. If there is no capacity, then \cc{append} must
@@ -431,15 +431,15 @@ allocate a new slice, copy the existing elements to it, and then store
 fresh pointer.
 
 The difficulty with Go slices arise when supporting subslicing. Consider
-\cc{s{[}:i{]}}, where \cc{i} is less than \cc{len(s)}.
+\cc{s[:i]}, where \cc{i} is less than \cc{len(s)}.
 Clearly this slice should have the same pointer and length \cc{i},
 but what should its capacity be? Surprisingly, the capacity of this
 prefix is the full capacity of \cc{s}, which means that the unused
-elements of \cc{s{[}:i{]}} \emph{include the elements of \cc{s}}
-beyond the index \cc{i}. As a result, \cc{append(s{[}:i{]},\ x)}
-in fact modifies \cc{s{[}i{]}}. GooseLang takes care to model this
+elements of \cc{s[:i]} \emph{include the elements of \cc{s}}
+beyond the index \cc{i}. As a result, \cc{append(s[:i], x)}
+in fact modifies \cc{s[i]}. GooseLang takes care to model this
 behavior by implementing \cc{append} exactly as above, taking into
-account that \cc{append(s,\ x)} might be an in-place operation.
+account that \cc{append(s, x)} might be an in-place operation.
 
 The GooseLang model is specifically designed to be sound by sticking to
 the Go implementation as closely as possible, but we want reasoning
@@ -450,53 +450,57 @@ the concrete model, so that only the model is trusted and not the
 separation logic specifications.
 
 The GooseLang model of slices is based on two abstract predicates:
-\(sliceRep(s, l)\) and \(sliceCap(s)\). To model the slice values
-themselves we use \(s : Slice\) where \(Slice\) is a Gallina record; a
-function \(SliceVal(s) : Val\) converts the Gallina representation to
+$sliceRep(s, l)$ and $sliceCap(s)$. To model the slice values
+themselves we use $s : Slice$ where $Slice$ is a Gallina record; a
+function $SliceVal(s) : Val$ converts the Gallina representation to
 the GooseLang tuple that the slice model uses. We will only present the
-\emph{untyped} version of this specification where \(l : list val\), but
-GooseLang also has a typed version where \(l : list T\) where there is
-some (Gallina) function \(to\_val : T -> Val\). The typed version is
+\emph{untyped} version of this specification where $l : list val$, but
+GooseLang also has a typed version where $l : list T$ where there is
+some (Gallina) function $to\_val : T -> Val$. The typed version is
 practically convenient in proofs but is only a small extension to the
 untyped version.
 
-The first predicate \(sliceRep(s, l)\) gives the abstract value of
-\(s\), the list of values it contains, excluding additional capacity. It
+The first predicate $sliceRep(s, l)$ gives the abstract value of
+$s$, the list of values it contains, excluding additional capacity. It
 also represents ownership over all these elements, in terms of the
 underlying struct points-to facts. We use this predicate to specify
 loads and stores:
 
-\(\{sliceRep(s, l) * i < |l|\} s[i] \{RET v. v = l !! i * sliceRep(s, l)\}\)
+\[
+  sliceRep(s, l) * i < |l|\} s[i] \{RET v. v = l !! i * sliceRep(s, l)\}
+\]
 
-\(\{sliceRep(s, l) * i < |l|\} s[i] = v \{RET v. v = l !! i * sliceRep(s, l[i := v])\}\)
+\[
+  sliceRep(s, l) * i < |l|\} s[i] = v \{RET v. v = l !! i * sliceRep(s, l[i := v])\}
+\]
 
-Next, \(sliceCap(s)\) is an abstract predicate that represents
-\emph{ownership over the capacity} of \(s\). It is necessary to append,
+Next, $sliceCap(s)$ is an abstract predicate that represents
+\emph{ownership over the capacity} of $s$. It is necessary to append,
 since appending might need to write to the capacity, but unneeded to
 read and write to a slice.
 
-\(\{sliceRep(s, l) * sliceCap(s)\} \mathtt{append(s, x)} \{RET s', sliceRep(s', l ++ [x]) * sliceCap(s')\}\)
+$\{sliceRep(s, l) * sliceCap(s)\} \mathtt{append(s, x)} \{RET s', sliceRep(s', l ++ [x]) * sliceCap(s')\}$
 
 This specification is fairly simple. In fact, we often use a shorthand
-\(sliceFull(s, l) = sliceRep(s, l) * sliceCap(s)\) when the proof will
+$sliceFull(s, l) = sliceRep(s, l) * sliceCap(s)$ when the proof will
 always retain ownership of slice capacity, in which case the spec looks
 even simpler. However, the proof is non-trivial, since in one case it
-moves ownership from \(sliceCap(s)\) to \(sliceRep(s', l ++ [x])\)
-(where \(ptr(s') = ptr(s)\)), while in the other it constructs a
-completely new allocation for \(s'\).
+moves ownership from $sliceCap(s)$ to $sliceRep(s', l ++ [x])$
+(where $ptr(s') = ptr(s)$), while in the other it constructs a
+completely new allocation for $s'$.
 
 The most interesting rules are for subslicing and how they interact with
-capacity. Consider \cc{s{[}:i{]}} again. While Go has no formal
+capacity. Consider \cc{s[:i]} again. While Go has no formal
 notion of ownership, our specifications do. We can model the
-\emph{value} for \cc{s{[}:i{]}} easily enough; call it
-\(sliceTake(s, i)\) (it simply reduces the length and keeps the capacity
-of \(s\), as specified by Go). Now we need to decide how ownership of
-\(sliceRep(s, l) * sliceCap(s)\) should relate to ownership of
-\(sliceRep(sliceTake(s, i), take(l, i))\). It turns out there are two
-possibilities: we can either give up ownership of the remainder of \(s\)
-in exchange for \(sliceCap(sliceTake(s, i))\), or we can ignore the
+\emph{value} for \cc{s[:i]} easily enough; call it
+$sliceTake(s, i)$ (it simply reduces the length and keeps the capacity
+of $s$, as specified by Go). Now we need to decide how ownership of
+$sliceRep(s, l) * sliceCap(s)$ should relate to ownership of
+$sliceRep(sliceTake(s, i), take(l, i))$. It turns out there are two
+possibilities: we can either give up ownership of the remainder of $s$
+in exchange for $sliceCap(sliceTake(s, i))$, or we can ignore the
 capacity of the subslice and keep
-\(sliceRep(sliceDrop(s, i), drop(l, i))\). These are incomparable and
+$sliceRep(sliceDrop(s, i), drop(l, i))$. These are incomparable and
 unexpressed in the code: the decision is based on whether we intend to
 append to the subslice but stop using the old slice, or whether we want
 to continue using the remainder of \cc{s}.
@@ -504,20 +508,20 @@ to continue using the remainder of \cc{s}.
 Concretely, GooseLang verifies the following entailment for reasoning
 about subslicing in terms of the slice model:
 
-\(sliceFull(s, l) \vdash sliceFull(sliceTake(s, i), take(l, i))\)
+$sliceFull(s, l) \vdash sliceFull(sliceTake(s, i), take(l, i))$
 
 This entailment precisely captures how retaining ownerhsip of the
-capacity of \(sliceTake(s, i)\) requires giving up the remainder of
-\(s\).
+capacity of $sliceTake(s, i)$ requires giving up the remainder of
+$s$.
 
-\(sliceRep(s, l) \dashv\vdash sliceRep(sliceTake(s, i), take(l, i)) * sliceRep(sliceDrop(s, i), drop(l, i))\)
+$sliceRep(s, l) \dashv\vdash sliceRep(sliceTake(s, i), take(l, i)) * sliceRep(sliceDrop(s, i), drop(l, i))$
 
-This alternative bidirectional entailment splits \(s\) into two parts,
-but gives up ownership over \(sliceTake(s, i)\)'s capacity in exchange
-for using those elements in \cc{s{[}i:{]}}. From this point it will
-not be possible to prove the safety of appending to \cc{s{[}:i{]}},
+This alternative bidirectional entailment splits $s$ into two parts,
+but gives up ownership over $sliceTake(s, i)$'s capacity in exchange
+for using those elements in \cc{s[:i]}. From this point it will
+not be possible to prove the safety of appending to \cc{s[:i]},
 since this would conflict with the separate ownership over
-\cc{s{[}i:{]}}.
+\cc{s[i:]}.
 
 \section{Maps}
 
@@ -551,23 +555,23 @@ The proof and specification for maps is relatively easy since they are
 non-concurrent, so the proof assumes ownership over the entire map. We
 treat a map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
-specification is based on a pure relation \(mapVal(v, m)\) that relates
-this encoded value to a Gallina map \(m\), which uses \cc{gmap} from
-stdpp; for simplicity we use \cc{gmap\ uint64\ val} and limit map
+specification is based on a pure relation $mapVal(v, m)$ that relates
+this encoded value to a Gallina map $m$, which uses \cc{gmap} from
+stdpp; for simplicity we use \cc{gmap uint64 val} and limit map
 keys to integers. Values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
-all use \(mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)\). The
+all use $mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)$. The
 indirection is important, since the Go map value
-\cc{m\ :\ map{[}uint64{]}V} is in fact a reference to a map that is
+\cc{m : map[uint64]V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
 length, and capacity --- and heap data).
 
 For example,
 
-\(\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}\)
+$\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}$
 
-Map iteration has a more sophisticated specification {[}citation
-needed{]}:
+Map iteration has a more sophisticated specification [citation
+needed]:
 
 TODO: write down iteration spec
 
@@ -614,10 +618,10 @@ is that the semantics uses a convenient but non-executable way of
 expressing the order of evaluation. GooseLang is a lambda calculus, so
 its semantics is expressed as a transition system between expressions.
 It is easy to give the semantics of a primitive at the \emph{head} of an
-expression; for example, we can say what \(Store(l, v)\) does in a given
-heap if \(l\) and \(v\) are already values (it stores \(v\) in the heap
+expression; for example, we can say what $Store(l, v)$ does in a given
+heap if $l$ and $v$ are already values (it stores $v$ in the heap
 and evaluates to \cc{\#()}, the unit value). It is also easy to
-interpret \emph{pure} reductions like \cc{x\ +\ y} where \cc{x}
+interpret \emph{pure} reductions like \cc{x + y} where \cc{x}
 and \cc{y} are values since the semantics of these pure expressions
 is already given as a Gallina function.
 
@@ -626,11 +630,11 @@ which specify how to find a sub-expression within \cc{e} to reduce
 if the head is not immediately a value. The code follows a standard
 presentation of context reduction using \emph{evaluation contexts}. The
 idea is to define a type of evaluation contexts \cc{K} that
-represent an expression with a hole; a function \(fill(K, e)\), usually
-written \(K[e]\), fills the hole with \(e\). The possible evaluation
-contexts give all the context reductions in one compact rule: if \(e\)
-can step to \(e'\), then \(K[e]\) can step to \(K[e']\). Thus the
-semantics has a rule that works when any such \(K\) exists, while the
+represent an expression with a hole; a function $fill(K, e)$, usually
+written $K[e]$, fills the hole with $e$. The possible evaluation
+contexts give all the context reductions in one compact rule: if $e$
+can step to $e'$, then $K[e]$ can step to $K[e']$. Thus the
+semantics has a rule that works when any such $K$ exists, while the
 interpreter recurses through an expression (in the right order) and
 evaluates a sub-expression, then fills it into the context. We prove
 this correct, showing that the interpeter and semantics agree on an
