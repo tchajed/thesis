@@ -87,12 +87,12 @@ Using Perennial for the transaction sytem and Dafny for the file-system
 operations lets us use the sharpest tool for each part of the proof. However, it
 introduces a challenge in the proof: it is not obvious how to connect a verified
 transaction system with the Dafny proof. This thesis develops an appropriate
-specification for the transaction system and then uses an on-paper proof to
-argue that the entire system is correct. The on-paper proof stitches together
-the Dafny and Coq proofs, so that most of the proof is machine-checked while the
-overall proof spans two very different proof systems. The overall system's
-correctness then depends on some manual audits over the Dafny code to check that
-the reasoning steps in the on-paper proof are sound.
+specification for the transaction system and then links the Dafny proof with the
+transaction system's specification, to
+argue that the linked code is correct. This linking theorem has a proof which stitches together
+the Dafny and Coq proofs, so that all of the code is verified with a
+machine-checked proof but we verify the system using two very different proof
+systems.
 
 The contribution of this thesis lies in how we prove DaisyNFS correct; the
 system implementation itself uses standard techniques to achieve good
@@ -115,7 +115,7 @@ file-system layer. In particular this thesis makes the following contributions:
   transaction system.
   \item DaisyNFS is a file system that implements each file system operation as
   a transaction, using the verified transaction system to safely run
-  concurrently. A key contribution is an on-paper soundness proof that shows how
+  concurrently. A key contribution is a linking proof showing how
   the Dafny and Perennial proofs can be composed.
 \end{itemize}
 
