@@ -236,6 +236,41 @@ the trust only lies in the interface between them.
 
 \section{Challenges}
 
+What is hard about verifying a concurrent file system? There are two broad
+challenges: the first is how to structure the file system, and given our
+structure, the second is how to tame reasoning about concurrency and crash
+safety together.
+
+The first challenge in verifying a concurrent file system is how to structure it
+to manage the proof. We address this in our system design, using transactions to
+isolate crash safety and concurrency. While transactions are not fundamental to
+correctly implementing a file system (see Featherstich, for example), they
+helped with verification since they provide a strong specification to all the
+software written on top, in a way we were able to formalize and prove.
+
+The second challenge is in proving the transaction system correct: we implement
+new techniques to deal with the interactions of concurrency and crash safety in
+the transaction system's implementation. The verification challenge is that the
+system is highly concurrent, including with lock-free access to disk. At a high
+level, concurrency and crashes create non-determinism: the proof must consider a
+large number of possible executions. On another level, the implementation is
+large, so we must specify and verify individual components and then stitch these
+specifications together. There is promising progress on taming this complexity
+for concurrent programs, but pragmatically we require new techniques to deal
+with the complexities added by lock-free programming and crashes.
+
+While in the introduction we have often given equal weight to the transaction
+system and the file-system implementation, the reader will observe that much
+more of the thesis is about verifying the transaction system. Partly the
+transaction system is more complex, but the more fundamental reason is that the
+infrastructure for the transaction system did not exist. In particular we
+designed two systems that are needed to even start the proof: Goose connects Go
+code to the proof, so that the implementation is efficient, while Perennial is
+our new program logic for concurrent storage systems. On the other hand the
+purpose of the file-system design is to use standard, simpler infrastructure for
+the file system, and this shows in the relative simplicity of that part of the
+proof.
+
 \section{How to read this thesis}
 
 \Cref{sec:daisy-nfs} describes the programming interface, specification,

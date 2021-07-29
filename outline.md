@@ -6,6 +6,8 @@ them but the bugs involved are subtle
 This thesis: we'll build a file system and verify it. This will also require
 building the tools to do so.
 
+related work, approach, challenges (maybe?)
+
 # Overview
 
 Implementation-focused: transaction system gives general abstraction, Dafny code
@@ -17,6 +19,11 @@ Key idea, important to remaining structure: use new and heavyweight verification
 for transaction system, but simple and automated verification for transactions
 
 repeated hierarchy: interface, specification, system design, proof
+
+**Question:** should we work top-down or bottom-up? Bottom up is easier, but top
+down probably better reflects how the reader will work; they will want the
+overall picture and then can dive into each detail. Alternately maybe the
+chapters are bottom up but the approach is given top-down.
 
 # DaisyNFS
 
