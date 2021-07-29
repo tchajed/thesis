@@ -16,7 +16,7 @@ Start with spec: code implements atomic NFS API
 Key idea, important to remaining structure: use new and heavyweight verification
 for transaction system, but simple and automated verification for transactions
 
-repeated hierarchy: API, specification, system design, proof
+repeated hierarchy: interface, specification, system design, proof
 
 # DaisyNFS
 

@@ -195,9 +195,44 @@ Next, we use the transaction system in Dafny as the basis for a file system.
 The transaction system is implemented as an ordinary Go package, with methods to
 start a transaction, execute reads and writes within it, and finally commit or
 abort it. Using Dafny's \cc{extern} feature we make these methods available with
-specifications that match the specifications proven in Coq.
+assumed specifications that match the specifications proven in Coq.
 
-\todo{finish this up}
+Dafny verification works quite differently from Coq. Dafny is a programming
+language with verification features; contrast this with Coq, which supports
+general math that can \emph{model} programs. A Dafny method can be annotated
+with a specification. The Dafny checker converts a method and its specification
+to a logical formula, which is true if and only if the specification holds for
+the method. It then queries a \emph{solver} to determine if the formula is true.
+Contrast all of this with Coq, where the user manually develops the program
+logic and connects the rules of this logic. The process cannot be perfectly
+automated because it is impossible to answer whether a general logical formula
+is true or not, but the user can insert annotations to help out the solver, and
+generally fewer annotations are needed than lines of proof for Coq. The main
+downside to this approach is that it fixes a sequential programming language, so
+unlike Coq it isn't possible to reason about concurrency and crashes.
+
+One of the contributions of this thesis is that the file-system design isolates
+concurrency and crash safety into the transaction system. This structure leaves
+the rest of the implementation only to \emph{sequentially} implement the
+file-system logic and data structures. Because this is sequential, crash-free
+execution, we use Dafny to implement and verify each operation, then run this
+code wrapped in a transaction. Later we will have more to say about the file
+system's proof, but for now suffice it to say that we show it correctly
+implements the NFS protocol.
+
+Since we use two different formal systems, we do not set up and prove a single,
+unified theorem about the whole file system, which is indeed not even
+implemented in one language. Instead, the file system is compiled by linking the
+Dafny code, after compilation to Go, with the transaction system. Similar to
+this code linking step, we prove a linking theorem, showing that the proof from
+Coq and proof from Dafny compose properly. The proofs from both systems are
+checked automatically so we call them mechanized, but this final linking step is
+outside of both systems so we must give it on paper. However, we take care to
+make the transaction system's specification strong enough that the two theorems
+compose easily. Later we discuss what parts of the system are \emph{trusted} to
+guarantee that the whole system is correct; notably, we learn from Coq and Dafny
+that the transaction system and file-system code are independently correct, and
+the trust only lies in the interface between them.
 
 \section{Challenges}
 
