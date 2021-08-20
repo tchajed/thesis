@@ -111,11 +111,11 @@ file-system layer. In particular this thesis makes the following contributions:
   performance optimization.
   \item A verified transaction system gives code the
   illusion of atomic transactions, with respect to both crashes and other
-  threads. The proof uses Perennial to establish a proof about any client of the
+  threads. The proof uses Perennial to establish a theorem about any client of the
   transaction system.
   \item DaisyNFS is a file system that implements each file system operation as
   a transaction, using the verified transaction system to safely run
-  concurrently. A key contribution is a linking proof showing how
+  concurrently. A key contribution is a linking theorem showing how
   the Dafny and Perennial proofs can be composed.
 \end{itemize}
 
@@ -128,9 +128,20 @@ ext4 file system.
 
 \section{State of the art}
 
-crash testing, fuzzing, symbolic execution
+Production file systems are generally validated by testing. While testing is
+indispensible for development, the nature of a file system makes it difficult to
+catch all bugs with only testing. The fundamental difficulty is the
+non-determinism from wanting crash safety even in the middle of execution and
+having concurrency in the implementation for good performance.
 
-forward reference to related work for state-of-the-art verification techniques
+The importance of file-system correctness has been recognized by the academic
+community, thus there are many approaches for increasing confidence with
+improved testing. One line of work has explored systematically testing crashes
+at intermediate points~\cite{mohan:crashmonkey,pillai:appcrash}. Another line of
+work has focused on fuzz testing as a way to induce crash-safety
+bugs~\cite{xu:janus,kim:hydra}.
+
+some preview of verification techniques
 
 \section{Approach}
 
