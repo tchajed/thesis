@@ -121,8 +121,27 @@
 
 \mainmatter
 
+File systems are an important service of the operating system, yet
+implementations still have bugs that can even lead to data loss. Formal
+verification offers a promising solution by showing that the file system always
+meets its specification, even though the implementation has concurrency and
+should tolerate a crash or power failure at any time. This thesis introduces
+techniques for making such a proof feasible and efficient, with a new
+verification framework and novel file-system design that isolates the most
+difficult reasoning to a transaction system that provides atomic updates and
+then connects to sequential proofs for the correctness of the main file-system
+logic.
+
 \chapter{Thesis proposal}
 \input{01-introduction.tex}
+
+\section{Timeline}
+The main research in this thesis is already complete, including all of the
+file-system proofs. The system is also described between a published paper on
+GoJournal~\cite{chajed:gojournal} and a draft on DaisyNFS itself, but the thesis
+will give a more integrated view that connects the two proofs more simply. I aim
+to complete a draft of the thesis by October 1st and leave several weeks for
+feedback and revision.
 
 \backmatter
 
