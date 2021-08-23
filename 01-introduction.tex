@@ -43,10 +43,6 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
-\todo{How to add some structure to intro while still giving a short, coherent
-overall view? Or should we not bother and leave that short overview to the
-abstract or end of the intro?}
-
 DaisyNFS is implemented in two main layers, a division which is important to
 situate our contributions. While there are many intermediate abstractions, the
 most important is an intermediate abstraction that supports starting and
@@ -131,17 +127,39 @@ ext4 file system.
 Production file systems are generally validated by testing. While testing is
 indispensible for development, the nature of a file system makes it difficult to
 catch all bugs with only testing. The fundamental difficulty is the
-non-determinism from wanting crash safety even in the middle of execution and
-having concurrency in the implementation for good performance.
+non-determinism from crashes in the middle of execution and
+exploiting concurrency in the implementation for good performance.
 
 The importance of file-system correctness has been recognized by the academic
 community, thus there are many approaches for increasing confidence with
 improved testing. One line of work has explored systematically testing crashes
 at intermediate points~\cite{mohan:crashmonkey,pillai:appcrash}. Another line of
 work has focused on fuzz testing as a way to induce crash-safety
-bugs~\cite{xu:janus,kim:hydra}.
+bugs~\cite{xu:janus,kim:hydra}. These approaches have been successful for
+finding bugs, including crash-safety bugs, but they only test sequential
+executions, missing any bugs related to concurrency or crashes while multiple
+threads are running. Furthermore, unlike formal verification, testing cannot
+cover all executions of a program, even without crashes and concurrency,
+potentially missing bugs.
 
-some preview of verification techniques
+The academic community has also recognized the value of formal verification for
+reasoning about a file-system implementation. The closest related work is
+another verified, concurrent file system, Flashix. The use case for Flashix is
+more specific than DaisyNFS, as it is designed to run directly on flash chips.
+Its concurrency is primarily between regular operations and garbage collection,
+and read-only concurrency. In contrast, DaisyNFS is a general-purpose file
+system which uses a disk that provides an abstraction of an array of blocks and
+efficiently implements even write-write concurrency. In addition to different
+goals for the overall artifacts, DaisyNFS acheives crash safety with a
+general-purpose transaction system, whereas Flashix uses an ordered cache that
+is carefully designed to work with its particular file-system design.
+
+There are other verified file systems, especially the sequential file systems
+FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
+in-memory but concurrent file system AtomFS~\cite{zou:atomfs}. These systems use
+verification techniques that do not support both crashes and concurrency, so we
+cannot extend them in a straightforward way to achieve the realism goals in this
+thesis.
 
 \section{Approach}
 
@@ -281,14 +299,3 @@ our new program logic for concurrent storage systems. On the other hand the
 purpose of the file-system design is to use standard, simpler infrastructure for
 the file system, and this shows in the relative simplicity of that part of the
 proof.
-
-\section{How to read this thesis}
-
-\Cref{sec:daisy-nfs} describes the programming interface, specification,
-implementation, and proof for the overall file system. When describing the
-implementation and proof, a significant component is the transaction system,
-which we only give an interface and specification for. The details of that proof
-are in \cref{sec:txn}. The transaction system's proof required two
-contributions that are part of this thesis. \Cref{sec:goose} is optional
-reading on how the proof connects to the code. \Cref{sec:perennial} gives
-background needed to understand how the proof itself works.
