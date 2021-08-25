@@ -27,10 +27,17 @@ thesis is to \emph{implement} a file system, define a mathematical
 \emph{prove} that the implementation always meets the specification regardless
 of how the program executes and even under crashes. To increase confidence in
 the proof, we carry it out with a computer; such a machine-checked proof
-formalizes the specification and proof as code that are automatically checked
-for correctness. The main contributions of this thesis lie in the proof, whereas
-we use standard techniques in the implementation and give a straightforward
-specification.
+formalizes the proof as code that is automatically checked
+for correctness against the specification and implementation.
+
+Our contributions address two main challenges in verifying a file system. The
+first challenge is reasoning about the combination of crash safety and
+concurrency at all, for which we build a framework that applies to efficient
+code (written in Go) and can handle the sorts of reasoning in the file system.
+The second challenge is the complexity of the implementation, which we address
+with a novel, verification-friendly file-system design that makes most of the
+file-system code behave sequentially without crashes, resulting in much simpler
+sequential proofs.
 
 More concretely the verified
 artifact from this thesis is \textbf{DaisyNFS}, which implements the Network
@@ -43,25 +50,21 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
-DaisyNFS is implemented in two main layers, a division which is important to
-situate our contributions. While there are many intermediate abstractions, the
-most important is an intermediate abstraction that supports starting and
-committing transactions that consist of a sequence of reads and writes which
-appear to execute atomically, including if the system crashes. The lower level
-of the system is a \emph{transaction system} that implements this abstraction on
-top of a raw disk. Next, the \emph{file-system layer} implements each NFS
-operation as a single transaction, using the transaction system to automatically
-make each file-system operation atomic for
-concurrency and crashes. Transactions greatly simplify making a file
-system correct, since they handle concurrency and crash safety so the
-file system can focus on correctly implementing its data structures and
-algorithms.
+The novely in DaisyNFS's design is a split into two main layers, first a
+lower-level \emph{transaction system} that gives the illusion of atomic
+operations with reads and writes and then a \emph{file-system layer} that
+implements each file-system operation as a single transaction to automatically
+make them all atomic. While many file systems (including the most common Linux
+file system, ext4) use transactions, DaisyNFS uses transactions in a principled
+way so that each operation is automatically atomic, whereas many transaction
+systems still have state outside the transaction system which is subtle to
+manage.
 
-The structural division is important because a core contribution of the thesis
-is an approach to give proofs for the two layers with different techniques.
-The transaction
-system exposes a simple API but its internals involve lots of
-concurrency and crash-safety reasoning. Performance is important since
+The design enables us to give proofs for the two layers with different
+techniques, notably using \emph{sequential proofs} for the file-system layer and
+isolating the difficult concurrency and crash-safety reasoning to the
+transaction system's implementation.
+Performance in the transaction system is important since
 this layer limits the performance and concurrency of the file system.
 This layer's verification uses specialized infrastructure we developed
 and describe in the thesis: \textbf{Perennial} is a new program logic
@@ -90,22 +93,18 @@ the Dafny and Coq proofs, so that all of the code is verified with a
 machine-checked proof but we verify the system using two very different proof
 systems.
 
-The contribution of this thesis lies in how we prove DaisyNFS correct; the
-system implementation itself uses standard techniques to achieve good
-performance. We developed new verification techniques to reason about crash
-safety and concurrency, to reason about code written in an efficient language,
-and to take advantage of the transaction system for simpler proofs in the
-file-system layer. In particular this thesis makes the following contributions:
+This thesis aims for the goal of making verifying a concurrent file system
+feasible and scalable in terms of features and performance. In particular we
+make the following contributions:
 \begin{itemize}
   \item Perennial 2.0 is a verification framework for reasoning about crash
-  safety and concurrency. We extend concurrent separation logic with new
-  techniques to bring its power to make proofs modular to programs with crash
-  safety in their specification.
+  safety and concurrency. A new primitive for transferring ownership of durable
+  state helped us reason about complex interactions in the transaction system's
+  implementation.
   \item Goose is a system for reasoning about Go using Perennial. We needed a
   new and flexible system to support our custom verification infrastructure, and
-  the use of Go improved productivity for implementation and especially
-  performance optimization.
-  \item A verified transaction system gives code the
+  the Go was a good platform for writing code and improving its performance.
+  \item A proof of a transaction system showing it gives code running on top the
   illusion of atomic transactions, with respect to both crashes and other
   threads. The proof uses Perennial to establish a theorem about any client of the
   transaction system.
@@ -118,7 +117,7 @@ file-system layer. In particular this thesis makes the following contributions:
 DaisyNFS implements the NFSv3 protocol, a standard protocol for exposing
 a file system over the network. We use DaisyNFS by mounting it with the
 Linux NFS client and then interacting with the mounted file system using
-the standard system-call API. A performance evaluation of DaisyNFS shows
+the standard system-call API.\@ A performance evaluation of DaisyNFS shows
 that it is competitive with the Linux kernel NFS server exporting an
 ext4 file system.
 
