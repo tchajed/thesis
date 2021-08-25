@@ -143,7 +143,7 @@ potentially missing bugs.
 
 The academic community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
-another verified, concurrent file system, Flashix~\todo{citation}. The use case for Flashix is
+another verified, concurrent file system, Flashix~\cite{bodenmuller:concurrent-flashix}. The use case for Flashix is
 more specific than DaisyNFS, as it is designed to run directly on flash chips
 rather than more standard SSDs.
 Its concurrency is primarily between regular operations and garbage collection,
@@ -152,8 +152,7 @@ system which efficiently implements even write-write concurrency, on top of a
 standard SSD that is more sophisticated than raw flash chips. In addition to different
 goals for the overall artifacts, DaisyNFS has a different file system design
 where crash safety is based on a general-purpose transaction system, whereas
-Flashix uses an ordered cache that is carefully designed to work with its
-particular file-system design.
+Flashix accounts for flash failures and thus crashes in every write to storage.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
@@ -269,38 +268,42 @@ the trust only lies in the interface between them.
 \section{Challenges}
 
 What is hard about verifying a concurrent file system? There are two broad
-challenges: the first is how to structure the file system, and given our
-structure, the second is how to tame reasoning about concurrency and crash
-safety together.
+challenges to solve: how to reason about crash safety and concurrency at all,
+and how to manage the complexity of the system.
 
-The first challenge in verifying a concurrent file system is how to structure it
-to manage the proof. We address this in our system design, using transactions to
-isolate crash safety and concurrency. While transactions are not fundamental to
-correctly implementing a file system (see Featherstich~\todo{citation},
-BetrFS~\todo{citation}, or btrfs, for example), they
-helped with verification since they provide a strong specification to all the
-software written on top, in a way we were able to formalize and prove.
+The first challenge is to develop techniques for reasoning about crashes and
+concurrency. To give a flavor of the kinds of interactions these two can bring
+about, we give a simple example from the transaction system. Writes to the
+transaction system are buffered in memory before being flushed to disk, with the
+goal of coalescing concurrent transactions in a single flush. Perhaps
+surprisingly, even if all writes are immediately followed by a flush, the system
+does not appear to have atomically durable writes. If one thread writes, another
+thread can concurrently read the buffered value before it is flushed, but a
+crash immediately afterward will lose the write and revert to the old value.
 
-\todo{rewrite this paragraph}
-The second challenge is in proving the transaction system correct: we implement
-new techniques to deal with the interactions of concurrency and crash safety in
-the transaction system's implementation. The verification challenge is that the
-system is highly concurrent, including with lock-free access to disk. At a high
-level, concurrency and crashes create non-determinism: the proof must consider a
-large number of possible executions. On another level, the implementation is
-large, so we must specify and verify individual components and then stitch these
-specifications together. There is promising progress on taming this complexity
-for concurrent programs, but pragmatically we require new techniques to deal
-with the complexities added by lock-free programming and crashes.
+Once we have techniques that can in principle express crash and recovery
+behavior, we need some structure to make reasoning about the real
+transaction-system and file-system implementations feasible. Within the
+transaction system this takes the form of modular proofs, matching the structure
+of the code. The overall file system relies heavily on the transaction system to
+lower the proof burden, isolating the tricky crash safety and concurrency
+reasoning to a generic system and then verifying the file-system operations with
+sequential proofs. Transactions are not fundamental to correctly implementing a
+file system: notably Featherstitch~\cite{frost:featherstitch} offers a
+principled way to think about correctness without transactions, while
+B$e$trFS~\cite{jannen:betrfs} and the production btrfs file systems use
+copy-on-write as the core atomicity primitive. However, our rigorous use of
+transactions is amenable to a simpler proof since we can show that transactions
+are atomic once, independent of the actual code written on top. Furthermore this
+design makes the file system easy to grow over time since further development
+just involves writing more sequential code and proofs.
 
-While in the introduction we have often given equal weight to the transaction
-system and the file-system implementation, the reader will observe that much
-more of the thesis is about verifying the transaction system. Partly the
-transaction system is more complex, but the more fundamental reason is that the
-infrastructure for the transaction system did not exist. In particular we
-designed two systems that are needed to even start the proof: Goose connects Go
-code to the proof, so that the implementation is efficient, while Perennial is
-our new program logic for concurrent storage systems. On the other hand the
-purpose of the file-system design is to use standard, simpler infrastructure for
-the file system, and this shows in the relative simplicity of that part of the
-proof.
+While in the introduction we have given nearly equal weight to the transaction
+system and the file-system implementation, much more of the thesis is about
+verifying the transaction system. The transaction system is more complex than
+the file-system design, largely by design: the transaction system uses novel
+verification techniques whereas the file-system
+design explicitly aims to make the higher-level proofs simple and sequential.
+Furthermore the transaction system involved new infrastructure that is part of
+this thesis, both the program logic and Goose, our tool for connecting the
+implementation to the proof.
