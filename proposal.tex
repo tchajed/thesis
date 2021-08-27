@@ -1,169 +1,66 @@
-\documentclass[fontsize=12pt,paper=letter,cleardoublepage=plain,twoside=false]{scrbook}
+%% This file is for producing a Doctoral Thesis proposal.  It should be fairly
+%% self-explanatory.
 
-% adapted from https://github.com/jonhoo/thesis/
+\documentclass[twoside]{article}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{color}
+\bibliographystyle{abbrvnat}
+\newcommand{\proposaldate}{September 6, 2021}
 
-% for 1.5 line spacing
-\usepackage{setspace}
-\onehalfspacing
-% single spacing for table of contents
-\AfterTOCHead{\singlespacing}
-
-% recompute page layout based on the above
-\recalctypearea
-
-% more colors (like RedOrange)
-\usepackage[dvipsnames]{xcolor}
-
-% qualitative colors
-% subset of https://jfly.uni-koeln.de/color/
-% that is also distinctive in grayscale
-\definecolor{set1}{HTML}{0071b2} % blue
-\definecolor{set2}{HTML}{e59c00} % orange
-\definecolor{set3}{HTML}{009e73} % green
-\definecolor{set4}{HTML}{efe440} % yellow
-
-% so we can splice in PDFs
-\usepackage{pdfpages}
-
-% set up bibliography
-\usepackage[square,comma,numbers,sort&compress]{natbib}
-
-% enumerate* and itemize*
-\usepackage[inline]{enumitem}
-
-% for \begin{comment}
-\usepackage{verbatim}
-
-% for source-code listings
-\usepackage[newfloat,draft=false]{minted}
-
-% for formulas
-\usepackage{mathtools}
-
-% to split lists into multiple columns
-\usepackage{multicol}
-
-% for "on page NN" reference
-\usepackage[nospace]{varioref}
-
-% for \sfrac
-\usepackage{xfrac}
-
-% for \ifoptionfinal
-\usepackage{ifdraft}
-
-\usepackage[breaklinks, pdfborder={0 0 0}]{hyperref}
-\usepackage[nameinlink]{cleveref}
-
-% for \num, used in \loc macro
-\usepackage[group-separator={,}]{siunitx}
-
-% generate synctex output for inverse search
-\synctex=1
-
-% an environment for todos
-\newenvironment{inprogress}
-  {\vspace{.5em} \color{set2} \noindent \textbf{TODO}}
-  {\vspace{.5em}}
-\newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
-\newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
-\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
-
-% a command to indicate current editing progress
-\newcommand{\resume}{
-  \begin{center}
-    \color{set2}
-    \hrule
-    \vspace{1pt}
-    \hrule
-    \hrule
-    \vspace{10pt}
-    \textbf{This section is not yet complete.}
-    \vspace{10pt}
-    \hrule
-    \hrule
-    \vspace{1pt}
-    \hrule
-  \end{center}
-}
 
 \usepackage{relsize}
 \renewcommand{\ttdefault}{pxtt}
 \input{cmds}
 
-% for handy reference
-%
-% paragraph without spacing:
-% \setparsizes{0pt}{0pt}{0pt plus 1fil}
-
-% in thesis: titlehead, subject, title, subtitle
-\title{Verifying a concurrent, crash-safe file system with sequential proofs}
+\newcommand{\thetitle}{Verifying a concurrent file system}
+\title{\thetitle}
 \author{Tej Chajed}
+
 \begin{document}
 
-\mainmatter
+\pagestyle{empty}
+\markboth{{\sc thesis proposal}}{{\sc thesis proposal}}
+\def\title{\thetitle}
+\def\author{Tej Chajed}
+\def\addrone{45 Hayward St., apt 2826}
+\def\addrtwo{Cambridge, MA 02142}
 
-File systems are an important service of the operating system, yet
-implementations still have bugs that lead to incorrect results or even data loss. Formal
-verification offers a promising solution by showing that the file system always
-meets its specification, even though the implementation has concurrency and
-should tolerate a crash or power failure at any time. This thesis introduces
-techniques for making such a proof feasible and efficient, with a new
-verification framework and novel file-system design that isolates the most
-difficult reasoning to a transaction system that provides atomic updates and
-then connects to sequential proofs for the correctness of the main file-system
-logic.
+\def\degree{Doctor of Philosophy}
+%% Added \deptname for PhD proposals in other fields.
+%% Krishna Sethuraman (1990)
+\def\deptname{Electrical Engineering \\ and Computer Science}
+\def\laboratory{Computer Science and Artificial Intelligence Laboratory}
 
-% Suggested outline for proposal:
-%
-% - a few paragraphs providing an intro to the chapter
-% - motivation
-% - approach
-% - state of the art
-% - challenges
-% - overview of design
-% - contributions
-% - overview of rest of thesis
+\def\submissiondate{\proposaldate}
+\def\completiondate{October 2021}
+
+\def\supervisor{Professor Frans Kaashoek}
+\def\supertitleone{Professor of Computer Science}
+\def\supertitletwo{}
+
+\def\readerone{Professor Nickolai Zeldovich}
+\def\readeronetitleone{Professor of Computer Science}
+\def\readeronetitletwo{}
+
+\def\readertwo{Butler Lampson}
+% don't need a title maybe? but format uses this text for length of signature
+% line
+\def\readertwotitleone{~~~~~~~~~~~~~~~~~~~~~~~~~~~}
+\def\readertwotitletwo{}
+
+%\def\readerthree{Professor TODO}
+%\def\readerthreetitleone{Associate Professor of Electrical Engineering}
+%\def\readerthreetitletwo{and Computer Science}
 
 
-\chapter{Thesis proposal}
-\input{01-introduction.tex}
+\def\abstract{\input{proposal-abstract}}
+\input{cover}
+\input{01-introduction}
+\input{proposal-timeline}
 
-\section{Overview of rest of thesis}
-The thesis will have three main chapters: Goose, GoJournal, and DaisyNFS.\@
-These chapters will be written to be fairly independent of each other. The Goose
-chapter is new content that describes how we connect an implementation in Go to
-a proof in Perennial, which is used to verify GoJournal. However, the details of
-the system are not needed to understand the GoJournal specification or proof,
-where we can pretend like the reasoning is directly over the Go code. We can
-decouple GoJournal and DaisyNFS by recalling the top-level refinement theorem
-from GoJournal within DaisyNFS in enough detail to describe how the proofs are
-linked.
-
-GoJournal is described in a published paper~\cite{chajed:gojournal}, and
-DaisyNFS is also described in a draft paper. The thesis differs from these two
-in that by combining them, we can describe the GoJournal specification in the
-context of the file system, whereas the paper was written before DaisyNFS
-existed. There is also some redundancy; for example GoJournal had an evaluation
-based on an unverified file system whereas the thesis will simply evaluate the
-complete and verified DaisyNFS file system.
-
-\section{Timeline}
-The file system and transaction system implementations and proofs are complete,
-which represents the bulk of the work of this thesis. We also have a fairly
-complete understanding of DaisyNFS's performance compared to Linux. I aim to
-complete a draft of the thesis by October 1st and leave several weeks for
-feedback and revision. There are three main tasks: revising the story of the
-DaisyNFS paper based on feedback from SOSP; removing redundancy between the
-GoJournal and DaisyNFS papers; and describing a new and more complete
-performance evaluation.
-
-\backmatter
-
-% single spacing for bibliography
-\begin{spacing}{1}
-\bibliography{n-str,paper,n,n-conf}{}
-\bibliographystyle{abbrvnat}
-\end{spacing}
+%\bibliographystyle{plain}
+%\nocite{*}
+\bibliography{n-str,paper,n,n-conf}
 
 \end{document}

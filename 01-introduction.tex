@@ -50,7 +50,7 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
-The novely in DaisyNFS's design is a split into two main layers, first a
+The novelty in DaisyNFS's design is a split into two main layers, first a
 lower-level \emph{transaction system} that gives the illusion of atomic
 operations with reads and writes and then a \emph{file-system layer} that
 implements each file-system operation as a single transaction to automatically

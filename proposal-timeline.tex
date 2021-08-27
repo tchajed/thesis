@@ -1,0 +1,28 @@
+\section{Overview of rest of thesis}
+The thesis will have three main chapters: Goose, GoJournal, and DaisyNFS.\@
+These chapters will be written to be fairly independent of each other. The Goose
+chapter is new content that describes how we connect an implementation in Go to
+a proof in Perennial, which is used to verify GoJournal. However, the details of
+the system are not needed to understand the GoJournal specification or proof,
+where we can pretend like the reasoning is directly over the Go code. We can
+decouple GoJournal and DaisyNFS by recalling the top-level refinement theorem
+from GoJournal within DaisyNFS in enough detail to describe how the proofs are
+linked.
+
+GoJournal is described in a published paper~\cite{chajed:gojournal}, and
+DaisyNFS is also described in a draft paper. The thesis differs from these two
+in that by combining them, we can describe the GoJournal specification in the
+context of the file system, whereas the paper was written before DaisyNFS
+existed. There is also some redundancy; for example GoJournal had an evaluation
+based on an unverified file system whereas the thesis will simply evaluate the
+complete and verified DaisyNFS file system.
+
+\section{Timeline}
+The file system and transaction system implementations and proofs are complete,
+which represents the bulk of the work of this thesis. We also have a fairly
+complete understanding of DaisyNFS's performance compared to Linux. I aim to
+complete a draft of the thesis by October 1st and leave several weeks for
+feedback and revision. There are three main tasks: revising the story of the
+DaisyNFS paper based on feedback from SOSP; removing redundancy between the
+GoJournal and DaisyNFS papers; and describing a new and more complete
+performance evaluation.
