@@ -3,11 +3,11 @@ implementations still have bugs that lead to incorrect results or even data loss
 verification offers a promising solution by showing that the file system always
 meets its specification, even though the implementation has concurrency and
 should tolerate a crash or power failure at any time. This thesis introduces
-techniques for making such a proof feasible and efficient, with a new
-verification framework and novel file-system design that isolates the most
-difficult reasoning to a transaction system that provides atomic updates and
-then connects to sequential proofs for the correctness of the main file-system
-logic.
+techniques for making such a proof feasible and efficient. We developed a new
+file-system design that isolates the most difficult reasoning to a transaction
+system while using sequential proofs for the file-system logic. In addition we
+developed new techniques to reason about a highly concurrent transaction system
+and prove that it provides atomicity to the file system.
 
 % Suggested outline for proposal:
 %

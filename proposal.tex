@@ -3,9 +3,20 @@
 
 \documentclass[twoside]{article}
 \usepackage{hyperref}
-\usepackage{natbib}
 \usepackage{color}
-\bibliographystyle{abbrvnat}
+\usepackage[
+  backend=bibtex,
+  minalphanames=3,
+  isbn=false,
+  sortcites=true,
+  sorting=anyt,
+  abbreviate=false,
+  url=false,
+  doi=false,
+  maxnames=99,
+  minbibnames=3,
+  maxbibnames=99]{biblatex}
+\addbibresource{n-str,paper,n,n-conf}
 \newcommand{\proposaldate}{September 6, 2021}
 
 
@@ -13,7 +24,7 @@
 \renewcommand{\ttdefault}{pxtt}
 \input{cmds}
 
-\newcommand{\thetitle}{Verifying a concurrent file system}
+\newcommand{\thetitle}{Verifying a concurrent file system with sequential proofs}
 \title{\thetitle}
 \author{Tej Chajed}
 
@@ -56,11 +67,16 @@
 
 \def\abstract{\input{proposal-abstract}}
 \input{cover}
+\begin{center}
+  \Large Verifying a concurrent file system \\
+  with sequential proofs
+\end{center}
 \input{01-introduction}
 \input{proposal-timeline}
 
 %\bibliographystyle{plain}
 %\nocite{*}
-\bibliography{n-str,paper,n,n-conf}
+%\bibliography{n-str,paper,n,n-conf}
+\printbibliography
 
 \end{document}

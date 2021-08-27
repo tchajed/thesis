@@ -35,9 +35,8 @@ first challenge is reasoning about the combination of crash safety and
 concurrency at all, for which we build a framework that applies to efficient
 code (written in Go) and can handle the sorts of reasoning in the file system.
 The second challenge is the complexity of the implementation, which we address
-with a novel, verification-friendly file-system design that makes most of the
-file-system code behave sequentially without crashes, resulting in much simpler
-sequential proofs.
+with a novel, verification-friendly file-system design that allows us to reason
+about each operation as if it were atomic, resulting in much simpler sequential proofs.
 
 More concretely the verified
 artifact from this thesis is \textbf{DaisyNFS}, which implements the Network
@@ -103,7 +102,7 @@ make the following contributions:
   implementation.
   \item Goose is a system for reasoning about Go using Perennial. We needed a
   new and flexible system to support our custom verification infrastructure, and
-  the Go was a good platform for writing code and improving its performance.
+  Go was a good platform for writing code and improving its performance.
   \item A proof of a transaction system showing it gives code running on top the
   illusion of atomic transactions, with respect to both crashes and other
   threads. The proof uses Perennial to establish a theorem about any client of the
@@ -141,7 +140,7 @@ threads are running. Furthermore, unlike formal verification, testing cannot
 cover all executions of a program, even without crashes and concurrency,
 potentially missing bugs.
 
-The academic community has also recognized the value of formal verification for
+The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
 another verified, concurrent file system, Flashix~\cite{bodenmuller:concurrent-flashix}. The use case for Flashix is
 more specific than DaisyNFS, as it is designed to run directly on flash chips
@@ -183,7 +182,7 @@ assumptions we make about how the program behaves; the rest of the proof will be
 about these behaviors. The semantics is typically structured as a transition
 system, where an execution is a sequence of states and as the program executes,
 along with some notion of observable behavior, like external I/O or return
-values. From now I'll generally refer to the model as simply being the origin
+values. From now on I'll generally refer to the model as simply being the original
 program being verified,
 but we'll make a distinction when discussing what it means to have verified
 the system.
