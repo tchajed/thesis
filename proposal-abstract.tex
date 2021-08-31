@@ -1,13 +1,16 @@
-File systems are an important service of the operating system, yet
-implementations still have bugs that lead to incorrect results or even data loss. Formal
-verification offers a promising solution by showing that the file system always
-meets its specification, even though the implementation has concurrency and
-should tolerate a crash or power failure at any time. This thesis introduces
-techniques for making such a proof feasible and efficient. We developed a new
-file-system design that isolates the most difficult reasoning to a transaction
-system while using sequential proofs for the file-system logic. In addition we
-developed new techniques to reason about a highly concurrent transaction system
-and prove that it provides atomicity to the file system.
+File systems are an important service of operating systems, yet implementations
+have bugs that can lead to incorrect results or even data loss. What makes it
+difficult to write a correct file system is that even simple operations can
+execute in many ways due to concurrency and power failures, making it
+challenging to think through or test all possibilities. Formal verification
+offers a promising solution by using a proof to show the file system always
+meets its specification. This thesis introduces a design and verification
+framework that make it feasible to implement and verify the DaisyNFS file
+system. Our contributions are several techniques: a design that isolates most of
+the difficult reasoning to a transaction system, a specification for the
+transaction system that enables simpler sequential proofs for file-system
+operations, and finally a verification framework that makes reasoning about
+concurrency and crash safety within the transaction system feasible.
 
 % Suggested outline for proposal:
 %

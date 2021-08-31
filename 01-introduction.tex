@@ -16,7 +16,7 @@ implementation. Unfortunately, testing is fundamentally difficult due to the
 combination of a concurrent implementation and the requirement that the file
 system be correct even when the computer crashes. Both of these facets of a file
 system mean even a handful of operations can have a large number of possible
-executions, making it difficult to scale testing and have high confidence in the
+executions, making it difficult to test all of them and gain high confidence in the
 implementation.
 
 This thesis takes an alternate approach to testing to obtain a correct file
@@ -30,7 +30,7 @@ the proof, we carry it out with a computer; such a machine-checked proof
 formalizes the proof as code that is automatically checked
 for correctness against the specification and implementation.
 
-Our contributions address two main challenges in verifying a file system. The
+The thesis's contributions address two main challenges in verifying a file system. The
 first challenge is reasoning about the combination of crash safety and
 concurrency at all, for which we build a framework that applies to efficient
 code (written in Go) and can handle the sorts of reasoning in the file system.
@@ -56,8 +56,10 @@ implements each file-system operation as a single transaction to automatically
 make them all atomic. While many file systems (including the most common Linux
 file system, ext4) use transactions, DaisyNFS uses transactions in a principled
 way so that each operation is automatically atomic, whereas many transaction
-systems still have state outside the transaction system which is subtle to
-manage.
+systems still have state outside the transaction system. Combining the
+transaction system with other state is subtle, since it means the developer
+cannot rely entirely on the transaction system for atomicity but must instead
+coordinate threads, for example with additional locking.
 
 The design enables us to give proofs for the two layers with different
 techniques, notably using \emph{sequential proofs} for the file-system layer and
@@ -93,24 +95,24 @@ machine-checked proof but we verify the system using two very different proof
 systems.
 
 This thesis aims for the goal of making verifying a concurrent file system
-feasible and scalable in terms of features and performance. In particular we
-make the following contributions:
+feasible and scalable in terms of features and performance. In particular this thesis
+makes the following contributions:
 \begin{itemize}
-  \item Perennial 2.0 is a verification framework for reasoning about crash
+  \item Perennial 2.0: a verification framework for reasoning about crash
   safety and concurrency. A new primitive for transferring ownership of durable
   state helped us reason about complex interactions in the transaction system's
   implementation.
-  \item Goose is a system for reasoning about Go using Perennial. We needed a
+  \item Goose: a system for reasoning about Go using Perennial. We needed a
   new and flexible system to support our custom verification infrastructure, and
   Go was a good platform for writing code and improving its performance.
-  \item A proof of a transaction system showing it gives code running on top the
-  illusion of atomic transactions, with respect to both crashes and other
-  threads. The proof uses Perennial to establish a theorem about any client of the
-  transaction system.
-  \item DaisyNFS is a file system that implements each file system operation as
-  a transaction, using the verified transaction system to safely run
-  concurrently. A key contribution is a linking theorem showing how
-  the Dafny and Perennial proofs can be composed.
+  \item A proof of a transaction system showing that transactions have the
+    illusion of sequential, atomic execution, with respect to both crashes and other
+    threads. The proof uses Perennial to establish a theorem about any client of the
+    transaction system.
+  \item DaisyNFS: a file system that takes advantage of the transaction system's
+    correctness theorem to reason about each transaction in Dafny, a
+    sequential verification language. A key contribution is a linking theorem
+    that shows how the Dafny and Perennial proofs can be composed.
 \end{itemize}
 
 DaisyNFS implements the NFSv3 protocol, a standard protocol for exposing
