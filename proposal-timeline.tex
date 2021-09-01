@@ -9,14 +9,6 @@ decouple GoJournal and DaisyNFS by recalling the top-level refinement theorem
 from GoJournal within DaisyNFS in enough detail to describe how the proofs are
 linked.
 
-GoJournal is described in a published paper~\cite{chajed:gojournal}, and
-DaisyNFS is also described in a draft paper. The thesis differs from these two
-in that by combining them, we can describe the GoJournal specification in the
-context of the file system, whereas the paper was written before DaisyNFS
-existed. There is also some redundancy; for example GoJournal had an evaluation
-based on an unverified file system whereas the thesis will simply evaluate the
-complete and verified DaisyNFS file system.
-
 \section{Timeline}
 The file system and transaction system implementations and proofs are complete,
 which represents the bulk of the work of this thesis. We also have a fairly
