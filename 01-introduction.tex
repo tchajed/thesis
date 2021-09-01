@@ -49,50 +49,33 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
-The novelty in DaisyNFS's design is a split into two main layers, first a
-lower-level \emph{transaction system} that gives the illusion of atomic
-operations with reads and writes and then a \emph{file-system layer} that
-implements each file-system operation as a single transaction to automatically
-make them all atomic. While many file systems (including the most common Linux
-file system, ext4) use transactions, DaisyNFS uses transactions in a principled
-way so that each operation is automatically atomic, whereas many transaction
-systems still have state outside the transaction system. Combining the
-transaction system with other state is subtle, since it means the developer
-cannot rely entirely on the transaction system for atomicity but must instead
-coordinate threads, for example with additional locking.
+DaisyNFS has a novel file-system design that relies on a \emph{transaction
+system} to make verification practical. The advantage of this design is that the
+transaction system makes calling code appear to run in sequential transactions,
+isolating crash safety and concurrency concerns to the transaction system
+implementation. While other file systems (including the most common Linux file
+system, ext4, and the Windows NTFS file system) also use transactions, DaisyNFS
+uses them in a principled way such that every file-system operation is
+automatically made atomic. In many other file systems there remains state
+outside the transaction system, resulting in a subtle implementation where the
+developer must still coordinate between the transaction and outside state, for
+example by adding additional locking.
 
-The design enables us to give proofs for the two layers with different
-techniques, notably using \emph{sequential proofs} for the file-system layer and
-isolating the difficult concurrency and crash-safety reasoning to the
-transaction system's implementation.
-Performance in the transaction system is important since
-this layer limits the performance and concurrency of the file system.
-This layer's verification uses specialized infrastructure we developed
-and describe in the thesis: \textbf{Perennial} is a new program logic
-for reasoning about the combination of concurrency and crash safety, and
-\textbf{Goose} is a tool that translates the Go implementation of the
-system to a model that we can apply Perennial to.
+A key technical contribution that allows us to verify this file-system design is
+a formal specification for how the transaction system guarantees atomicity. Our
+formal specification is backed by a machine-checked proof against an
+implementation, giving confidence that this specification is actually achieved.
+The challenge in formalizing the details is that the transaction system requires
+calling code to follow some rules to guarantee atomicity --- for example,
+transactions that read or write state unknown to the transaction system cannot
+be made atomic.
 
-For the file-system implementation and proof, we use the Dafny
-verification language. The file-system operations interact with the
-transaction system to store and retrieve data. To run the system, we
-compile the Dafny code to Go, which imports and calls into the
-transaction system as a library. Dafny only supports sequential
-reasoning, which is sufficient at this layer because the transaction
-system guarantees that the Dafny code appears to run sequentially. In contrast
-with Perennial, Dafny is an automated reasoning framework, resulting in simpler
-and more productive proofs in this layer.
-
-Using Perennial for the transaction sytem and Dafny for the file-system
-operations lets us use the sharpest tool for each part of the proof. However, it
-introduces a challenge in the proof: it is not obvious how to connect a verified
-transaction system with the Dafny proof. This thesis develops an appropriate
-specification for the transaction system and then links the Dafny proof with the
-transaction system's specification, to
-argue that the linked code is correct. This linking theorem has a proof which stitches together
-the Dafny and Coq proofs, so that all of the code is verified with a
-machine-checked proof but we verify the system using two very different proof
-systems.
+The transaction system has a high-performance implementation since it is the
+bottleneck for the file-system's performance, resulting in tricky concurrency
+and crash safety patterns. This thesis develops specialized infrastructure for
+carrying out this reasoning: \textbf{Perennial} is a new program logic for
+reasoning about the combination of concurrency and crash safety, and
+\textbf{Goose} is a tool for reasoning about a Go implementation using Perennial.
 
 This thesis aims for the goal of making verifying a concurrent file system
 feasible and scalable in terms of features and performance. In particular this thesis
@@ -144,23 +127,78 @@ potentially missing bugs.
 
 The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
-another verified, concurrent file system, Flashix~\cite{bodenmuller:concurrent-flashix}. The use case for Flashix is
-more specific than DaisyNFS, as it is designed to run directly on flash chips
-rather than more standard SSDs.
-Its concurrency is primarily between regular operations and garbage collection,
-and read-only concurrency. In contrast, DaisyNFS is a general-purpose file
-system which efficiently implements even write-write concurrency, on top of a
-standard SSD that is more sophisticated than raw flash chips. In addition to different
-goals for the overall artifacts, DaisyNFS has a different file system design
-where crash safety is based on a general-purpose transaction system, whereas
-Flashix accounts for flash failures and thus crashes in every write to storage.
+another verified, concurrent file system,
+Flashix~\cite{bodenmuller:concurrent-flashix}. Flashix runs on top of a
+lower-level storage technology, raw flash rather than an SSD. The techniques
+developed to verify Flashix are specialized to this use case and not intended to
+scale to a general-purpose file system. Its concurrency is primarily between
+regular operations and garbage collection, and read-only concurrency. DaisyNFS
+has a different file-system design with write-write concurrency and a general
+crash safety solution using transactions, whereas Flashix accounts for flash
+failures and thus crashes in every write to storage.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
 in-memory but concurrent file system AtomFS~\cite{zou:atomfs}. These systems use
-verification techniques that do not support both crashes and concurrency, so we
-cannot extend them in a straightforward way to achieve the realism goals in this
-thesis.
+verification techniques that do not support both crashes and concurrency, and we
+cannot extend them in a straightforward way to support the other form of reasoning.
+
+\section{Challenges in implementing file systems}
+
+Fundamentally a file system is a data structure that stores files inside a
+hierarchy of directories. If this were an ordinary data structure it would be
+fairly simple to implement correctly. However, the file system must persist all
+of its data into disk blocks. Furthermore, we would like the file system to keep
+stored data safe even if it is interrupted, which might happen due to a power
+failure or sudden disconnect of the storage device; we call this property
+``crash safety''. Without appropriate care in the implementation, a naive
+implementation could lose or corrupt data. Data loss is particularly bad when
+metadata is corrupted --- for example, if a directory is moved by removing it
+from its original parent and then adding it to the new parent, interrupting this
+process might lose the directory and all of its contents.
+
+Concurrency adds complexity on top of implementing the file system as a
+crash-safe data structure. To get good performance, it is helpful to take
+advantage of multiple CPUs to prepare concurrent operations. One of the slowest
+parts of a file system is actually writing to stable storage, since writing to a
+disk is slower than writing to memory. An efficient file system can take
+advantage of concurrently-issued writes by coalescing them into a single write
+to the disk, improving the throughput of the system.
+
+With both crash safety and concurrency, there is a wide spectrum of guarantees
+the file system might make about what happens with concurrent operations and
+crashes. Informally we would like the system not to lose data, and we don't want
+an unlucky interleaving of concurrent threads to have broad consequences like a
+complete deadlock. Since this thesis is about using a proof to establish
+correctness, we need a formal definition of correctness to prove.
+
+Applications and users can have different expectations for what guarantees the
+file system makes. We chose to implement the strongest guarantee for concurrency
+and crash safety: every operation should appear to occur at a single instant in
+time, or in other words should be atomic. This holds for concurrent threads as
+well as if a system crashes and the system reboots. Operations that are in
+progress might still be interrupted on crash, so data in the process of being
+written will be lost, but this is unavoidable if the system never reached the
+point of persisting that data.
+
+File systems do offer weaker guarantees --- especially deferring when data is
+durable, so recently-written data might be lost on crash but the system always
+reverts to a consistent state --- it is generally more difficult to take
+advantage of those weaker guarantees and prove that the system still meets its
+specification. The NFS specification requires most operations to be persistent
+when they return in any case, restricting when an NFS server can take advantage
+of weaker durability guarantees. Instead of relaxing the guarantees we focused
+on a fairly efficient implementation of our strong atomic specification.
+
+Concurrency and crash safety can interact to make atomicity difficult to
+achieve. To give a flavor of the kinds of interactions these two can bring
+about, we give a simple example from the transaction system. Writes to the
+transaction system are buffered in memory before being flushed to disk, with the
+goal of coalescing concurrent transactions in a single flush. Perhaps
+surprisingly, even if all writes are immediately followed by a flush, the system
+does not appear to have atomically durable writes. If one thread writes, another
+thread can concurrently read the buffered value before it is flushed, but a
+crash immediately afterward will lose the write and revert to the old value.
 
 \section{Approach}
 
@@ -265,46 +303,3 @@ compose easily. Later we discuss what parts of the system are \emph{trusted} to
 guarantee that the whole system is correct; notably, we learn from Coq and Dafny
 that the transaction system and file-system code are independently correct, and
 the trust only lies in the interface between them.
-
-\section{Challenges}
-
-What is hard about verifying a concurrent file system? There are two broad
-challenges to solve: how to reason about crash safety and concurrency at all,
-and how to manage the complexity of the system.
-
-The first challenge is to develop techniques for reasoning about crashes and
-concurrency. To give a flavor of the kinds of interactions these two can bring
-about, we give a simple example from the transaction system. Writes to the
-transaction system are buffered in memory before being flushed to disk, with the
-goal of coalescing concurrent transactions in a single flush. Perhaps
-surprisingly, even if all writes are immediately followed by a flush, the system
-does not appear to have atomically durable writes. If one thread writes, another
-thread can concurrently read the buffered value before it is flushed, but a
-crash immediately afterward will lose the write and revert to the old value.
-
-Once we have techniques that can in principle express crash and recovery
-behavior, we need some structure to make reasoning about the real
-transaction-system and file-system implementations feasible. Within the
-transaction system this takes the form of modular proofs, matching the structure
-of the code. The overall file system relies heavily on the transaction system to
-lower the proof burden, isolating the tricky crash safety and concurrency
-reasoning to a generic system and then verifying the file-system operations with
-sequential proofs. Transactions are not fundamental to correctly implementing a
-file system: notably Featherstitch~\cite{frost:featherstitch} offers a
-principled way to think about correctness without transactions, while
-B$e$trFS~\cite{jannen:betrfs} and the production btrfs file systems use
-copy-on-write as the core atomicity primitive. However, our rigorous use of
-transactions is amenable to a simpler proof since we can show that transactions
-are atomic once, independent of the actual code written on top. Furthermore this
-design makes the file system easy to grow over time since further development
-just involves writing more sequential code and proofs.
-
-While in the introduction we have given nearly equal weight to the transaction
-system and the file-system implementation, much more of the thesis is about
-verifying the transaction system. The transaction system is more complex than
-the file-system design, largely by design: the transaction system uses novel
-verification techniques whereas the file-system
-design explicitly aims to make the higher-level proofs simple and sequential.
-Furthermore the transaction system involved new infrastructure that is part of
-this thesis, both the program logic and Goose, our tool for connecting the
-implementation to the proof.
