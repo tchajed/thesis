@@ -1,13 +1,31 @@
-\section{Overview of rest of thesis}
-The thesis will have three main chapters: Goose, GoJournal, and DaisyNFS.\@
-These chapters will be written to be fairly independent of each other. The Goose
-chapter is new content that describes how we connect an implementation in Go to
-a proof in Perennial, which is used to verify GoJournal. However, the details of
-the system are not needed to understand the GoJournal specification or proof,
-where we can pretend like the reasoning is directly over the Go code. We can
-decouple GoJournal and DaisyNFS by recalling the top-level refinement theorem
-from GoJournal within DaisyNFS in enough detail to describe how the proofs are
-linked.
+\section{Outline of thesis}
+
+\begin{itemize}
+  \item Introduction. This proposal is a draft of the introduction.
+  \item Related work. We will give a more detailed overview of related work.
+        There are two main strands: testing file systems to find bugs, and
+        reasoning about storage systems (with or without concurrency).
+  \item Goose. This system connects an implementation in Go to a model for proof
+        purposes in Perennial.
+  \item GoJournal. A transaction system with a proof that transactions (if the
+        obey a particular contract) are atomic, both to other threads and on
+        crash. This thesis focuses on the design and proof strategy of
+        GoJournal, without going into the formal details of the Perennial
+        program logic.
+  \item DaisyNFS. This chapter is both about the file-system proof and how the
+        specification for GoJournal is used from Dafny.
+  \item Evaluation. We will evaluate the performance of DaisyNFS. We wil also
+        evaluate the proof effort and discuss the assumptions in the proof.
+  \item Conclusion.
+\end{itemize}
+
+The main body of the thesis is the three chapters on Goose, GoJournal, and
+DaisyNFS.\@ We will make these independent of each other. Goose is easy to
+abstract away in the GoJournal chapter, since we can pretend like the reasoning
+is directly over the Go code. A specification we call program refinement bridges
+GoJournal and DaisyNFS, so to decouple the two in the DaisyNFS chapter we will
+re-introduce the specification for GoJournal, from the perspective of using it
+rather than proving it.
 
 \section{Timeline}
 The file system and transaction system implementations and proofs are complete,
