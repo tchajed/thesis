@@ -9,7 +9,7 @@ concurrency for high performance. However, due to this complexity, file systems
 sometimes have bugs, especially subtle bugs that only manifest if the system
 crashes at an inopportune time or if concurrent operations interleave in just
 the wrong way. These bugs can result in the file system misbehaving, for example
-losing some or all files when the file system's internals are corrupted.
+losing files when the file system's internals are corrupted.
 
 A file system's developers generally use testing to identify and fix bugs in the
 implementation. Unfortunately, testing is fundamentally difficult due to the
@@ -151,7 +151,7 @@ fairly simple to implement correctly. However, the file system must persist all
 of its data into disk blocks. Furthermore, we would like the file system to keep
 stored data safe even if it is interrupted, which might happen due to a power
 failure or sudden disconnect of the storage device; we call this property
-``crash safety''. Without appropriate care in the implementation, a naive
+``crash safety.'' Without appropriate care in the implementation, a naive
 implementation could lose or corrupt data. Data loss is particularly bad when
 metadata is corrupted --- for example, if a directory is moved by removing it
 from its original parent and then adding it to the new parent, interrupting this
@@ -220,14 +220,14 @@ expressive enough to represent essentially any math. A first step when using Coq
 is to connect the code to a model in Coq. The model and its semantics encodes any
 assumptions we make about how the program behaves; the rest of the proof will be
 about these behaviors. The semantics is typically structured as a transition
-system, where an execution is a sequence of states and as the program executes,
+system, where an execution is a sequence of states the program goes through
 along with some notion of observable behavior, like external I/O or return
-values. From now on I'll generally refer to the model as simply being the original
+values. From now on this thesis will refer to the model as simply being the original
 program being verified,
 but we'll make a distinction when discussing what it means to have verified
 the system.
 
-Now that we have a program in Coq, we can reason about it. The goal of
+Once we have a program in Coq, we can reason about it. The goal of
 verification is to prove that the program meets its specification, and
 specifications tend to give the allowed behaviors of the program. These
 specifications forbid universally incorrect behavior, like reading an
