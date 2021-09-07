@@ -1,0 +1,147 @@
+\section{Introduction}
+
+
+Storage systems, such as file systems, need to be carefully structured
+to not lose persistent user data, even in the face of application and
+whole-system crashes. They often achieve this \emph{crash safety}
+property by delegating writing to storage to a \emph{journaling
+system}, which exposes an API for executing an operation such that its
+writes appear on disk atomically. The journaling system simplifies
+implementing the storage system's logic: to atomically modify a set of
+objects, the file system simply writes to them one at a time within a single
+journal operation.  The result is that each storage operation is atomic with
+respect to crashes.
+
+While a journaling system exposes a simple API, its implementation must address
+crash safety and also be concurrent for good performance.
+Maintaining correctness in the presence of both concurrency and crashes is
+challenging.  For example, in pursuit of performance, journaling systems
+often avoid holding locks while performing I/O, but reasoning
+about the correctness of such optimizations requires considering what
+happens if one thread's disk reads interleave with another thread's
+disk writes, and what happens when the system crashes anywhere
+during that interleaving.
+
+% \mfk{we should make clear that \txn is a Go package.}
+This paper presents \txn, a Go package that provides the first formally verified concurrent journaling
+system. To verify \txn, we developed Perennial 2.0, an extension to the Perennial~\citep{chajed:perennial} framework
+with several features designed to enable modular reasoning about concurrent, crash-safe systems.
+In this work we set a goal of giving
+\txn a specification that \emph{reflects the simplicity of using a journal for
+crash atomicity}.
+\txn can be used by an application like a file system or a key-value
+store. As long as the application follows a locking discipline
+for its on-disk state, such as per-file locks for a file system, proving the correctness
+and crash-safety of that implementation on top of \txn should involve
+largely \emph{sequential} reasoning, despite the fact that the application
+has multiple concurrent threads and can crash at any time.
+
+Realizing this goal raises two challenges: specifying \txn in a way that makes
+application reasoning sequential, and proving \txn's implementation correct. The
+specification makes reasoning about an operation sequential with a
+\emph{lifting} interface where the proof has an abstraction of a ``checked out''
+private fragment of the disk that the operation appears to synchronously modify.
+At commit time the private fragment is ``checked in'', at which point it is
+durable and can be exposed to other threads. The journal guarantees the
+operation is atomic by delaying all writes to commit time, so the developer
+should not need to explicitly reason about crash safety until commit time.
+Perennial 2.0 supports a new technique called \emph{crash framing} to formalize
+the intuition that during an operation the developer need not explicitly
+consider crash safety.
+
+The second challenge lies in proving \txn itself.  This is
+difficult because we desire modularity to make the system's proof tractable,
+which requires giving suitable specifications to the internal interfaces of the system.
+While the user-visible interface of \txn is simple, the
+internal interfaces of a high-performance journaling system are
+hard to specify and fit together.
+To address this challenge, Perennial 2.0 contributes \emph{logically atomic crash
+  specifications} which enable natural specifications of system layers in terms of
+a transition system with
+atomic transitions for the public methods.
+These specifications include a \emph{crash transition}
+to describe what happens to the state of a layer during a crash.
+% These specifications both intuitively correspond to atomicity
+% and are precise enough
+Such specifications make it possible to build upper layers of the system on top without
+worrying about implementation details of how atomic transitions are achieved.
+This separation of concerns lines up with the modularity in the implementation;
+the proof layers divide up the reasoning along the same lines that the
+code divides up functionality among Go packages.
+% Furthermore, we needed
+% to incorporate a \emph{crash transition} into the transition system to specify exactly
+% what data can be lost on crash, since some of the internal APIs of \txn buffer
+% data in memory before persisting it. \mfk{I don't understand this last
+%   sentence. And, I would like to avoid another ``we''}
+
+% The internal API makes it difficult to achieve the desired strong
+% specification of atomic transactions. The reason the strong specification
+% holds is due to the use of locks to protect disk-object ownership. Under
+% these ownership assumptions, the journaling system can prove that the
+% internal APIs behave atomically with a single logical commit point.
+
+% We implemented \sys on top of Perennial~\cite{chajed:perennial}, a
+% concurrent crash-safe verification framework.  We then implemented
+% \txn and used \sys to formally specify and prove its correctness and
+% crash safety; in the process of doing so we found one design bug that
+% was not caught by unit tests (\S\ref{sec:eval:bugs}).
+
+% \mfk{make clear that this \gnfs imports the \txn package.}
+To test the performance and completeness of \txn, we built \gnfs, a functional
+(but unverified) NFSv3
+server that can be mounted through the Linux NFS client. \gnfs imports \txn
+and uses it to achieve crash consistency for NFS operations. We focus on
+NFSv3 because it is widely used in practice, its performance matters
+for applications, and it has a crash-safety and correctness
+specification in the form of RFC 1813~\cite{RFC:1813}.  The
+crash-safety properties are advanced; for example, the protocol supports unstable
+writes which let the implementation delay flushing them to disk.
+
+On a combination of microbenchmarks and a software-development workload,
+\gnfs achieves at least 90\% of the throughput of Linux's in-kernel NFS server
+exporting ext4 running on either a RAM disk or fast NVMe storage. On slower
+SSD storage without using unstable writes \gnfs gets 20\% of Linux's throughput
+due to inefficient I/O. \txn's
+concurrency is crucial to performance: the throughput of \gnfs scales
+with the number of clients, but if \txn is modified to execute
+sequentially (as in previous verified storage systems), even with 20 clients \gnfs achieves only
+double the throughput of a single client.
+
+To demonstrate that \txn's specifications enable effective verification of client applications,
+we implemented and verified a simplified NFS server, which we call \simplenfs,
+covering the core operations, such as \scc{read}, \scc{write},
+\scc{getattr}, and \scc{setattr} (which can shrink and grow a file).
+By using \txn's specifications, the proof for \simplenfs largely involves crash-free reasoning
+(only \simplenfsCrashLOC{} lines of code, out of a total of \simplenfsLOC{}, require explicit reasoning about crashes).
+This translates into a lower proof overhead: \simplenfs requires \simplenfsLOP{}
+lines of proof for \simplenfsLOC{} lines of Go code.  \txn itself requires
+\gotxnLOP{} lines of proof for \gotxnLOC{} lines of Go code.
+
+The contributions of this paper are (1) \txn, a concurrent
+journaling system with a machine-checked proof of correctness and
+crash-safety; (2) the Perennial 2.0 framework, with extensions to the original
+Perennial framework that enable modularity and crash-free reasoning on top of \txn;
+and (3) \simplenfs, a verified core of an NFSv3 file server built on
+top of \txn.
+
+Although \txn is advanced enough to support a high-performance NFS
+server, it has some limitations.  \txn's internals (code and proof)
+support deferred durability, but for simplicity, \txn's top-level
+specification requires applications to immediately flush committed
+journal operations, which is sufficient to prove \simplenfs.  \txn is also
+less general than JBD2 (e.g., \txn does not support floating commit
+blocks), and less general than database transaction systems (e.g.,
+\txn does not support undoing journaled operations).
+While \txn provides atomic updates for crash consistency, it does not
+implement automatic concurrency control. Objects accessed by a journal operation
+cannot be concurrently accessed by another thread.
+\txn provides a verified library for locking objects tracked by the journal, which clients
+can use to implement concurrency control.
+% While \txn provides
+% a library for locking objects tracked by the journal,
+% \txn does not implement automatic concurrency control for transactions.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "paper.tex"
+%%% End:

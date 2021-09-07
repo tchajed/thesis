@@ -1,4 +1,46 @@
 %% semantic formatting
 \newcommand{\code}[1]{\texttt{\detokenize{#1}}}
 \newcommand{\cc}[1]{\mbox{\smaller[0.5]\texttt{\detokenize{#1}}}}
+\newcommand{\scc}[1]{\mbox{\textsc{\detokenize{#1}}}}
 \newcommand{\loc}[1]{\num[group-separator={,},group-minimum-digits=4]{#1}}
+
+%% iris.sty extensions
+\newcommand{\sep}{*}
+\NewDocumentCommand \hoareC {m m m m}{
+  \curlybracket{#1}\spac #2 \spac \curlybracket{#3}\curlybracket{#4}%
+}
+
+\NewDocumentCommand \hoareCV {O{c} m m m m}{
+  {\begin{aligned}[#1]
+  &\curlybracket{#2} \\
+  &\quad{#3} \\
+  &\curlybracket{#4} \\
+  &\curlybracket{#5}
+  \end{aligned}}%
+}
+
+\newcommand{\SKIP}{\mathit{noop}}
+\renewcommand{\Ret}[1]{\text{\textbf{ret}}\,\, #1,\,}
+
+%%% GoJournal
+
+% temporary commands for compatibility
+\newcommand{\txn}{GoJournal}
+\newcommand{\gnfs}{GoNFS}
+\newcommand{\simplenfs}{SimpleNFS}
+
+% abbreviations
+\newcommand{\fstar}{F${}^\star$\xspace}
+
+% GoJournal total
+\newcommand{\gotxnLOC}{\loc{1345}}
+\newcommand{\gotxnLOP}{\loc{25797}}
+% \newcommand{\gotxnRatio}{18}
+%
+% \newcommand{\gnfsLOC}{\loc{2941}}
+%
+\newcommand{\simplenfsLOC}{\loc{462}}
+\newcommand{\simplenfsLOP}{\loc{3749}}
+\newcommand{\simplenfsRatio}{8}
+%
+\newcommand{\simplenfsCrashLOC}{\loc{44}}

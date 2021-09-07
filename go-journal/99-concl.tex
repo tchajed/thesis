@@ -1,0 +1,17 @@
+\section{Conclusion}
+\label{sec:concl}
+
+\txn is the first concurrent crash-safe journaling
+system with a machine-checked proof, built on top of the Perennial 2.0 framework.
+\txn uses Perennial's techniques, including lifting and crash framing, to
+carry over the atomic benefits of journaling to its formal specification.
+This enables storage applications to use mostly crash-free reasoning in
+their proofs.  For example, in the verified \simplenfs server, only \simplenfsCrashLOC{}
+lines of code, out of \simplenfsLOC{}, required crash reasoning.  \txn is sophisticated
+enough to implement a functional (but unverified) NFSv3 server, \gnfs, that achieves
+90\% of the performance of a Linux ext4 NFSv3 server on a development workload, far higher than
+any previous verified file systems, and \txn's concurrency enables \gnfs
+to scale with concurrent client requests.  To simplify \txn's proofs,
+Perennial provides logically atomic crash specifications, which capture the
+crash properties of internal interfaces as single logical transitions,
+enabling modular proofs for \txn's internal layers.

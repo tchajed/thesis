@@ -1,0 +1,34 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1,codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0.2in]
+\PY{k+kd}{func} \PY{n+nx}{NFS3\PYZus{}WRITE\PYZus{}op}\PY{p}{(}\PY{n+nx}{op} \PY{o}{*}\PY{n+nx}{Op}\PY{p}{,} \PY{n+nx}{args} \PY{n+nx}{WRITE3args}\PY{p}{,}
+    \PY{n+nx}{inum} \PY{n+nx}{Inum}\PY{p}{,} \PY{n+nx}{reply} \PY{o}{*}\PY{n+nx}{WRITE3res}\PY{p}{)} \PY{k+kt}{bool} \PY{p}{\PYZob{}}
+  \PY{n+nx}{ip} \PY{o}{:=} \PY{n+nx}{ReadInode}\PY{p}{(}\PY{n+nx}{op}\PY{p}{,} \PY{n+nx}{inum}\PY{p}{)}
+  \PY{n+nx}{count}\PY{p}{,} \PY{n+nx}{ok} \PY{o}{:=} \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Write}\PY{p}{(}\PY{n+nx}{op}\PY{p}{,} \PY{n+nx}{args}\PY{p}{.}\PY{n+nx}{Offset}\PY{p}{,}
+        \PY{n+nx}{args}\PY{p}{.}\PY{n+nx}{Count}\PY{p}{,} \PY{n+nx}{args}\PY{p}{.}\PY{n+nx}{Data}\PY{p}{)}
+  \PY{o}{...} \PY{c+c1}{// set count and status}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kd}{func} \PY{p}{(}\PY{n+nx}{ip} \PY{o}{*}\PY{n+nx}{Inode}\PY{p}{)} \PY{n+nx}{Write}\PY{p}{(}\PY{n+nx}{op} \PY{o}{*}\PY{n+nx}{Op}\PY{p}{,} \PY{n+nx}{off} \PY{k+kt}{uint64}\PY{p}{,}
+    \PY{n+nx}{count} \PY{k+kt}{uint64}\PY{p}{,} \PY{n+nx}{data} \PY{p}{[}\PY{p}{]}\PY{k+kt}{byte}\PY{p}{)} \PY{p}{(}\PY{k+kt}{uint64}\PY{p}{,} \PY{k+kt}{bool}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{k}{if} \PY{n+nx}{count} \PY{o}{!=} \PY{n+nb}{uint64}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n+nx}{data}\PY{p}{)}\PY{p}{)} \PY{o}{||}
+     \PY{n+nx}{util}\PY{p}{.}\PY{n+nx}{SumOverflows}\PY{p}{(}\PY{n+nx}{off}\PY{p}{,} \PY{n+nx}{count}\PY{p}{)} \PY{o}{||}
+     \PY{n+nx}{off}\PY{o}{+}\PY{n+nx}{count} \PY{p}{\PYZgt{}} \PY{n+nx}{disk}\PY{p}{.}\PY{n+nx}{BlockSize} \PY{o}{||}
+     \PY{n+nx}{off} \PY{p}{\PYZgt{}} \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Size} \PY{p}{\PYZob{}}
+    \PY{k}{return} \PY{l+m+mi}{0}\PY{p}{,} \PY{k+kc}{false}
+  \PY{p}{\PYZcb{}}
+
+  \PY{n+nx}{buf} \PY{o}{:=} \PY{n+nx}{op}\PY{p}{.}\PY{n+nx}{ReadBuf}\PY{p}{(}\PY{n+nx}{block2addr}\PY{p}{(}\PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Data}\PY{p}{)}\PY{p}{,}
+        \PY{n+nx}{NBITBLOCK}\PY{p}{)}
+  \PY{n+nb}{copy}\PY{p}{(}\PY{n+nx}{buf}\PY{p}{.}\PY{n+nx}{Data}\PY{p}{[}\PY{n+nx}{off}\PY{p}{:}\PY{p}{]}\PY{p}{,} \PY{n+nx}{data}\PY{p}{)}
+  \PY{n+nx}{buf}\PY{p}{.}\PY{n+nx}{SetDirty}\PY{p}{(}\PY{p}{)}
+  \PY{k}{if} \PY{n+nx}{off}\PY{o}{+}\PY{n+nx}{count} \PY{p}{\PYZgt{}} \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Size} \PY{p}{\PYZob{}}
+    \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Size} \PY{p}{=} \PY{n+nx}{off} \PY{o}{+} \PY{n+nx}{count}
+    \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{WriteInode}\PY{p}{(}\PY{n+nx}{op}\PY{p}{)}
+  \PY{p}{\PYZcb{}}
+  \PY{k}{return} \PY{n+nx}{count}\PY{p}{,} \PY{k+kc}{true}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kd}{func} \PY{p}{(}\PY{n+nx}{ip} \PY{o}{*}\PY{n+nx}{Inode}\PY{p}{)} \PY{n+nx}{WriteInode}\PY{p}{(}\PY{n+nx}{op} \PY{o}{*}\PY{n+nx}{Op}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{n+nx}{op}\PY{p}{.}\PY{n+nx}{OverWrite}\PY{p}{(}\PY{n+nx}{inum2Addr}\PY{p}{(}\PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Inum}\PY{p}{)}\PY{p}{,}
+    \PY{n+nx}{INODESZ}\PY{o}{*}\PY{l+m+mi}{8}\PY{p}{,} \PY{n+nx}{ip}\PY{p}{.}\PY{n+nx}{Encode}\PY{p}{(}\PY{p}{)}\PY{p}{)}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}

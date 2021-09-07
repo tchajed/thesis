@@ -1,0 +1,24 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1,codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0.2in]
+\PY{k+kd}{type} \PY{n+nx}{Update} \PY{k+kd}{struct} \PY{p}{\PYZob{}}
+  \PY{n+nx}{Addr} \PY{k+kt}{uint64}
+  \PY{n+nx}{Data} \PY{n+nx}{Block}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kd}{func} \PY{p}{(}\PY{n+nx}{l} \PY{o}{*}\PY{n+nx}{Wal}\PY{p}{)} \PY{n+nx}{install}\PY{p}{(}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{Lock}\PY{p}{(}\PY{p}{)}
+  \PY{n+nx}{installEnd} \PY{o}{:=} \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{diskEnd}
+  \PY{c+c1}{// grab all the logged updates from memory}
+  \PY{k+kd}{var} \PY{n+nx}{bufs} \PY{p}{[}\PY{p}{]}\PY{n+nx}{Update} \PY{p}{=} \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{memLog}\PY{p}{.}\PY{n+nx}{takeTill}\PY{p}{(}\PY{n+nx}{installEnd}\PY{p}{)}
+  \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{Unlock}\PY{p}{(}\PY{p}{)}
+
+  \PY{c+c1}{// install bufs to data region lock\PYZhy{}free}
+  \PY{n+nx}{installBlocks}\PY{p}{(}\PY{n+nx}{bufs}\PY{p}{)}
+  \PY{c+c1}{// trim the circular buffer lock\PYZhy{}free}
+  \PY{n+nx}{circ}\PY{p}{.}\PY{n+nx}{Advance}\PY{p}{(}\PY{n+nx}{installEnd}\PY{p}{)}
+
+  \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{Lock}\PY{p}{(}\PY{p}{)}
+  \PY{c+c1}{// now trim the in\PYZhy{}memory log}
+  \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{memLog}\PY{p}{.}\PY{n+nx}{trimTill}\PY{p}{(}\PY{n+nx}{installEnd}\PY{p}{)}
+  \PY{n+nx}{l}\PY{p}{.}\PY{n+nx}{Unlock}\PY{p}{(}\PY{p}{)}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}

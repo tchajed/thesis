@@ -1,0 +1,56 @@
+\scalebox{.9}{%
+\begin{tikzpicture}[>=latex, ampersand replacement=\&]
+
+  \tikzstyle{blk1}=[fill=blue!10]; 
+  \tikzstyle{blk6write}=[fill=blue!40]; 
+
+  \matrix (disk) [matrix of nodes, nodes={rectangle,draw,minimum width=5ex, minimum height=4ex, anchor=center},
+    nodes in empty cells,
+    execute at empty cell=\node{\vphantom{?}};]
+  { \& |[blk1]|\text{A} \& \& \& B \& \& \& \dots \\ };
+  \node (disklabel) [left=.1cm of disk] {Disk Block:};
+
+  \foreach \i [count=\xi from 0] in  {1,...,8}{
+      \node also [label=below:\xi] (disk-1-\i) {}; 
+  }
+
+  \matrix (thread1) [matrix of nodes, above=1.45cm of disk.west, anchor=west, nodes={rectangle,draw,minimum width=5ex, minimum height=4ex, anchor=center},
+    execute at empty cell=\node{\vphantom{?}};]
+  { \& |[blk1]|\text{A} \& \& \& |[blk6write]|\text{B'} \& \& \& \dots \\ };
+  \node (thread1label) [left=.1cm of thread1] {Thread 1:};
+
+  \matrix (thread2) [matrix of nodes, below=1.65cm of disk.west, anchor=west, nodes={rectangle,draw,minimum width=5ex, minimum height=4ex, anchor=center},
+    execute at empty cell=\node{\vphantom{?}};]
+  { \& |[blk1]|\text{A} \& \& \& B/B' \& \& \& \dots \\ };
+  \node (thread2label) [left=.1cm of thread2] {Thread 2:};
+
+  \tikzstyle{edge}=[->,thick, shorten >=.1cm, shorten <=.1cm];
+  \draw [edge, color=black, transform canvas={xshift=-.5em}] (disk-1-2) -- (thread1-1-2);
+  \draw [edge, color=red, transform canvas={xshift=.5em}] (thread1-1-2) -- (disk-1-2);
+
+  \draw [edge, color=black, transform canvas={xshift=0em}] (disk-1-2.south)+(0,-.4cm) -- (thread2-1-2);
+
+  \draw [edge, color=red] (thread1-1-5)+(0,.9cm) -- (thread1-1-5);
+
+
+%  \tikzstyle{disk}=[thick,rectangle, draw, minimum width=1.8cm,minimum
+%    height=1.5cm, align=center];
+%
+%  \node[disk] (installed) {Installed \\ writes};
+%  \node[disk,right=0cm of installed] (logged) {Logged \\ writes};
+%  \node[disk,right=0cm of logged] (logging) {Writes \\ being \\ logged};
+%  \node[disk,right=0cm of logging, minimum width=2.2cm] (unstable) {Unstable \\ writes};
+%
+%  \node[] at (-0.8cm,-1cm) {$\uparrow$ 0};
+%  \node[] (memstart) at (1.6cm, -1cm) {$\uparrow$ \cc{memStart}};
+%  \node[] (diskend) at (3.4cm, -1cm) {$\uparrow$ \cc{diskEnd}};
+%  \node[] (nextdiskend) at (5.5cm, -1cm) {$\uparrow$ \cc{nextDiskEnd}};
+%  \node[] (memend) at (7.3cm, -1cm) {$\uparrow$ \cc{memEnd}};
+%
+%  \node[below=0cm of memstart, align=left] {$|\Rightarrow$ \\ Installer};
+%  \node[below=0cm of diskend, align=left] {$|\Rightarrow$ \\ Logger};
+%  \node[below=0cm of nextdiskend, align=left] {$|\Rightarrow$ \\ \cc{Flush}};
+%  \node[below=0cm of memend, align=left] {$|\Rightarrow$ \\ \cc{Commit}};
+
+\end{tikzpicture}
+}

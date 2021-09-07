@@ -1,0 +1,454 @@
+\section{Verifying \txn}
+\label{s:proof}
+
+\txn consists of multiple layers, as described in \autoref{s:system:impl}.  This
+section provides some highlights of the complexity involved in \txn's
+implementation, along with the proof techniques required to formally
+reason about that complexity.
+
+% \begin{figure}
+%   \centering
+%   \small
+%   \begin{tabular}{ll}
+%     \toprule
+%     \bf Layer & \bf Description \\
+%     \midrule
+%     \scc{lockmap} & Locking for application objects (e.g., files) \\
+%     \scc{sepbuftxn} & Separation logic for journaled data \\
+%     \scc{buftxn} & In-memory transactions \\
+%     \scc{obj} & Journaling partial block writes (buffers) \\
+%     \scc{wal} & Whole-block write-ahead logging \\
+%     \scc{circular} & Circular log structure \\
+%     \midrule
+%   \end{tabular}
+%   \caption{\txn layers.}
+%   \label{fig:layers}
+% \end{figure}
+
+\subsection{Write-ahead logging (\scc{wal})}
+
+The write-ahead log layer is responsible for updating multiple disk
+blocks (a multiwrite) atomically.
+Each multiwrite is a list
+of updates, where an update consists of a disk block number and the new data to write in that block.
+%The write-ahead log makes transactions atomic by first writing the
+% updates to an on-disk log, and then installing them to their respective
+% disk blocks.
+A background logger thread moves multiwrites from an in-memory buffer to an
+on-disk log. To make this atomic, the logger first writes
+the contents of a multiwrite in a log entry, and then updates a designated header block to indicate
+the entry is complete. If a crash
+happens before the header is updated, none of the multwrite's updates
+are applied; if a crash happens after the header update, the multiwrite
+will be applied during recovery.
+Meanwhile, an installer thread applies entries in the log to the disk, clearing
+space for new multiwrites.
+If a crash happens before the updates in an entry are fully installed,
+recovery installs the updates again from the on-disk log.
+
+The write-ahead log implements two optimizations related to combining
+multiwrites. Two or more multiwrites can be \emph{group committed} by logging
+them together, which still guarantees their atomicity. If multiwrites being
+committed together update the same block, the first update can be
+\emph{absorbed} and replaced with the second. These optimizations trigger both
+for multiwrites that are committed without waiting for durability and also for
+concurrent, synchronous multiwrites.
+
+% When a transaction is written in the log,
+% updates to the on-disk log is made atomic by first writing the updates
+% to the log, and then updating a designated header block.
+%
+% If a crash
+% happens before the header is updated, none of the transaction's updates
+% are applied; if a crash happens after the header update, the transaction
+% will be applied during recovery.
+
+% Write-ahead logging is a standard approach for atomic disk writes, but it
+% is complicated by performance and crash safety requirements.  For example,
+% writing transactions to disk requires waiting for a disk write, which
+% can be slow.  To improve performance, many storage applications do not
+% flush transactions to disk immediately (e.g., unstable \scc{write} RPCs
+% in NFSv3), but do require that the on-disk state be consistent (i.e.,
+% no partially applied or out-of-order transactions) after a crash.
+% Furthermore, because disk writes are slow, many operations need to
+% happen in parallel, without holding locks while waiting for disk reads
+% and writes: committing new transactions in memory; logging transactions
+% from memory to disk; waiting for transactions to be made durable; and
+% installing transactions.  Concurrency ensures that in-memory operations
+% need not wait for any in-flight disk reads or writes, and that many
+% disk reads and writes can happen at the same time.  Finally, to reduce
+% the number of disk writes, multiple in-memory transactions are logged
+% to disk together (``group commit''), and if they update the same disk
+% block multiple times, only the most recent update of that disk block is
+% written to the log (``absorption'').
+
+% Formally verifying a high-performance write-ahead log is challenging
+% because of the lock-free concurrency, and because the log must maintain
+% crash-safety at all times.
+
+
+\paragraph{Internal abstract state: logical log.}
+To prove the write-ahead log layer correct, \txn represents the
+state of the write-ahead log as a logical list of multiwrites, as
+shown in \autoref{fig:log}.  Multiwrites before \cc{memStart} have
+already been installed, and their log entries do not physically exist in memory or on disk.
+Multiwrites from \cc{memStart} to \cc{diskEnd} are already logged on
+disk.  Multiwrites from \cc{diskEnd} to \cc{nextDiskEnd} are currently being logged
+from memory to disk.  Finally, multiwrites between \cc{nextDiskEnd}
+and \cc{memEnd} are purely in-memory, and are eligible for absorption.
+
+\begin{figure}[ht]
+    \input{go-journal/fig/log}
+    \vspace{-\baselineskip}
+    \caption{The logical write-ahead log.  Vertical arrows indicate
+        designated positions in the logical log.  Labels below the arrows
+        indicate what thread or function is responsible for advancing
+        that logical position to the right.}
+    \label{fig:log}
+\end{figure}
+
+This representation allows \txn to precisely specify how concurrent
+operations modify this abstract state, and how the state changes on crash.
+For example, although the installer thread performs many disk writes to
+install multiwrites, its only effect on the abstract state is that it
+advances \cc{memStart}.  Similarly, the logger thread's only change to
+the abstract state is to advance \cc{diskEnd}.  Calling \cc{Flush()}
+advances \cc{nextDiskEnd}, freezing the data to be logged, then waits
+for the logger to advance \cc{diskEnd} up to that point.  Committing a
+new multiwrite simply appends it at \cc{memEnd}.  Finally, on crash,
+an arbitrary suffix of the log from \cc{diskEnd} onwards is discarded.
+
+
+\paragraph{External abstract state: durable lower bound.}
+Although the details of the logical log are important for proving the
+\scc{wal} layer, the caller (i.e., the \scc{obj} layer) does not need
+to know about installation, group commit, etc. To abstract away these
+details, the \scc{wal} provides a simplified state as its interface,
+as shown in \autoref{fig:wal-spec}.  The simplified state consists of
+the same list of multiwrites, together with \cc{durable_lb}, which is
+a lower bound on what set of multiwrites will be preserved on crash.
+Using a lower bound instead of precisely exporting \cc{diskEnd} means
+that this abstract view does not need to change if the logger thread
+adds more multiwrites to disk in the background, and thus hides
+this concurrency.
+
+\begin{figure}[ht]
+\input{go-journal/code/walcrashspec}
+\vspace{-\baselineskip}
+\caption{Parts of the specification for the \scc{wal} interface.}
+\label{fig:wal-spec}
+\end{figure}
+
+
+\paragraph{Lock-free logging and installation.}
+For performance, \txn has dedicated threads that perform logging and
+installation.  However, these threads do not hold any locks while reading
+or writing to disk.  To allow these threads to run concurrently, \txn
+uses two separate header blocks, as shown in \autoref{fig:physlog}.
+One header block (owned by the installer thread) stores the start of
+the on-disk log, and another header block (owned by the logger thread)
+stores the end of the on-disk log.  This lets the installer and logger
+concurrently advance their pointers (\cc{memStart} and \cc{diskEnd}
+respectively) without locks.
+
+\begin{figure}
+    \centering
+    \input{go-journal/fig/physlog}
+    \caption{The physical write-ahead log.}
+    \label{fig:physlog}
+\end{figure}
+
+Although the logger and installer threads can perform lock-free disk
+writes, they must still coordinate with one another.  For example,
+the installer cannot run ahead of the logger thread, and the logger
+thread must coordinate with threads that are appending new multiwrites
+in memory. \txn's proof uses the notion of \emph{monotonic counters} to reason
+about the safety of the logger and installer's lock-free operations.
+
+The logger thread needs to check that \cc{memStart} is far enough along that the
+log will have space for the new multiwrite. The proof gets a \emph{lower bound}
+on the \cc{memStart} variable while holding a lock, which remains true even
+after releasing the lock. Even though \cc{memStart} might grow after the initial
+check, the log will only have more space and thus the multiwrite will still fit.
+
+The installer has a similar lock-free region that also reasons using a lower
+bound. The installer retrieves the updates from the current \cc{memStart} to
+\cc{diskEnd} in order to start installing them to disk. When the installer
+eventually trims the log, it needs to be sure not to advance beyond the current
+logger position, which the proof demonstrates using a lower bound on
+\cc{diskEnd} from when the logger initially started.
+
+\subsection{Logically atomic crash specifications}
+\label{s:proof:logatom}
+
+Throughout the \txn stack we specify internal layers using a transition-system
+specification, such as the examples illustrated in \autoref{fig:wal-spec} for
+the \scc{wal} layer. Perennial formalizes what it means for the code in a layer to
+implement a transition using Hoare triples in a style we call
+\emph{logically atomic crash specifications}. While the precise encoding
+involves some technical details of Iris, we explain here the intuition behind these
+specifications as well as why they are useful.
+
+As a motivating example, consider the moment when the logger thread commits a
+new batch of multiwrites to the physical log in order to advance the durable
+point \cc{diskEnd} in the logical log of the \scc{wal} layer. It does this by calling into the
+\cc{Append} method of the \scc{circular} layer, which appends to the small
+buffer of logged multiwrites. The code for \cc{Append} commits at some internal
+step when it writes the header block and makes the data valid, and it is at this
+instant that the logical log's \cc{diskEnd} should be incremented.
+How can we verify \cc{Append} in the \scc{circular} layer separately from the \scc{wal} layer,
+while still executing the right update in the logger proof?
+
+Logically atomic specifications achieve this separation by having the precondition to \cc{Append}
+take a logical \emph{callback}~\cite{jacobs:logatom}, which the proof promises to ``execute'' at the commit point.
+This callback is a Hoare triple of the form $\hoare{P}{\SKIP}{Q}$, where $P$ and $Q$ are later selected
+by the logger proof to update the \cc{diskEnd} ghost state of the logical log, as shown in \autoref{fig:circ-callback}.
+% The logger proof maintains a
+% ghost variable $\gamma \mapsto \cc{diskEnd}$, much like other points-to predicates,
+% but variable $\gamma$ exists only in the proof. It passes an update to this
+% variable
+% $\hoare{\gamma \mapsto \cc{diskEnd}}%
+% {\SKIP}%
+% {\gamma \mapsto (\cc{diskEnd} + \cc{len}(\cc{txns}))}$
+% as the callback, as illustrated in \autoref{fig:circ-callback}.
+%(we use the
+%shorthand $\gamma\ \cc{+=}\ \cc{len(txns)}$ for
+%space reasons).
+This
+specification for \cc{Append} provides modularity in that the \cc{Append} proof
+does not need to know about the logical log and its \cc{diskEnd}, and the logger
+proof does not need to worry about why \cc{Append} is atomic.  A key
+advance of Perennial's logically atomic crash specs lies in additionally capturing the
+crash behavior in this callback style, so as to enable a complete
+proof of crash safety across layers.
+
+\begin{figure}
+  \input{go-journal/fig/appendhocap}
+  \caption{Illustration of how the proof of \cc{Append} executes a logical
+callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)} to \cc{diskEnd}.}
+% $\gamma\ \cc{+=}\ \cc{len(txns)}$.
+% Note that the proof of
+% \cc{Append} does not need to know the details of what \textcolor[rgb]{0.35,
+% 0.35, 0.35}{cb} does.}
+  \label{fig:circ-callback}
+\end{figure}
+
+% \begin{figure}
+%   \includegraphics[width=\columnwidth]{drawn-diagrams/circ-callback.png}
+%   \caption{Illustration of how the proof of \cc{Append} executes a callback of
+%     ghost updates from the logger thread. Note that the proof of \cc{Append}
+%     does not need to know the details of what \cc{cb} does. \joe{make this figure}}
+%   \label{fig:circ-callback}
+% \end{figure}
+
+%  The proof separates verifying the
+% circular buffer that manipulates the on-disk header blocks and transactions (the
+% first 513 blocks in \autoref{fig:physlog}) from reasoning about the logger
+% thread.
+%
+%  Transition systems are useful as a specification because
+% they can precisely capture the behavior of even complex internal APIs like that
+% of the \scc{wal}, including crash behavior resulting from deferring logging and
+% the split \cc{ReadMem} and \cc{ReadInstalled} operations.
+%
+% Perennial formalizes what it means for the code of a layer to implement a transition
+% system by encoding the \emph{refinement} between the code and the transition
+% system within separation logic using Iris ghost state, a style we call
+% \emph{logically atomic crash specifications}.  Logically atomic crash triples
+% are important in Perennial for modularity. Transition systems are an expressive
+% specification, and we can use them to precisely express the behavior of even
+% complicated internal APIs with lots of concurrency.  The way refinement is
+% encoded in a logically atomic crash specification is to expose the abstract
+% state of a layer as a ghost variable which the calling code maintains.  Giving
+% the caller control using a ghost variable is a powerful technique in Iris, and
+% lets us express invariants that are maintained by upper layers \emph{without
+% lower layers being aware of these invariants}.
+%
+% For a concrete example, we describe how logically atomic crash specifications
+% help factor out a library for managing the on-disk circular buffer (the first
+% 513 blocks on disk in \autoref{fig:physlog}) in the \scc{wal}. This internal
+% layer handles just two operations: \cc{Append} writes updates to the buffer
+% atomically to log a new batch of transactions and \cc{Advance} trims from the
+% front of the buffer to make room for new updates after installing old ones.
+% These operations can be called concurrently by the logger and installer threads.
+% They behave like a queue of updates, which is updated atomically. Importantly
+% the circular buffer's state is durable, which is reflected by specifying that on
+% crash its abstract state is unaffected and proving that the queue can be
+% reconstructed based on the header blocks.
+%
+% The write-ahead log uses the circular buffer's atomic specification by relating
+% the buffer's queue to the logical write-ahead log seen in \autoref{fig:log}.
+% Slightly simplified, the invariant says that the data in the queue is exactly
+% the updates between \cc{memStart} and \cc{diskEnd}. More precisely during the
+% lock-free code in the installer the queue might have advanced beyond
+% \cc{memStart}: this is safe because in that case the invariant also says the
+% missing updates have already been installed. During the lock-free code in the
+% installer the queue might have the updates all the way to \cc{nextDiskEnd}: this
+% is safe because it persists more data than promised by \cc{diskEnd}, and as
+% explained the external abstraction of the \scc{wal} only promises a lower-bound
+% on durability, not precisely what is on disk.
+%
+% How does the proof of the \scc{wal} reason about calls to the circular buffer?
+% We illustrate this refinement reasoning for the specific case of the call to
+% \cc{Append} that logs a new batch of transactions.
+%
+% \includegraphics{drawn-diagrams/circ-hocap.png}
+%
+% In this diagram, the logger thread has called \cc{Append} with the teal updates.
+% The circular buffer at some point atomically commits the effect of the
+% \cc{Append} (at the point where it updates the logger header block), at which
+% point it transitions from the blue updates to the blue + teal updates. What the
+% specification allows the logger proof to do is simultaneously update ghost state
+% in the write-ahead log representing the logical write-ahead log. At this point
+% it is safe to advance the logical \cc{diskEnd} variable, since the teal updates
+% from the log are now durable. Eventually the logger thread will re-acquire the
+% lock and update the in-memory \cc{diskEnd} value and calls to \cc{Flush} will
+% know that these updates are durable.
+%
+% The key idea is that the write-ahead log has some invariant about what updates
+% are actually stored in the circular buffer that relates them to the updates in
+% the log and ensures that durable updates are in the circular buffer or are
+% installed. However, these details are unimporting to proving that the circular
+% buffer correctly and atomically writes updates to disk. Logically atomic crash
+% specifications separate the two proofs, simplifying the reasoning in both the
+% circular buffer and write-ahead log.
+
+% One way to think about this specification is that when calling a method in the
+% layer, the caller supplies a \emph{callback} function that takes two states that
+% are a valid transition of the transition system as input. The specification for
+% the method promises atomicity by guaranteeing to call the callback at a single
+% instant --- the commit point of the code --- and move the transition system
+% forward. Other than these callback functions, the code in the layer is not
+% allowed to affect the abstract state of the system since other effects might
+% break an invariant over the abstract state being maintained by the caller.
+%
+% \begin{figure}
+%   \[
+%     \hoare%
+%     {\begin{aligned}
+%        &\cc{layer_state}(\gamma) \sep\\
+%       &\quad(\forall \sigma, \sigma', r.\, \cc{allowed}(\cc{op}, \sigma, \sigma', r) \to\\
+%       &\quad\quad\gamma \mapsto \sigma \vs \gamma \mapsto \sigma' \sep Q(r))
+%      \end{aligned}}%
+%     {\cc{op}()}%
+%     {\Ret{r} Q(r)}
+%   \]
+%   \caption{The generic form of a logically atomic crash specification for an
+%     operation \cc{op}. The specification allows the caller to pick a
+%     postcondition $Q$; the operation promises to return a value that satisfies
+%     $Q$. The way the operation does so is to update a ghost variable $\gamma$, which
+%     $\cc{layer_state}(\gamma)$ asserts holds the abstract state of the layer
+%     (and that the layer has previously been initialized). It can only do so by
+%     calling the update in the precondition, which is an update from $\sigma$ to
+%     $\sigma'$ and $r$ that follows the transition system, represented by
+%     $\cc{allowed}(\cc{op}, \sigma, \sigma', r)$.}
+%   \label{fig:crash-hocap}
+% \end{figure}
+
+\subsection{Concurrency within a block (\scc{obj})}
+\label{s:proof:obj}
+
+\txn's \scc{obj} layer allows the caller to issue reads and writes that
+are smaller than a full block.  This finer granularity helps increase
+concurrency: for example, the NFS file server packs multiple inodes into
+a single disk block, and \scc{obj} allows threads to concurrently read
+and write multiple inodes even if they share a disk block.
+
+At commit time, \scc{obj}'s \cc{Commit} may need to perform an
+``installation read'' and read a full block, update the range that was
+modified by the caller as part of a journal operation, and write back the
+full block using the \scc{wal} layer.  To ensure correctness of this
+read-modify-write operation, \cc{Commit} uses a lock to serialize
+all commit operations.  However, \cc{Read} operations are lock-free:
+they can execute concurrently with one another and concurrently with
+\cc{Commit}.
+
+Lock-free reads pose a verification challenge because the disk
+block can be modified during the read.  Consider the example shown
+in \autoref{fig:txn-concur}, where a single disk block stores many
+inodes. Inode 1 initially contains the value A, while inode 4 contains B. Thread 1 is committing a write of B' to inode 4 in that block, while
+thread 2 concurrently reads inode 1 from the same block.  To read
+inode 1, thread 2 will read the entire block, and then copy out the part
+of the block corresponding to inode 1.  The block seen by
+thread 2 will differ depending on whether thread 1's write happens
+before or after the read, but inode 1 will contain A in either case.
+
+%\begin{figure}[ht]
+%\centering
+%\includegraphics{drawn-diagrams/sub-block-concurrency.png}
+%\caption{An example of a concurrent \cc{Read} and \cc{Commit}
+%  in the \scc{obj} layer.}
+%\label{fig:txn-concur}
+%\end{figure}
+
+\begin{figure}[ht]
+\centering
+\input{go-journal/fig/sub-block-concurrency}
+\vspace{-\baselineskip}
+\caption{An example of a concurrent \cc{Read} of inode 1 and \cc{Commit}
+  modifying inode 4
+  in the \scc{obj} layer.}
+\label{fig:txn-concur}
+\end{figure}
+
+Formally reasoning about the \cc{Read} operation requires the \scc{obj}
+layer to connect the $a \mapsto_{\mathit{op}} o$ predicate about a disk object
+(such as an inode) to the disk block containing that object at the
+\scc{wal} layer.  However, due to the race condition described above,
+the \cc{Read} implementation might observe many possible values of the
+containing disk block.  As a result, it is important for the \scc{obj}
+invariant to relate the $a \mapsto_{\mathit{op}} o$ predicate not just to
+the latest value of the containing block, but to all recent contents
+of that block.  Specifically, the invariant for $a \mapsto_{\mathit{op}} o$
+requires that all recent writes to $a$'s block (since \cc{Read(a)}
+started) must agree on the part of the block storing $o$.  As a result,
+regardless of what block happened to be read,
+the caller is guaranteed to see the correct object $o$.
+
+
+% \subsection{Lock-free reads in \scc{wal}}
+%
+% \autoref{fig:walread} shows the implementation of \cc{Read} in the
+% \scc{wal} layer.  This implementation does not hold any lock for the
+% duration of the read; instead, it uses a lock to check the in-memory state
+% (consisting of updates between \cc{memStart} and \cc{memEnd}), and, if
+% no in-memory updates match the address being read, \cc{Read} falls back
+% to reading from the installed area on disk.  As a result, other threads
+% can run between the call to \cc{ReadMem()} and \cc{ReadInstalled()}.
+% In particular, a thread running \scc{obj}'s \cc{Commit()} could write
+% to the same block that another thread is reading, if the two threads
+% are accessing different files, as shown in \autoref{fig:txn-concur}.
+%
+% \begin{figure}[ht]
+% \input{go-journal/code/walreads}
+% \caption{The implementation of \cc{Read} in the \scc{wal} layer.}
+% \label{fig:walread}
+% \end{figure}
+%
+% This poses a challenge in specifying the behavior of \cc{Read}, because
+% there are two possible commit points: either during \cc{ReadMem()} or
+% during \cc{ReadInstalled()} \tej{this is wrong --- the other commit point is
+% part of another thread's commit. Suppose $a$ is written and then $b$, and $a$
+% gets installed before the ReadInstalled runs. Then the value read is consistent
+% with any point after $a$ was written but before $b$. We simplify the situation
+% drastically by allowing ReadInstalled to return a non-deterministic value, so
+% its linearization point is within its code.}.  Fortunately, the
+% \scc{obj} layer maintains
+% a strong invariant about all of the possible blocks that \cc{Read} could
+% return (either from \cc{ReadMem()} or \cc{ReadInstalled()}.  As a result,
+% \scc{wal}'s \cc{Read()} does not provide a single atomic specification;
+% instead, it exposes both \cc{ReadMem()} and \cc{ReadInstalled()}, and
+% \scc{obj}'s \cc{Read()} uses its strong invariant to reason about the
+% result returned from either of the two read functions.
+%
+% Formally, we believe that proving the \scc{wal} \cc{Read()} operation to
+% be linearizable requires using \emph{prophecy variables}.  Perennial
+% does not support them, which forced us to adopt the non-atomic
+% specification described above.  Recent results on prophecy variables
+% in Iris~\cite{jung:prophecy} could be used to avoid such a non-atomic
+% specification for the \scc{wal} \cc{Read()}.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "paper.tex"
+%%% End:

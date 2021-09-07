@@ -1,0 +1,121 @@
+% Other name ideas:
+% CSI (Crash-Safe Iris)
+% CS-Iris
+% Cyris
+% Ciris
+
+% Rhizome
+% Scion
+% One of the so-called ``resurrection plants'', which can survive dehydration for long periods (astericus, lichen, ...)?
+% RootStock (a kind of rhizome, but a little less alien sounding. unfortunately, also the name of a cloud provider.)
+
+% Perennial
+% long form: Perennial Iris (though note that irises are perennial)
+
+% Succulent (David suggested Sucqulent, maybe Suqulent?)
+
+% Geophyte: "Plants that have an underground storage organ are called geophytes
+% in the Raunkiær plant life-form classification system. [2][3] Storage organs
+% often, but not always, act as perennating organs which enable plants to survive
+% adverse conditions (such as cold, excessive heat, lack of light or drought)."
+% (Wikipedia)
+
+%% abbreviations
+\newcommand{\txn}{GoJournal\xspace}
+\newcommand{\simplenfs}{SimpleNFS\xspace}
+\newcommand{\gnfs}{GoNFS\xspace}
+
+\newcommand{\fstar}{F${}^\star$\xspace}
+
+%% editing markup
+\newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
+\newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
+\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
+\newcommand{\tej}[1]{\insertnote{red}{TC}{#1}}
+\newcommand{\joe}[1]{\insertnote{red}{JDT}{#1}}
+\newcommand{\mfk}[1]{\insertnote{red}{MFK}{#1}}
+\newcommand{\ralf}[1]{\insertnote{red}{RJ}{#1}}
+%% for checking length without todos/notes
+%\renewcommand{\insertnote}[3]{}
+\newcommand{\todocite}[1]{\textcolor{red}{[cite #1]}}
+
+%% semantic formatting
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\parahdr}[1]{\noindent\textbf{#1}}
+\newcommand{\cc}[1]{\mbox{\smaller[0.5]\texttt{\detokenize{#1}}}}
+\newcommand{\scc}[1]{\mbox{\textsc{\detokenize{#1}}}}
+
+\newcommand{\loc}[1]{\num[group-separator={,},group-minimum-digits=4]{#1}}
+
+%% \theoremstyle{definition}
+%% \newtheorem{theorem}{Theorem}
+
+\newcommand{\sep}{*}
+\NewDocumentCommand \hoareC {m m m m}{
+  \curlybracket{#1}\spac #2 \spac \curlybracket{#3}\curlybracket{#4}%
+}
+
+\NewDocumentCommand \hoareCV {O{c} m m m m}{
+  {\begin{aligned}[#1]
+  &\curlybracket{#2} \\
+  &\quad{#3} \\
+  &\curlybracket{#4} \\
+  &\curlybracket{#5}
+  \end{aligned}}%
+}
+
+\newcommand{\SKIP}{\mathit{noop}}
+\renewcommand{\Ret}[1]{\text{\textbf{ret}}\,\, #1,\,}
+
+
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\dbltopfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\floatpagefraction}{0.9}
+\renewcommand{\dblfloatpagefraction}{0.9}
+\setcounter{topnumber}{10}
+\setcounter{bottomnumber}{10}
+\setcounter{totalnumber}{10}
+\setcounter{dbltopnumber}{10}
+
+\bibpunct[: ]{[}{]}{,}{n}{XXX}{XXX}
+
+% \newcommand{\circularLOC}{\loc{108}}
+% \newcommand{\circularLOP}{\loc{1911}}
+% \newcommand{\circularRatio}{18}
+%
+% \newcommand{\walLOC}{\loc{571}}
+% \newcommand{\walLOP}{\loc{12940}}
+% \newcommand{\walRatio}{23}
+%
+% % Use a different naming convention to avoid confusing txn layer with gotxn
+% \newcommand{\txnlayerLOC}{\loc{134}}
+% \newcommand{\txnlayerLOP}{\loc{2440}}
+% \newcommand{\txnlayerRatio}{18}
+%
+% \newcommand{\buftxnLOC}{\loc{117}}
+% \newcommand{\buftxnLOP}{\loc{1180}}
+% \newcommand{\sepbuftxnLOP}{\loc{1326}}
+% \newcommand{\allbuftxnRatio}{21}
+%
+% \newcommand{\lockmapLOC}{\loc{118}}
+% \newcommand{\lockmapLOP}{\loc{867}}
+% \newcommand{\lockmapRatio}{7}
+%
+% \newcommand{\miscLOC}{\loc{293}}
+% \newcommand{\miscLOP}{\loc{3785}}
+% \newcommand{\miscRatio}{13}
+%
+% GoJournal total
+\newcommand{\gotxnLOC}{\loc{1345}}
+\newcommand{\gotxnLOP}{\loc{25797}}
+% \newcommand{\gotxnRatio}{18}
+%
+% \newcommand{\gnfsLOC}{\loc{2941}}
+%
+\newcommand{\simplenfsLOC}{\loc{462}}
+\newcommand{\simplenfsLOP}{\loc{3749}}
+\newcommand{\simplenfsRatio}{8}
+%
+\newcommand{\simplenfsCrashLOC}{\loc{44}}

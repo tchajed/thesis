@@ -1,0 +1,212 @@
+\section{System design}
+\label{s:system}
+
+The verified artifact of this paper is \txn, a Go package that gives clients an
+abstraction of a disk with crash-safe writes. This section aims to convey what
+the journal is, why its implementation deserves verification, and how systems can be built
+using it. First, \autoref{s:system:api} explains how a developer uses
+\txn to write a concurrent storage system, informally laying out what the
+package's requirements and guarantees are. Then,
+\autoref{s:system:impl} explains how the journal is implemented.
+% Finally, \autoref{sec:overview} lays out the verification methodology for
+% \txn and applications built on top of it.
+
+% Later sections
+% give the formal specification~(\autoref{s:design}) and interesting details of
+% the proof~(\autoref{s:proof}).
+
+\subsection{Programming with \txn}
+\label{s:system:api}
+
+Developers use the journal to turn several storage operations into an atomic journal operation that commits to disk using the \txn
+interface listed in \autoref{fig:buftxn}.  \cc{Begin} starts a
+journal operation, returning a \cc{*Op} object, which keeps track of the
+objects read or written in the operation.  An object is addressed by the
+\cc{Addr} struct, which names a block address and bit offset within the block. \simplenfs
+has objects for on-disk blocks and on-disk inodes, while the
+complete NFS server also uses objects for individual allocator bits.
+
+\cc{ReadBuf} reads an object into an in-memory \cc{*Buf} struct, returning the latest value of the
+object within this journal operation.  If the operation hasn't read the
+object yet, it reads the latest value from disk (or from a recently
+committed operation).  A journal operation can modify the returned buffer in place and
+then mark the buffer as dirty with \cc{SetDirty}. To overwrite an object without
+reading it the application can call \cc{OverWrite}. When the operation is
+fully prepared, the application commits it atomically using \cc{Commit}; setting
+\cc{wait=true} additionally forces the journal to flush the results to disk.
+In either case the writes in the operation appear together on disk or not at
+all even if the system crashes. The application can also call \cc{Flush} to
+make the journal persist several committed but unstable operations to disk.
+
+While \txn provides crash-safe atomic updates to disk with this interface, it is the developer's job
+to provide concurrency control to prevent concurrent operations from manipulating
+the same on-disk objects. In a file system a common strategy for concurrency
+control is to use a per-file lock that protects both the file metadata and any
+data blocks associated with the file, and this strategy is the one
+used by \gnfs and \simplenfs.
+To make it easier for a file system to maintain these locks,
+\txn includes a lockmap library that behaves as if it were a large array of
+locks but with a more memory-efficient implementation; the
+Guava Striped documentation describes the idea well~\cite{guava-striped}.
+%which in \gnfs
+%and \simplenfs is used to lock files by inode number.
+
+
+\begin{figure}
+  \input{go-journal/code/nfswrite}
+  \vspace{-\baselineskip}
+  \caption{RPC handler for NFS \scc{write} showing locking and committing a
+    journal operation.}
+  \label{fig:nfswrite}
+\end{figure}
+
+% \begin{figure}
+%   \input{go-journal/code/nfswritecommit}
+%   \vspace{-\baselineskip}
+%   \caption{\cc{NFS3_WRITE_locked} runs with the file locked.}
+%   \label{fig:writecommit}
+% \end{figure}
+
+%\begin{figure}
+%  \input{go-journal/code/nfswritewp}
+%  \vspace{-\baselineskip}
+%  \caption{Implementation of the \scc{write} operation.}
+%  \label{fig:writewp}
+%\end{figure}
+
+\begin{figure}
+  \input{go-journal/code/write}
+  \vspace{-\baselineskip}
+  \caption{\cc{NFS3_WRITE_op} prepares a journal operation \cc{op} for the \scc{write}
+    RPC.}
+  \label{fig:write}
+\end{figure}
+
+\autoref{fig:nfswrite} and \autoref{fig:write} show how \simplenfs
+uses the \txn API and the lockmap.  The server runs each NFS request in a
+separate Go thread running a single journal operation. \autoref{fig:nfswrite}
+shows the RPC handler for an NFS \scc{write} RPC, in particular acquiring a
+per-inode lock (lines 6 and 8) and preparing an operation starting at line 14.
+
+The handler is split into several nested functions for ease of verification.
+\autoref{fig:write} shows how the \scc{write} RPC's journal operation of type
+\cc{*Op} is prepared. For example, lines 18--21 read and modify the block data,
+while line 30 modifies the inode. The combination of per-file locking
+and using the journal for disk access frees
+the developer from thinking about either concurrency or crashes during the
+entire \cc{NFS3_WRITE_op} code, which we will show is also the case in the proof using Perennial's
+specification techniques in \autoref{s:design}.
+% The reason that \cc{WriteInode} is a separate function is because other RPC
+% handlers may call it (e.g., \scc{setattr})
+
+For ease of explanation, \simplenfs has the limitation that
+each file consists of only one block, but note that \scc{write}
+modifies two on-disk objects: the inode and the block owned by
+the file; the two together must be written atomically, which the proof shows
+using the \txn specification.  Also note that there is no explicit
+locking of blocks; ownership of the data block is implicit because a block can belong
+to only one file.
+% In the proof, this is captured by the per-file invariant (\autoref{s:design:rep}).
+
+\subsection{\txn implementation}
+\label{s:system:impl}
+
+\begin{figure}
+  \centering
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Layer} & \textbf{Description} \\
+    \midrule
+    \scc{jrnl} & In-memory object operations \\
+    \scc{obj} & Journaling sub-block writes \\
+    \scc{wal} & Whole-block write-ahead logging \\
+    \scc{circular} & Circular log structure \\
+    \midrule
+  \end{tabular}
+  \caption{\txn layers.}
+  \label{fig:layers}
+\end{figure}
+
+The journal is structured into several layers, as shown in \autoref{fig:layers}.
+At a high level, the system is split into two halves. The low-level half is a
+write-ahead log that behaves like a disk with an atomic multiwrite operation,
+which appears to update multiple disk blocks simultaneously even if the system
+crashes. The upper half, called the object system,
+allows callers to perform read and write operations on objects
+smaller than a block (``sub-block'' objects).  Writes are
+buffered in memory until the caller chooses to commit, at which point a multiwrite to the
+write-ahead log commits the writes to disk.
+
+The write-ahead log is implemented by organizing the disk into a small,
+fixed-size circular buffer and a remaining data region. Data is first atomically
+\emph{logged} to the circular buffer and then eventually \emph{installed}
+to the data region, to free space in the circular buffer. Reads first go through
+the circular buffer (which is cached for efficiency) and then access the data
+region.
+
+The object system maintains a list of buffers of data read or written by each journal operation.
+Reads first check the write-ahead log's cache since
+they must observe committed operations. To commit, the object
+layer gathers all the dirty buffers and submits them as a multiwrite to the
+write-ahead log. To allow reading and writing objects that are smaller than a
+block, the object layer assembles these into block writes by doing a
+read-modify-write sequence.
+%if a block isn't completely overwritten within an operation.
+
+Because disk writes are slow, for good performance the journal executes many
+tasks in parallel. Committing new journal operations in memory, logging operations
+from memory to disk, waiting for operations to be made durable, and
+installing logged writes all happen concurrently.  Concurrency ensures that
+in-memory operations
+need not wait for any in-flight disk reads or writes, and that many
+disk reads and writes can happen at the same time.  Finally, to reduce the
+number of disk writes, the write-ahead log implements two optimizations.
+Multiwrites are combined and written
+together (``group commit''), and if they update the same disk
+block multiple times, only the most recent update of that disk block is
+written to the log (``absorption''). Concurrency makes these optimizations
+useful even for synchronous operations, which can be committed together and
+absorbed if they are issued concurrently.
+
+Concurrency in the write-ahead log complicates not just its internals but also
+reasoning about the multiwrite abstraction built on top. One difficulty is that
+reading requires checking the log's in-memory cache and then falling back to the disk,
+but the disk read happens without a lock. If a multiwrite commits after the read
+misses in the cache, then the disk read will not observe the latest value. The
+write-ahead log specification specifies that reading the installed value might return an
+old view of the disk, and the object layer can handle this weak specification with
+an invariant that guarantees the object being read has not been modified since
+that old view.
+
+The object layer implements sub-block access on top of the write-ahead
+log's block-level multiwrites. Objects accessed by an operation must be locked,
+so supporting fine-grained access is necessary to allow operations to run
+concurrently even if they happen to access the same disk block. For example, a
+file system might pack inodes into a block, and locking an inode should not
+prevent concurrent operations for other inodes in the same block. The
+object-layer implementation is able to execute reads and writes during an
+operation without any additional locks, but something more is needed to commit.
+Imagine a situation where between reading some disk block and writing it an
+unrelated object was modified in the same block; committing the modified block
+would overwrite the concurrent modification, losing data. The code addresses
+this with a global commit lock that prevents concurrent modifications while
+reading the blocks to be written.
+
+% The implementation of the write-ahead log and transaction management is
+% complicated primarily because of a highly concurrent implementation. Without
+% concurrency, the implementation and specification
+% would be similar to the logging system of FSCQ, but a file-system built on top
+% would also get little performance benefit from multiple cores. In the evaluation
+% we show this loss of performance in a version of \txn's code with its
+% concurrency disabled \tej{forward reference and maybe some numbers}.
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "paper.tex"
+%%% End:
+
+
+\section{Verification overview}
+\label{sec:overview}
+\input{go-journal/overview}

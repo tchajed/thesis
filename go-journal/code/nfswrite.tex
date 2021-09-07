@@ -1,0 +1,26 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1,codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0.2in]
+\PY{k+kd}{func} \PY{n+nx}{NFS3\PYZus{}WRITE}\PY{p}{(}\PY{n+nx}{args} \PY{n+nx}{WRITE3args}\PY{p}{)} \PY{n+nx}{WRITE3res} \PY{p}{\PYZob{}}
+  \PY{n+nx}{inum} \PY{o}{:=} \PY{n+nx}{fh2ino}\PY{p}{(}\PY{n+nx}{args}\PY{p}{.}\PY{n+nx}{File}\PY{p}{)}
+  \PY{k}{if} \PY{p}{!}\PY{n+nx}{validInum}\PY{p}{(}\PY{n+nx}{inum}\PY{p}{)} \PY{p}{\PYZob{}}
+    \PY{k}{return} \PY{n+nx}{WRITE3res}\PY{p}{\PYZob{}}\PY{n+nx}{Status}\PY{p}{:} \PY{n+nx}{NFS3ERR\PYZus{}INVAL}\PY{p}{\PYZcb{}}
+  \PY{p}{\PYZcb{}}
+  \PY{n+nx}{inode\PYZus{}locks}\PY{p}{.}\PY{n+nx}{Acquire}\PY{p}{(}\PY{n+nx}{inum}\PY{p}{)}
+  \PY{n+nx}{reply} \PY{o}{:=} \PY{n+nx}{NFS3\PYZus{}WRITE\PYZus{}locked}\PY{p}{(}\PY{n+nx}{args}\PY{p}{,} \PY{n+nx}{inum}\PY{p}{)}
+  \PY{n+nx}{inode\PYZus{}locks}\PY{p}{.}\PY{n+nx}{Release}\PY{p}{(}\PY{n+nx}{inum}\PY{p}{)}
+  \PY{k}{return} \PY{n+nx}{reply}
+\PY{p}{\PYZcb{}}
+
+\PY{k+kd}{func} \PY{n+nx}{NFS3\PYZus{}WRITE\PYZus{}locked}\PY{p}{(}\PY{n+nx}{args} \PY{n+nx}{WRITE3args}\PY{p}{,}
+    \PY{n+nx}{inum} \PY{n+nx}{Inum}\PY{p}{)} \PY{p}{(}\PY{n+nx}{reply} \PY{n+nx}{WRITE3res}\PY{p}{)} \PY{p}{\PYZob{}}
+  \PY{n+nx}{op} \PY{o}{:=} \PY{n+nx}{Begin}\PY{p}{(}\PY{p}{)}
+  \PY{k}{if} \PY{p}{!}\PY{n+nx}{NFS3\PYZus{}WRITE\PYZus{}op}\PY{p}{(}\PY{n+nx}{op}\PY{p}{,} \PY{n+nx}{args}\PY{p}{,} \PY{n+nx}{inum}\PY{p}{,} \PY{o}{\PYZam{}}\PY{n+nx}{reply}\PY{p}{)} \PY{p}{\PYZob{}}
+    \PY{k}{return}
+  \PY{p}{\PYZcb{}}
+  \PY{k}{if} \PY{n+nx}{txn}\PY{p}{.}\PY{n+nx}{Commit}\PY{p}{(}\PY{k+kc}{true}\PY{p}{)} \PY{p}{\PYZob{}}
+    \PY{n+nx}{reply}\PY{p}{.}\PY{n+nx}{Status} \PY{p}{=} \PY{n+nx}{NFS3\PYZus{}OK}
+  \PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+    \PY{n+nx}{reply}\PY{p}{.}\PY{n+nx}{Status} \PY{p}{=} \PY{n+nx}{NFS3ERR\PYZus{}SERVERFAULT}
+  \PY{p}{\PYZcb{}}
+  \PY{k}{return}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}

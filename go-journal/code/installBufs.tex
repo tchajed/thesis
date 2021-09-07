@@ -1,0 +1,27 @@
+\begin{Verbatim}[commandchars=\\\{\},numbers=left,firstnumber=1,stepnumber=1,codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0.2in]
+\PY{k+kd}{func} \PY{p}{(}\PY{n+nx}{op} \PY{o}{*}\PY{n+nx}{Op}\PY{p}{)} \PY{n+nx}{installBufsMap}\PY{p}{(}\PY{n+nx}{bufs} \PY{p}{[}\PY{p}{]}\PY{o}{*}\PY{n+nx}{Buf}\PY{p}{)} \PY{k+kd}{map}\PY{p}{[}\PY{n+nx}{Bnum}\PY{p}{]}\PY{n+nx}{Block} \PY{p}{\PYZob{}}
+  \PY{n+nx}{blks} \PY{o}{:=} \PY{n+nb}{make}\PY{p}{(}\PY{k+kd}{map}\PY{p}{[}\PY{n+nx}{Bnum}\PY{p}{]}\PY{n+nx}{Block}\PY{p}{)}
+
+  \PY{k}{for} \PY{n+nx}{\PYZus{}}\PY{p}{,} \PY{n+nx}{b} \PY{o}{:=} \PY{k}{range} \PY{n+nx}{bufs} \PY{p}{\PYZob{}}
+    \PY{c+c1}{// no need to read the old block if writing a whole block}
+    \PY{k}{if} \PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Sz} \PY{o}{==} \PY{n+nx}{NBITBLOCK} \PY{p}{\PYZob{}}
+      \PY{n+nx}{blks}\PY{p}{[}\PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Addr}\PY{p}{.}\PY{n+nx}{Blkno}\PY{p}{]} \PY{p}{=} \PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Data}
+    \PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+      \PY{k+kd}{var} \PY{n+nx}{blk} \PY{n+nx}{Block}
+      \PY{n+nx}{mapblk}\PY{p}{,} \PY{n+nx}{ok} \PY{o}{:=} \PY{n+nx}{blks}\PY{p}{[}\PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Addr}\PY{p}{.}\PY{n+nx}{Blkno}\PY{p}{]}
+      \PY{k}{if} \PY{n+nx}{ok} \PY{p}{\PYZob{}}
+        \PY{c+c1}{// we\PYZsq{}ve already read this block, update it again in\PYZhy{}place}
+        \PY{n+nx}{blk} \PY{p}{=} \PY{n+nx}{mapblk}
+      \PY{p}{\PYZcb{}} \PY{k}{else} \PY{p}{\PYZob{}}
+        \PY{c+c1}{// read this address for the first time and cache it}
+        \PY{n+nx}{blk} \PY{p}{=} \PY{n+nx}{op}\PY{p}{.}\PY{n+nx}{log}\PY{p}{.}\PY{n+nx}{Read}\PY{p}{(}\PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Addr}\PY{p}{.}\PY{n+nx}{Blkno}\PY{p}{)}
+        \PY{n+nx}{blks}\PY{p}{[}\PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Addr}\PY{p}{.}\PY{n+nx}{Blkno}\PY{p}{]} \PY{p}{=} \PY{n+nx}{blk}
+      \PY{p}{\PYZcb{}}
+      \PY{c+c1}{// write the data in b to the correct offset in blk}
+      \PY{n+nx}{b}\PY{p}{.}\PY{n+nx}{Install}\PY{p}{(}\PY{n+nx}{blk}\PY{p}{)}
+    \PY{p}{\PYZcb{}}
+  \PY{p}{\PYZcb{}}
+
+  \PY{k}{return} \PY{n+nx}{blks}
+\PY{p}{\PYZcb{}}
+\end{Verbatim}

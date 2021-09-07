@@ -52,14 +52,45 @@
 % for \ifoptionfinal
 \usepackage{ifdraft}
 
+% for nice tables
+\usepackage{booktabs}
+\usepackage{multirow}
+
+% \xspace
+\usepackage{xspace}
+
 \usepackage[breaklinks, pdfborder={0 0 0}]{hyperref}
 \usepackage[nameinlink]{cleveref}
+
+\usepackage{iris}
+\usepackage{amsmath}
+\usepackage{amssymb}
 
 % for \num, used in \loc macro
 \usepackage[group-separator={,}]{siunitx}
 
+% some sanity for special characters
+\usepackage[utf8]{inputenc}
+\input{glyphtounicode}
+\pdfgentounicode=1
+
 % generate synctex output for inverse search
 \synctex=1
+
+%% GoJournal stuff
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage{tikz}
+\usetikzlibrary{arrows,arrows.meta, shapes.geometric,decorations.pathreplacing,calc,positioning,matrix,tikzmark}
+
+\DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
+% manually-generated code listings
+\input{go-journal/code/fmt.tex}
+
+% unicode symbols in Coq code
+\DeclareUnicodeCharacter{03C3}{$\sigma$}
+\DeclareUnicodeCharacter{2264}{$\leq$}
+%% end GoJournal
 
 % do not reset page numbers at \mainmatter
 \let\mainmatterorig\mainmatter
@@ -142,21 +173,21 @@ paper~\cite{chajed:gojournal}.
 \label{sec:related}
 \input{02-related-work.tex}
 
-\chapter{DaisyNFS}%
-\label{sec:daisy-nfs}
-\input{06-daisy-nfs.tex}
-
 \chapter{Goose}%
 \label{sec:goose}
 \input{03-goose.tex}
 
-\chapter{Perennial}%
-\label{sec:perennial}
-\input{04-perennial.tex}
+%\chapter{Perennial}%
+%\label{sec:perennial}
+%\input{04-perennial.tex}
 
 \chapter{Transaction system}%
 \label{sec:txn}
 \input{05-txn.tex}
+
+\chapter{DaisyNFS}%
+\label{sec:daisy-nfs}
+\input{06-daisy-nfs.tex}
 
 \chapter{Conclusion}%
 \label{sec:conclusion}

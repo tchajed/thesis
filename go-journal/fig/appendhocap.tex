@@ -1,0 +1,72 @@
+% \begin{tikzpicture}[remember picture, >=latex]
+%   \draw node (append) [label=above:{Append proof}]{
+%     \begin{minipage}{0.3\textwidth}
+%    \begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0in]
+% \PY{k+kd}{func} \PY{n+nx}{Append}\PY{p}{(}\PY{n+nx}{txns}\PY{p}{)} \PY{p}{\PYZob{}}
+%   \PY{c+c1}{// write data}
+%   \PY{n+nx}{hdr} \PY{o}{:=} \PY{o}{...} \PY{c+c1}{// prep header}
+%   \PY{n+nx}{disk}\PY{p}{.}\PY{n+nx}{Write}\PY{p}{(}\PY{n+nx}{LOGHDR}\PY{p}{,} \PY{n+nx}{hdr}\PY{p}{)\tikzmark{write}}
+%   \PY{o}{...}
+% \PY{p}{\PYZcb{}}
+%    \end{Verbatim}
+%    \end{minipage}};
+% 
+%   \draw node (logger) [right=4cm of append.north, label=above:{Logger proof}, anchor=north] {
+%     \begin{minipage}{0.1\textwidth}
+%    \begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,xleftmargin=0in]
+% 
+% 
+% \PY{o}{...}
+% \PY{n+nx}{\tikzmark{append}Append(txns)}
+% \PY{o}{...}
+%         \end{Verbatim}
+%     \end{minipage}};
+% 
+%   \tikzstyle{edge}=[->,thick];
+%   \draw [edge, color=black, bend right] (pic cs:append) to (pic cs:write);
+%   \draw [edge, color=black, bend right] (pic cs:write) to (pic cs:append);
+% \end{tikzpicture}
+
+\begin{tikzpicture}[remember picture, >=latex]
+  \draw node (append) [label=above:{Append proof in \scc{circular}}]{
+    \begin{minipage}{0.3\textwidth}
+   \begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0in]
+\PY{k+kd}{func} \PY{n+nx}{Append}\PY{p}{(}\PY{n+nx}{txns, }\PY{pf}{$\{P\}\SKIP\{Q\}$}\PY{p}{)} \PY{p}{\PYZob{}}
+ \PY{c+c1}{... // write data}
+ \PY{n+nx}{hdr} \PY{o}{:=} \PY{o}{...}\PY{c+c1}{}
+ \PY{n+nx}{disk}\PY{p}{.}\PY{n+nx}{Write}\PY{p}{(}\PY{n+nx}{LOGHDR}\PY{p}{,} \PY{n+nx}{hdr}\PY{p}{)}\tikzmark{write2}
+ \PY{o}{...}
+\PY{p}{\PYZcb{}}
+   \end{Verbatim}
+   \end{minipage}};
+
+  \coordinate (pt) at (pic cs:write2) {};
+  \draw node (logger) [right=4.25cm of append.north, label=above:{Logger proof in \scc{wal}}, anchor=north] {};
+  \draw node (cbcall) [right=-.1cm of pt, yshift=.5ex,text width=1.5cm,align=center] {use \\ $\textcolor[rgb]{0.35,0.35,0.35}{\{P\}\SKIP\{Q\}}$};
+  \draw node (cbcode) [right=1.75cm of pt, yshift=.5ex] {%
+\textcolor[rgb]{0.35,0.35,0.35}{$\cc{diskEnd} \cc{+=}\ \cc{len(txns)}$}
+% \draw node (cbcode) [right=1.95cm of pt, yshift=-0ex, align=left] {%
+%   \textcolor[rgb]{0.35,0.35,0.35}{$\begin{aligned}P :=&  \gamma \mapsto \cc{diskEnd} \\
+%   Q :=& \gamma \mapsto \cc{diskEnd} \\ &\ \ \ \phantom{} + \cc{len}(\cc{txns})
+%      \end{aligned}$}
+%   \textcolor[rgb]{0.35,0.35,0.35}{$P :=  \gamma \mapsto \cc{diskEnd}$} \\
+%   \textcolor[rgb]{0.35,0.35,0.35}{$\begin{aligned}& Q := \\ & \qquad {\gamma \mapsto
+%         \cc{diskEnd} + \cc{len}(\cc{txns})}
+%      \end{aligned}$}
+%$\hoareV{\gamma \mapsto \cc{diskEnd}}%
+%{\SKIP}%
+%{\gamma \mapsto \left(\begin{aligned}
+%    &\cc{diskEnd} + \phantom{} \\
+%    &\cc{len}(\cc{txns})
+%\end{aligned}\right)}$
+};
+
+  \tikzstyle{edge}=[->,thick];
+  \draw [edge, color=black, bend left, transform canvas={yshift=1.2em}] (pt) to (cbcode.west);
+  \draw [edge, color=black, bend left, transform canvas={yshift=-1.1em}] (cbcode.west) to (pt);
+\end{tikzpicture}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "paper.tex"
+%%% End:
