@@ -18,11 +18,14 @@
   minbibnames=3,
   maxbibnames=99]{biblatex}
 \addbibresource{n-str,paper,n,n-conf}
-\newcommand{\proposaldate}{September 6, 2021}
 
+\def\submissiondate{September 10, 2021}
+\def\completiondate{November 2021}
 
 \usepackage{relsize}
 \renewcommand{\ttdefault}{pxtt}
+% since cmds renews it, expecting it from iris.sty
+\newcommand{\Ret}[1]{}
 \input{cmds}
 
 \newcommand{\thetitle}{Verifying a concurrent file system with sequential proofs}
@@ -35,17 +38,12 @@
 \markboth{{\sc thesis proposal}}{{\sc thesis proposal}}
 \def\title{\thetitle}
 \def\author{Tej Chajed}
-\def\addrone{45 Hayward St., apt 2826}
-\def\addrtwo{Cambridge, MA 02142}
 
 \def\degree{Doctor of Philosophy}
 %% Added \deptname for PhD proposals in other fields.
 %% Krishna Sethuraman (1990)
 \def\deptname{Electrical Engineering \\ and Computer Science}
 \def\laboratory{Computer Science and Artificial Intelligence Laboratory}
-
-\def\submissiondate{\proposaldate}
-\def\completiondate{October 2021}
 
 \def\supervisor{Professor Frans Kaashoek}
 \def\supertitleone{Professor of Computer Science}
