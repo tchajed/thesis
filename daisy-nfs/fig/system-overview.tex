@@ -1,0 +1,32 @@
+\begin{tikzpicture}[>=latex, node distance=1.25cm]
+
+ \tikzset{
+    genericnode/.style={rectangle,draw,minimum width=2cm, minimum height=.85cm, align=center,},
+    layer/.style={
+      genericnode,
+      alias=genericnode,% <- alias added
+      label={[anchor=south west,shift={(genericnode.north west)},inner sep=2pt]{\tiny #1}}% position the label using the alias
+    }}
+
+%\tikzstyle{layer}=[rectangle, draw, minimum width=2cm, minimum height=.85cm, align=center];
+\tikzstyle{genlayer}=[dashed, layer={}];
+\tikzstyle{edge}=[->,thick];
+
+\draw node (dispatch) [layer=Go] {Dispatch Loop};
+\draw node (goout) [genlayer,below of=dispatch] {Go output};
+\draw node (txn) [layer=Go,below of=goout] {Txn System};
+
+\draw node (coq) [left=1.5cm of txn, align=center] {Verification \\ in Perennial};
+\draw node (dafny) [left=1.25cm of goout, layer=Dafny] {File-system \\ Operations};
+
+\draw node (out) [below=1cm of txn] {\sys Library};
+
+\draw [thick] (dispatch.south) -- (goout.north);
+\draw [thick] (goout.south) -- (txn.north);
+\draw [edge] (txn.south) -- node[right] {\texttt{go build}} (out.north);
+\draw [edge] (txn.west) -- (coq.east);
+
+\draw [edge] (dafny.east) -- node[above] {\texttt{dafny}} (goout.west);
+
+
+\end{tikzpicture}

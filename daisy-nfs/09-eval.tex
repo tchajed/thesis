@@ -1,0 +1,195 @@
+\section{Evaluation}
+\label{sec:eval}
+
+In this section we evaluate \sys along the dimensions of performance,
+correctness, and functionality.
+
+\subsection{Performance}
+\label{sec:eval:bench}
+
+To evaluate the performance of \sys, we ran three benchmarks: the LFS smallfile
+and largefile benchmarks, and a development workload that consists of \cc{git
+clone} from a local repository followed by running \cc{make}. These are the same
+benchmarks used by DFSCQ~\cite{chen:dfscq} (a state-of-the art sequential
+verified file system) and for an unverified NFS server implemented on top of
+GoJournal~\cite{chajed:gojournal}. As a baseline, this evaluation uses a Linux
+NFS server exporting an ext4 file system mounted with \cc{data=journal} mode.
+The NFS server lets us compare fairly since both go through the Linux NFS client
+and use the same underlying protocol. Using \cc{data=journal} forces all data to
+go through the journal and disables log-bypass writes, which ensures that
+ext4 and \sys both guarantee NFS RPCs are committed durably when they return. In
+the default \cc{data=ordered} mode Linux achieves better performance but can
+lose recently written data if the system crashes.
+
+All of these benchmarks were run using Linux~5.11.0 and Go~1.17.1 on an Amazon
+EC2 i3.metal instance, which has 72 cores, 512~GB of RAM, and a local 1.9~TB
+NVMe SSD.\@ To reduce variability we limit the experiment to a single 36-core
+socket, disable turbo boost, and disable processor sleep states; the coefficient
+of variation for all experiments is under 5\% so we omit error bars for visual
+clarity.
+
+%% cpupower frequency-set -g performance
+%% threads=32 in the [nfsd] section of /etc/nfs.conf
+
+%% SINGLE-CORE EXPERIMENTS:
+%%   for n in $(seq 8 15) $(seq 24 31); do echo 0 > /sys/devices/system/cpu/cpu$n/online; done
+
+\begin{figure}
+  \includegraphics{daisy-nfs/fig/bench.pdf}
+  \caption{Performance of Linux NFS and DaisyNFS for \cc{smallfile},
+    \cc{largefile}, and \cc{app} workloads. DaisyNFS achieves comparable
+    performance to ext4 in \cc{data=journal} mode.}
+  \label{fig:eval:bench}
+\end{figure}
+
+The results are shown in \autoref{fig:eval:bench}. DaisyNFS gets about the same
+throughput as Linux on the smallfile benchmark, which is intended to
+be metadata-heavy. The smallfile benchmark repeatedly creates a file,
+writes 100 bytes to it and syncs the file, then deletes it. For both file
+systems, the throughput of the smallfile benchmark increases with the
+number of benchmark threads.
+
+DaisyNFS gets 96\% the throughput of Linux on the largefile benchmark, which is
+intended to measure bulk data writes. Note that in this benchmark ext4 would be
+significantly faster in \cc{data=ordered} mode due to no longer writing all data
+through the journal; with that option it can achieve closer to 500~MB/s even over
+NFS.\@ The largefile benchmark creates a 100~MB file by appending repeatedly, then
+syncs it. The Linux NFS client buffers the entire append process until the final
+sync, at which point it issues the writes in many chunks in parallel. This
+benchmark is challenging to support efficiently because the writes at the NFS
+server do not come in order, so some are past the end of the file. The semantics
+of such a write are to fill the gap with zeros, but both \sys and Linux get good
+performance despite this because they implicitly encode those zeros without even
+allocating a block. \sys gets comparable performance on this benchmark because
+GoJournal is good at handling concurrent synchronous writes, whereas Linux
+generally gets good performance by taking advantage of the weaker guarantees of
+\cc{data=ordered} mode.
+
+DaisyNFS achieves good performance on the app workload, which consists of running
+\cc{git clone} on the xv6 repo followed by \cc{make}. xv6 is an operating
+system, so building it requires running the usual development tools---gcc, ld,
+ar---but also running dd to generate a kernel image. Builds take about 3s,
+which are reported as a throughput number so higher is better.
+
+\subsection{Scalability}
+\label{sec:eval:scale}
+
+DaisynFS executes NFS operations concurrently to achieve better performance with
+multiple cores. The transaction system is built on GoJournal, which already
+demonstrated scalability. Here we report a similar experiment to demonstrate
+that DaisynFS can take advantage of GoJournal's scalability, after accounting for
+the transaction system's two-phase locking and any overhead added by the
+transactions themselves. The benchmark used is the smallfile benchmark from
+\autoref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
+on an SSD, other threads have a chance to prepare transactions while the
+journal is committing to disk. The SSD used is an KXG60PNV1T02 NVMe-attached
+1~TB SSD.
+
+\begin{figure}
+  \includegraphics{daisy-nfs/fig/scale.pdf}
+  \caption{Combined throughput of the \cc{smallfile} microbenchmark running on
+    an SSD while
+    varying the number of concurrent clients. \sys's performance scales with the
+    number of cores similar to ext4; both eventually saturate the disk and scale
+    sub-linearly.}
+  \label{fig:eval:scale}
+\end{figure}
+
+The results are shown in \autoref{fig:eval:scale}. The graph shows that \sys
+achieves both good absolute performance and gets higher throughput with more
+clients, comparable to the scalability of the Linux NFS server.
+DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
+installation of writes into disk blocks at commit time.
+
+
+\subsection{TCB discussion}
+
+It is worth noting that while \sys is a verified NFS server, we demonstrate its
+functionality and performance using the Linux file-system client. For example,
+the largefile benchmark issues appends to the Linux client, but the server sees
+parallel writes, which do not have the same crash-safety guarantees; the
+behavior of the client is out of scope for our verification. Similarly, we trust
+the state-machine model of the NFS protocol in Dafny.
+
+For the NFS server to meet its specification, we trust that the Dafny code is a
+``safe'' use of the transaction-system API as formally specified in Coq. Part of
+this safety is achieved with a manual audit, and part enforced by preconditions,
+so we trust that the preconditions in Dafny actually enforce the requirements of
+the Coq proof.
+% Finally, we trust our execution model: the user needs to run
+% initialization from an empty disk, run recovery after each boot, and the disk
+% should preserve all data written.
+
+\subsection{Testing the specification}
+
+While verification proves the implementation meets the specification, we also
+want confidence that the specification delivers a useful system that is
+compatible with existing clients. To evaluate the file system we mounted it
+using the Linux NFS client and ran the fsstress and fsx-linux tests, two suites
+used for testing the Linux kernel. In order to look for bugs in crash safety and
+recovery, we also ran CrashMonkey~\cite{mohan:crashmonkey}, which found no bugs
+in 2-operation tests after running for 24 hours.
+
+As a sanity check on the transaction system, we fuzzed the interface presented
+to Dafny using a test harness capable of performing arbitrary reads, writes and
+commits while following the transaction system's preconditions. The test checks
+that the transaction system does not crash and returns the correct data on read.
+The fuzzing did generate complex inputs with multiple chained operations but did
+not find any bugs, but we note that our fuzzing is limited to
+single-threaded and crash-free behavior.
+
+\subsection{Incremental improvements}
+\label{sec:eval:incremental}
+
+\begin{figure}
+  \begin{center}
+\begin{tabular}{lrr}
+  \toprule
+  \textbf{Feature} & \textbf{Time} & \textbf{Lines} \\
+  \midrule
+  In-place directory updates & 2 days & 600\\
+  Multi-block directories & 5 days & 800 \\
+  NFS attributes & 4 days & 500 \\
+  Freeing space (\autoref{sec:dafny:freeing}) & 3 days & 1400\\
+  \bottomrule
+\end{tabular}
+\end{center}
+\caption{Incremental improvements were implemented quickly and without much
+  code (which includes both implementation and proof).}
+\label{fig:features}
+\end{figure}
+
+\sys was implemented and verified over the course of three months by
+one of the authors, until it had support for enough of NFS to run. We
+added several features incrementally after the initial prototype
+worked, both to improve performance and to support more
+functionality. Some of the interesting changes are listed in
+\autoref{fig:features}.  To improve performance, we switched to
+operating on the serialized representation of directories directly
+(decoding fields on demand and encoding in-place) and then added also
+multi-block directories.  We added support for attributes so that the file
+system stores the mode, uid/gid, and modification timestamp for files and directories.
+Finally, we implemented the freeing plan described
+in \autoref{sec:dafny:freeing}, which required additional code through the
+whole stack (but by design no changes to the file-system invariant).
+We believe additional features such as symbolic links
+could be added incrementally with modest effort because
+of sequential reasoning and proof automation.
+
+%% \begin{itemize}
+%%   \item Directories were initially parsed into a functional data structure, then
+%%   re-serialized to make changes. To improve performance, we switched to
+%%   operating on the serialized representation directly (decoding fields on demand
+%%   and encoding in-place). (2 days, 600 lines changed)
+%%   \item Single-block directories were too limiting, so we switched to multiple
+%%   blocks, which are read into memory on demand. We still operate on the
+%%   serialized representation, but now of only part of the directory. (5 days, 800
+%%   lines changed)
+%%   \item Initially we only tracked file types. We added support for attributes so
+%%   that the mode, uid/gid, and modification timestamp would be stored correctly.
+%%   (4 days, 500 lines changed)
+%%   \item The file system initially only freed the first 8 direct blocks of an
+%%   inode. We implemented the space-freeing plan described in
+%%   \autoref{sec:dafny:freeing} through the whole stack afterward. (3 days, 1400
+%%   lines changed)
+%% \end{itemize}

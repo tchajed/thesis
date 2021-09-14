@@ -1,0 +1,127 @@
+\section{Implementation}
+
+\begin{figure}
+\begin{tabular}{lrrr}
+  \toprule
+  & proof & code & spec \\
+  \midrule
+  GoJournal & \loc{26000} & \loc{1345} & --- \\
+  Transaction system & \loc{9600}  & \loc{250} & \loc{564} (Thm~\ref{thm:txn}) \\
+  File system & \loc{6360}  & \loc{3230} & \loc{382} (Thm~\ref{thm:dafny}) \\
+  \cc{daisy-nfsd} & \emph{unverified} & \loc{876} & --- \\
+  \bottomrule
+\end{tabular}
+\caption{Lines of proof, code, and trusted specification. GoJournal is included
+  only for comparison; its specification is subsumed by the transaction system's.
+  Not shown are 635 lines of assumptions in Dafny about the
+  transaction system and Go primitives.}
+\label{fig:loc}
+\end{figure}
+
+We implemented \sys in a combination of Go and Dafny, with proofs in the
+Perennial framework (which is a library in the Coq proof assistant, heavily
+based on Iris~\cite{jung:iris-1}) and inline in Dafny. The Go side is mostly
+implemented by GoJournal, which we extend with a transaction system and
+concurrent allocator. The implementation is
+publicly available.\footnote{
+  The transaction system is part of
+  \url{github.com/mit-pdos/go-journal} while the Dafny side is at
+  \url{github.com/mit-pdos/daisy-nfsd} (which imports the former repo).
+  %URLs omitted for double-blind review.
+}.
+
+
+The lines of proof, code, and specification for the layers of the system are
+summarized in \autoref{fig:loc}. GoJournal is prior work but included for
+comparison purposes. The proof of program refinement, \autoref{thm:txn}, is
+relatively large because code executed in transactions blocks can include any Go
+operation modeled by Perennial that does not access global shared memory, not
+merely the journal transaction operations, and the proof has cases to handle
+each operation. However the result of the proof is a relatively concise
+specification as a plain Coq statement that doesn't refer to the Perennial
+logic.
+
+% wc -l program_proof/twophase/{twophase_proof,twophase_refinement_proof,twophase_sub_logical_reln_defs,typed_translate_facts,wrapper_proof,wrapper_init_proof}.v goose_lang/ffi/jrnl_ffi_facts.v
+% 9096 lines of Coq
+
+% allocator is 459 lines of proof for 123 lines of code
+
+% spec for refinement proof
+% wc -l src/goose_lang/typed_translate.v src/goose_lang/ffi/jrnl_ffi_spec.v
+% 564 lines of Coq
+
+The file-system operations are implemented in Dafny, which helped us verify a
+relatively complete system without too much tedium in the proofs. The
+proof-to-code ratio (where code is the number of lines extracted by Dafny's
+\cc{/printMode:NoGhost} flag) is about $2\times$ for just the file system code.
+The proof summarizes the implementation well, with about $8\times$ fewer lines
+of specification as code (ignoring the transaction system underlying this
+implementation). For efficiency, the Dafny code has trusted interfaces to
+primitives like byte slices and integer-to-byte encoding. Together these are
+written in \loc{635} lines of trusted Dafny code. The rest of the system has
+good leverage from the proofs: there are $8\times$ as many lines of code as
+specification. Finally, to complete the NFS server required 876 lines of Go
+code, largely (about half) to bridge between the Dafny method signatures and the
+actual NFS structs.
+
+% wc -l src/jrnl/*.s.dfy src/machine/*.s.dfy
+% 635 trusted lines of code
+
+% fish script:
+\begin{comment}
+begin
+    rm -rf src-compiled
+    for file in src/*/**.dfy
+        set -l path (string sub --start 4 $file)
+        set -l dir (dirname $path)
+        mkdir -p src-compiled/$dir
+        dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path $file &
+    end
+    wait
+    cloc --read-lang-def ~/dafny-lang.txt src-compiled
+    cloc --read-lang-def ~/dafny-lang.txt src
+end
+\end{comment}
+
+% cloc (compiled)
+% 3227 source lines of code
+
+% cloc (total)
+% 9585 source lines total (minus code, 6358 proof lines)
+
+\begin{comment}
+begin
+    gsed -n '/method[^(]* [A-Z]*(/,/^\s*{/p' src/fs/dir_fs.dfy
+    cat src/fs/nfs.s.dfy
+end | wc -l
+\end{comment}
+%
+% 382
+
+% additional implementation lines of Go in dafny-nfsd
+% wc -l nfsd/*.go cmd/dafny-nfsd/main.go
+% 876
+
+Similar to VeriBetrKV~\cite{hance:veribetrkv}, we followed a
+discipline of identifying and addressing timeouts in the proof, which
+hamper development by giving the developer slower feedback (because
+proofs fail only after 30s) and less specific feedback (because Dafny
+is unable to pinpoint which assertion or postcondition failed and
+reports a timeout for an entire method).  As a result, the overall
+build is fast: compiling the proofs takes only 12 minutes on a slow
+machine in continuous integration and under 4 minutes on a fast laptop
+using four CPU cores.
+
+%% Similar to
+%% VeriBetrKV~\cite{hance:veribetrkv}, when a proof took a long time,
+%% before moving on to another layer, we would hide definitions and add
+%% proof annotations to make verification fast enough for interactive
+%% development. This discipline was particularly important between
+%% layers: making the invariant of a layer opaque makes verification of
+%% the layer above predictable and fast, since the automation only sees
+%% one abstraction rather than all the lower levels.
+
+% Tej: takes 10m on my laptop with just one core (no VC parallelism)
+
+% VeriBetrKV is 1.8h CPU time and 11min on 32 cloud machines (of unspecified
+% number of cores)

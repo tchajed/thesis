@@ -1,0 +1,38 @@
+\begin{tikzpicture}[>=latex, node distance=1.5cm]
+
+ \tikzset{
+    genericnode/.style={rectangle,draw,minimum width=2cm, minimum height=.85cm, align=center,},
+    layer/.style={
+      genericnode,
+      alias=genericnode,% <- alias added
+      label={[anchor=south west,shift={(genericnode.north west)},inner sep=2pt]{\tiny #1}}% position the label using the alias
+    }}
+
+%\tikzstyle{layer}=[rectangle, draw, minimum width=2cm, minimum height=.85cm, align=center];
+\tikzstyle{genlayer}=[dashed, layer={}];
+\tikzstyle{edge}=[->,thick];
+
+\draw node (dispatch) [layer={$\gooselayer{NFS}$}] {$\snfs$};
+\draw node (goout) [layer={$\gooselayer{Txn}$},below of=dispatch] {$\sdfy$};
+\draw node (txn) [layer={$\gooselayer{Disk}$},below of=goout] {$\mathrm{link}(\sdfy, \txncode)$};
+
+\draw node (dafny) [left=1.25cm of goout, layer=Dafny] {File-system \\ Operations};
+
+%\draw [thick] (goout.south) -- (txn.north);
+\path (txn) edge[draw=none]
+                node (incl1) [sloped, auto=false,
+                 allow upside down] {$\refines$} (goout);
+\path (goout) edge[draw=none]
+                node (incl2) [sloped, auto=false,
+                 allow upside down] {$\refines$} (dispatch);
+
+
+\path (goout) edge[draw=none]
+                node (thm2) [xshift=1.3cm, auto=true] {Thm \ref{thm:dafny} (Dafny)} (dispatch);
+\path (txn) edge[draw=none]
+                node (thm1) [xshift=1.5cm, auto=true] {Thm \ref{thm:txn} (Perennial)} (goout);
+
+\draw [edge] (dafny.east) -- node[above] {\texttt{dafny}} (goout.west);
+
+
+\end{tikzpicture}

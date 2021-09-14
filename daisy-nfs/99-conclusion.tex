@@ -1,0 +1,16 @@
+\section{Conclusion}
+
+This paper presented \sys, a verified crash-safe,
+concurrent file system. \sys was built with verification in mind in
+two parts: a transaction system and a file system whose operations run
+as a transaction. This design allowed us to use the sharpest tool for
+each part: Perennial for concurrency and crash-safety reasoning and
+Dafny for sequential reasoning with much proof automation inside a
+transaction.  The specification of the transaction system was
+carefully designed to meet the assumptions that Dafny makes, but
+requires some by-hand auditing to confirm.  Overall this approach
+results in proof overhead of about $2\times$ for the file system part
+(vs. $18\times$ for the transaction system), allowing us to verify and
+build a functional and performing file system.
+
+% That's all, folks!

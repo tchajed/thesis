@@ -1,0 +1,59 @@
+\begin{tikzpicture}[>=latex]
+
+  \tikzstyle{circlog}=[thick,rectangle, draw,minimum height=1cm, align=center];
+
+  \node[circlog,minimum width=1cm,
+       label={[label position=below, align=center]Super\\block}] (logger) {};
+  \node[circlog,minimum width=1.7cm, right=0cm of logger,
+    inner sep=0pt,
+    rectangle split,
+    rectangle split every empty part={},
+    rectangle split parts=6,
+    rectangle split empty part width={.2cm},
+    rectangle split horizontal,
+       label={[label position=below, align=center]20 inode\\ blocks}] (installer) {};
+
+  \node[circlog, right=0cm of installer,
+    inner sep=0pt,
+    rectangle split,
+    rectangle split every empty part={},
+    rectangle split parts=20,
+    rectangle split empty part width={.1cm},
+    rectangle split horizontal,
+       label={[label position=below, align=center]30 allocator\\ bitmap blocks}] (log) {};
+
+
+  \node[circlog,minimum width=3.2cm, right=0cm of log,
+    inner sep=0pt,
+    rectangle split,
+    rectangle split every empty part={},
+    rectangle split parts=3,
+    rectangle split empty part width={1.15cm},
+    rectangle split horizontal,
+       label={[label position=below, align=center]data blocks\\ (remainder of disk)}] (log2) {};
+
+  \draw [line width=.05cm,black,transform canvas={yshift=.25cm}] (installer.south west)+(0,-.5cm) -- (installer.north west);
+  \draw [line width=.05cm,black,transform canvas={yshift=.25cm}] (log.south west)+(0,-.5cm) -- (log.north west);
+  \draw [line width=.05cm,black,transform canvas={yshift=.25cm}] (log2.south west)+(0,-.5cm) -- (log2.north west);
+
+%  \tikzstyle{circlog}=[thick,rectangle, draw,minimum height=1.5cm, align=center];
+%
+%  \node[circlog,minimum width=1.2cm,
+%       label={[label position=below, align=center]Super\\block}] (logger) {};
+%  \node[circlog,minimum width=1.7cm, right=0cm of logger,
+%       label={[label position=below, align=center]20 inode\\ blocks}] (installer) {};
+%
+%  \node[circlog,minimum width=2.0cm, right=0cm of installer,
+%       label={[label position=below, align=center]30 allocator\\ bitmap blocks}] (log) {};
+%
+%  \node[circlog,minimum width=3.4cm, right=0cm of log,
+%       label={[label position=below, align=center]data blocks\\ (remainder of disk)}] (log) {};
+
+%  \node[] at (-0.45cm,-1cm) {$\uparrow$ 0};
+%  \node[] at (4.2cm,-1cm) {$\uparrow$ 513};
+
+%  \draw [decorate,decoration={brace,mirror,amplitude=10pt},xshift=-4pt,yshift=0pt]
+%    (-0.45cm,-1.2cm) -- (4cm,-1.2cm) node [black,midway,yshift=-0.6cm]
+%    {\scc{circular}};
+
+\end{tikzpicture}

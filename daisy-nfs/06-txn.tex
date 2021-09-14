@@ -1,0 +1,171 @@
+\section{Verifying the transaction system}
+\label{sec:txn-proof}
+
+The transaction system is essential to the overall file system's performance.
+The overall system is only as concurrent as the transaction
+system --- in the limit, a transaction system with a global lock will mean the
+file system achieves no speed up from using multiple cores and no work will
+actually happen concurrently. A high-performance transaction system is difficult
+to verify, so we take an existing verified journal, GoJournal, as a starting
+point.
+
+The transaction system is verified with a refinement-style specification
+described in \autoref{sec:soundness}. This section discusses some of the
+interesting details of the proof.
+
+\subsection{Two-phase locking and allocator proof}
+
+Transaction atomicity relies on the guarantee that two different transactions
+cannot concurrently access the same object. The two-phase locking system
+guarantees this by logically maintaining a lock per object and then ensuring
+that the lock for an object is held whenever it is accessed. Allocating a lock
+upfront for every object would be expensive, so we use a more efficient lockmap
+data structure already implemented and verified in GoJournal.
+
+We isolate the reasoning about these locks into a set of Hoare-logic proofs
+about the two-phase locking methods. This intermediate specification exposes the
+durable state of the transaction system using ghost variables to the refinement
+proof. GoJournal exposes logical resources representing the on-disk and
+in-memory value of each object. The two-phase locking system wraps both of these
+resources in a lock that maintains a correspondence with the transaction
+system's ghost variables. To handle crashes, the proof uses Perennial's
+crash-aware lock specification~\citep{chajed:gojournal} to show that the durable
+state matches even if the system crashes while a transaction holds locks on some
+objects.
+
+% The lock reasoning uses the standard technique of wrapping access to resources in Iris invariants. When a lock is acquired, the proof gains access to the resources in its corresponding invariant; when the lock is released, the proof needs to return these resources to the invariant. Since the lock semantics guarantee that at most one thread can hold a particular lock at any point of time, this guarantees that at most one transaction can access the resources corresponding to a particular object at any point of time.
+
+The transaction system's allocator is also verified in Perennial through a
+series of Hoare triples.  Because \sys uses validation to check that the
+returned addresses are free, the triples only need to guarantee that these
+operations are memory safe and return in-bounds addresses.
+
+\subsection{Refinement to atomic language}
+
+\newcommand{\txnmapsto}{\mapsto_{\cc{txn}}}
+\newcommand{\thdmapsto}{\Rightarrow}
+
+Recall that \autoref{thm:txn} establishes refinement between the Txn layer and
+Disk layer.  That is, given a program p written in $\gooselayer{Txn}$, if the
+transaction operations of p are linked with an implementation written in
+$\gooselayer{Disk}$, the implementation program's observable behaviors (from
+running on a disk) are a subset of the specification's behaviors (with
+high-level transaction-system operations).
+
+In general, the Perennial framework supports proving refinements between a
+specification layer $\gooselayer{S}$ and an implementation layer $\gooselayer{I}$ by constructing
+a simulation between the specification and its implementation.  Following an
+approach developed by \citet{turon:caresl} and implemented in Perennial 1.0~\cite{chajed:perennial}, the execution of the specification
+program is represented by \emph{ghost state}. The logic then has assertions for
+describing this ghost state.  For example, for the Txn layer, the assertion $\cc{a}
+\txnmapsto b$ says that address $a$ contains the value $b$ in the ghost
+transaction system's state. In addition, there are \emph{thread points-to}
+assertions, written $j \thdmapsto \cc{e}$, which says that thread $j$ in the
+specification program is executing program $\cc{e}$. Perennial has rules
+for updating the ghost state by ``executing'' these ghost threads, such as:
+\[ (\cc{a} \txnmapsto b) \sep (j \thdmapsto \cc{Write(a, b')}) \vdash
+\cc{a} \txnmapsto b' \]
+which updates the value stored at $\cc{a}$ as a result of a write.
+
+To establish the refinement, the proof engineer first defines a
+\emph{representation invariant} $I$, an assertion in the logic that describes a
+relation between the specification state and the implementation state.
+Perennial's proof rules ensure that this designated invariant must hold before
+and after each step of a program throughout the proof. Next, the proof engineer
+proves a Hoare triple for each operation $o$ of $\gooselayer{S}$ and its
+corresponding implementation $p_o$ in $\gooselayer{I}$:
+\[
+\hoare{(j \thdmapsto o) * \knowInv{}{I}}{p_o}{\lambda v.\, (j \thdmapsto v)}
+ \]
+Such a \emph{refinement triple} says that if a specification thread is executing
+$o$ and an implementation thread is running $p_o$, then the representation
+invariant $I$ is maintained and the value $v$ returned by running $p_o$ is a valid
+return value of operation $o$. Typically, in such proofs, a ghost execution rule
+is used at the linearization point of $p_o$, to mark
+when the operation logically takes effect by executing $o$ in the ghost code.
+
+These refinement triples imply a refinement between programs in $\gooselayer{S}$
+and $\gooselayer{I}$. We prove refinement in Coq by applying the soundness
+theorem for the Perennial framework.
+
+In the particular case of the transaction system, the key refinement triple to
+prove is for a block of code $f$ enclosed in transaction \cc{Begin} and
+\cc{Commit} operations.
+%$\operatorname{Atomically}$:
+%
+%\[
+%\hoareV{j \thdmapsto \operatorname{Atomically}(f) * \knowInv{}{I}}
+%      {C(\operatorname{Atomically}(f))}{v.\, j \thdmapsto v}
+%\]
+%
+%where $C$ is the translation function described in \autoref{sec:soundness-thm1}.
+The difficulty in proving this triple is that the linearization point is at the
+very end when the code calls \cc{Commit}, at which point the actual earlier
+execution of $f$ becomes visible to other threads. The proof must show that
+ghost-executing the specification's Atomically block at this point is valid by
+tracking the behavior of $f$.
+
+To show this, our proof maintains a stronger invariant during a transaction's execution. As the transaction executes, we track the
+initial value of any objects accessed in a map $J$. The domain of this map
+$\Sigma = \operatorname{dom}(J)$ is the \emph{footprint} of the transaction,
+which two-phase locking keeps locked during the transaction. The intuition
+behind the invariant is that if the transaction only depends on $J$, the
+transaction's execution can be delayed to take place atomically at the call to
+\cc{Commit} and its behavior will be the same since the subset of the journal
+$J$ is the same.
+
+More formally, the proof constructs a second simulation relation during the
+execution of a transaction $\cc{f}$.  Let $J$ be a map giving the values of each
+object in the transaction's footprint $\Sigma$ at the first time they are
+accessed by $\cc{f}$, and let $J'$ be a mapping giving the transaction's current
+buffered in-memory view of the same addresses.  Then, the invariant requires
+that after $n$ steps of execution:
+%
+\begin{enumerate}
+
+\item The transaction holds the lock for every address $a \in \Sigma$.
+
+\item Executing $n$ steps of $\cc{f}$ in \emph{any} starting state that has the same
+  values as $J$ for the addresses in $\Sigma$ can lead to a state with values given
+  by $J'$.
+
+\end{enumerate}
+%
+At the start of a commit, the locking described by the first part of the
+invariant ensures that the durable value of each address still match the values
+in $J$. The second part of the invariant means that even though other
+parts of the state outside of $\Sigma$ may have changed, those changes do not
+affect execution of $\cc{f}$. Thus, the ghost execution of $\cc{f}$ at this point will
+have the same behavior as the implementation. The existing spec from GoJournal
+for \cc{Commit} ensures that the durable values of objects in the footprint are
+atomically updated to match $J'$.
+
+Showing that the second part of the invariant holds requires that code within a
+transaction must not access global state outside of the
+transaction system, as mentioned in \autoref{sec:proof:linking}. Accesses to such global state
+would violate the invariant because their behavior would then depend upon
+things outside of the footprint $\Sigma$. Because those global values could change
+by the time the transaction commits, the above argument would no longer work if they were allowed.
+
+The allocator creates another subtlety related to the second part of this
+invariant. Allocations do not hold the allocator lock throughout the remainder
+of a transaction. This seems to violate the two-phase locking pattern, since
+allocations could be implicitly observed by other concurrent transactions from
+the fact that an allocated address is no longer free. Correspondingly, in the
+proof, the footprint $J$ of a transaction does not describe the allocator state.
+Thus, at the ghost-execution linearization point, the addresses returned by the
+allocator may no longer be free. However, because the specification for the
+allocator does not guarantee that returned addresses are actually free, the
+second part of the invariant above still holds.
+
+% Suppose the transaction being simulated is $\operatorname{Atomically}{f}$, and the implementation
+% has executed $n$ steps of $f$, accessing addresses in the set $\sigma$.
+
+% Let $J_1 : \cc{addr} \rightarrow Obj$ be a map giving the durable state of the journal at the start of the transaction, and let $J_2$ be the current buffered in-memory view of the state from the perspective of the transaction.
+% Then, the invariant requires that:
+% \begin{enumerate}
+% \item the transaction holds the lock for every address $a \in \sigma$
+% \item for each $a$, $J_1(a)$ matches the ghost state value for the address $a$
+% \item if $J_1'$ is a mapping such that $\forall a \in \sigma$, $J_1(a) = J_1'(a)$, then executing $f$ for $n$ steps with an initial journal $J_1'$
+% \end{enumearte}
+% \joe{this would probably be vastly improved by using math notation that matches whatever will have been used in the previous two sections}

@@ -1,0 +1,337 @@
+\section{Verifying DaisyNFS}
+\label{sec:proof}
+
+How do we prove that the implementation of the NFS server running on a disk
+implements the NFS transition system formalized in Dafny? The overall structure
+of the proof resembles the division in the implementation: we prove that the
+transaction system really makes the calling code's transactions atomic, and
+separately prove that the file system's transactions are implemented correctly.
+By isolating the concurrency and crash-safety reasoning to the transaction system, we can use
+Dafny, with highly automated proofs, to reason about the file-system
+implementation (since it behaves sequentially) while using Perennial to reason
+about that concurrency and crash safety in the transaction system. Since the
+proofs happen in separate formal systems, we also prove a linking theorem about
+the entire file system whose proofs connects the transaction system's
+correctness to the correctness of the file-system code.
+
+Using a careful choice of interface between the transaction system and Dafny, we
+minimize the work that goes into linking, which has to be proven on paper.
+In particular the transaction system's proof
+shows that any calling program appears to have atomic transaction, provided the
+transactions follow some rules. For example, transactions can only modify state
+protected by the two-phase locking system; if the caller accesses a global
+variable, the transaction system can't see this access and acquire a lock so the
+transaction would not be atomic. At a high level the on-paper reasoning
+addresses why the Dafny transactions follow the rules required by the proof
+mechanized in Coq.
+% Dafny always assume methods run
+% sequentially, so it is necessary that the implementation meet any restrictions
+% of the transaction system for the Dafny proof to be meaningful.
+
+% to understand how it guarantees transactions behave
+% atomically and what the requirements on the caller are.
+
+% While there is no fully
+% machine-checked theorem covering the end-to-end system, all of the proofs within
+% the transaction system and within the Dafny code are machine-checked and this
+% proof merely connects those theorems. The manual step carried out here is
+% an audit over the Dafny code to establish that it fits the transaction system's
+% rules.
+
+% It would be an interesting direction for future work to automate this step.
+
+\begin{figure}[ht]
+\begin{tabular}{lp{4.5cm}r}
+\toprule
+Layer & Operations & \\
+\midrule
+  NFS
+      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \autoref{fig:nfs} \\
+  Txn
+      & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
+        \dots & \autoref{fig:txn-api} \\
+  Disk
+      & \cc{Read(a)}, \cc{Write(a, b)} & \\
+\bottomrule
+\end{tabular}
+\caption{API layers of \sys.}
+\label{fig:layers}
+\end{figure}
+
+The proof relates the \sys server loop at three different layers of abstraction,
+corresponding to the three API layers in \autoref{fig:layers}. Refinement from a code program to
+a specification program says that the behaviors of the code are a subset of the
+behaviors of the specification; we will shortly give a more precise definition.
+At the top layer, the specification end, we'd like to think of \sys as atomically responding to
+NFS operations according to the state machine developed in Dafny.
+The NFS operations are implemented using methods from transaction API, the middle layer.
+Finally, the running code links the Dafny code with the transaction system's
+implementation and runs on top of a raw disk-block API.
+
+To define refinement we need to be more precise about what a program is and how it
+executes. We
+write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
+from layer X, where X is one of NFS, Txn, or Disk.
+Layer operations are always atomic transitions in a state machine. In the
+NFS layer, the NFS operations behave according to the NFS state machine
+described previously in \autoref{sec:soundness} and defined formally in Dafny.
+The Txn layer is specified in both Coq where it is part of the transaction
+system's correctness theorem and in Dafny where it appears as an assumption. The
+Disk transition system is formalized in Coq as part of the GoJournal proof,
+and assumes reads and writes of 4KB blocks are atomic. Each layer
+includes concurrent threads that interleave layer
+operations, basic heap operations on pointers, slices, and maps, and computation
+on primitives like integers and structs.
+
+There are three programs involved in defining and proving the overall
+correctness of \sys, corresponding to the server loop at each abstraction layer.
+At the top, the specification is a loop $\snfs : \gooselayer{NFS}$ which
+atomically processes each NFS operation according to the NFS state machine. The
+next level is $\sdfy : \gooselayer{Txn}$, where each handler is the atomic body of the
+corresponding Dafny method, operating on top of the transaction system. Finally,
+the executable code is written
+$\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, indicating ``linking'' the
+Txn-layer server $\sdfy$ with the transaction system by taking each call to a
+Txn API and plugging in its implementation on top of a disk.
+
+Refinement relates two programs in terms of their visible behavior, which we
+will use to connect the server loop at the disk layer to the transaction layer
+and finally to the NFS layer. For the purposes of this paper, all of the
+programs involved are servers that issue network I/O, either receiving an NFS
+request or responding to one. Regardless of the level of abstraction, each model
+of the server defines a trace of network I/O consisting of requests and
+responses, and this is the behavior refinement talks about:
+
+\begin{definition}[Refinement]
+  An implementation program $p_{c}$ refines a specification program $p_{s}$,
+written $p_{c} \refines p_{s}$, if whenever there are initial states
+$\sigma_{s}$ and $\sigma_{c}$ satisfying $\mathrm{init}(\sigma_{s}, \sigma_{c})$
+and $p_{c}$ can execute from $\sigma_{c}$ and produce a trace of network I/O
+$tr$, then $p_{s}$ can execute from $\sigma_{s}$ and produce the same trace
+$tr$.  Execution might involve crashing and restarting a program (potentially
+multiple times), wiping out any in-memory state after each crash.
+  \label{def:refinement}
+\end{definition}
+
+The intuition behind the notation $p_{c} \refines p_{s}$ is that the set of
+behaviors of $p_{c}$ (the set of traces of network I/O $tr$) is a subset of the
+behaviors of $p_{s}$. Whenever we state $p_{c} \refines p_{s}$ we leave implicit
+a definition of initial states $\mathrm{init}(\sigma_{s}, \sigma_{c})$, which
+will generally say both states are all zeros and of the same size.
+
+\begin{figure}[ht]
+  \center
+  \input{daisy-nfs/fig/proof-overview.tex}
+  \caption{The overall structure of the proof combines theorems proven in Perennial
+    and Dafny, each tool used for the reasoning it is best suited to.}
+  \label{fig:proof-overview}
+\end{figure}
+
+\autoref{fig:proof-overview} gives the overall structure of the proof, which
+relates these three programs via refinement. The high-level strategy is to break the proof down
+into three steps: 1) state and prove \autoref{thm:txn} in Perennial, the correctness
+of the transaction system, 2) state and prove \autoref{thm:dafny} in Dafny, the
+correctness of the Dafny methods (as transactions), and 3) prove a specification
+for the whole compiled system, \autoref{thm:correctness}, by applying the other
+two theorems.
+
+% \begin{figure}
+%   \center
+%   \includegraphics[width=\columnwidth]{drawn-diagrams/proof-overview.png}
+%   \caption{The overall structure of the proof combines theorems proven in Coq
+%     and Dafny, each tool used for the reasoning it is best suited to.}
+%   \label{fig:proof-overview}
+% \end{figure}
+
+\subsection{Correctness theorem for the transaction system}
+\label{sec:proof:txn}
+
+\cc{Txn} layer semantics serves as the interface between the Perennial and Dafny
+proofs.  It specifies that transactions are atomic in the sense that code
+enclosed within a transaction \cc{Begin} and \cc{Commit} happens all at once (or
+does nothing, if \cc{Abort} is executed), without interleaving of steps by other
+threads.
+
+We define the correctness of the transaction system's implementation as a
+\emph{program refinement}.
+To set up this specification, consider a program $p : \gooselayer{Txn}$ that
+uses transactions.
+To run $p$, it is combined with the transaction-system implementation, producing
+a program $\mathrm{link}(p, \txncode) : \gooselayer{Disk}$ that can be run on
+top of a disk.
+Transactions in the linked program continue to have the expected atomic
+behavior, so long as transaction code in $p$ follows certain restrictions, such
+as not accessing shared state outside the journal system.  We write
+$\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these restrictions.
+
+% To connect this idealized semantics to the behavior of implementation, we define
+% an
+
+% At a high level of abstraction, the main difficulty is to give a specification
+% for the transaction system, which we do in several steps:
+%
+% \begin{enumerate}
+%   \item First, we define an arbitrary Go program running on top of
+%         the transaction system. For reasons we will explain shortly we will use
+%         $p : \gooselayer{Txn}$ for such a program. To run such a program it
+%         first needs to be linked with the transaction system implementation,
+%         producing a program denoted $\mathrm{link}(p, \txncode)$.
+%   \item The second idea is to say what the semantics of a program
+%         $p : \gooselayer{Txn}$ is. Transactions are atomic in this semantics in
+%         that the whole transaction transitions at once, without interleaving
+%         other threads. The program can issue reads and writes within a
+%         transaction, and they follow a simple state machine.
+%   \item The final idea is to define ``safe'' programs $\mathrm{safe}(p)$, those
+%         that follow the restrictions of the transaction system. The
+%         specification only applies to safe programs.
+% \end{enumerate}
+
+%With these specification ideas in place, what we prove in Coq is the following
+%theorem:
+
+The correctness of the transaction system is summarized by the following theorem:
+
+\begin{theorem}
+  The transaction system's implementation $\txncode$ is a program refinement, meaning for
+  all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
+  $\mathrm{link}(p, \txncode) \refines p$. The definition of
+  $init(\sigma_{s}, \sigma_{c})$ in this refinement relates an all-zero physical
+  disk to an all-zero transactional disk of the same size.
+  \label{thm:txn}
+\end{theorem}
+
+\autoref{thm:txn} is stated in Coq and has a fully mechanized proof in Perennial.
+What it says is that if a program is safe, the program linked with the
+transaction system always behaves as if its transactions were atomically
+accessing a transactional disk logically maintained by the transaction system.
+The definition of safety formalized in Coq requires that code within a
+transaction not access any shared memory outside of the transaction layer; other
+than that, transactions are permitted to issue reads, writes, and do other
+computation. Safety also requires that transactions follow the preconditions of
+the \cc{Read} and \cc{Write} operations, which require a discipline of accessing
+each object with a fixed size. Finally, safe programs can only \cc{Abort} or
+\cc{Commit} a given transaction once. The notion of safe program will be
+important when linking this proof with the Dafny proofs, since the transaction
+system's proof only applies to a safe caller.
+
+In the Coq development, \autoref{thm:txn} uses Goose~\cite{chajed:goose-coqpl}
+to translate the transaction system's Go implementation into a model in Coq that
+Perennial supports.
+
+\subsection{Correctness theorem for sequential file-system transactions}
+\label{sec:proof:dafny}
+
+The top-level file-system is a program denoted $\sdfy : \gooselayer{Txn}$
+written against the transaction-system API, where this program models the
+top-level dispatch loop that repeatedly accepts an NFS request and responds to
+it in a separate thread. What we prove using Dafny is that this implementation
+refines a more abstract dispatch loop $\snfs$ where the transitions atomically
+follow the NFS transition system:
+
+\begin{theorem}
+  $\sdfy \refines \snfs$. To establish the init relation in this definition,
+  the caller runs a dedicated method in Dafny that assumes an all-zero
+  transaction system and establishes the invariant all other operations rely on
+  (including recovery).
+  \label{thm:dafny}
+\end{theorem}
+
+We prove this theorem in Dafny using a standard \emph{forward simulation}
+technique.  Instead of directly reasoning about the $\sdfy$ concurrent program
+(which is not possible in Dafny) we instead consider each of its handler methods
+separately. Because transactions run atomically, it is sound to use Dafny's
+sequential specifications in terms of pre- and post-conditions to reason about
+an individual method. If every method satisfies a refinement obligation using a
+common abstraction relation, we know that the entire program satisfies
+refinement as defined above. This proof method of forward simulation is
+so common that many systems verified in Dafny do not mention it, or treat
+simulation and refinement synonymously.
+
+Crash safety does add one interesting case to forward simulation. In general for
+a sequential storage sytem, recovery should satisfy a specification that assumes
+a \emph{crash invariant} that the whole system maintains at each intermediate
+point and establishes the abstraction relation, with a new abstract state
+consistent with the specification's crash behavior~\cite{chajed:argosy}. Due to
+our transaction system we can make one simplification: on crash, the system will
+satisfy the abstraction relation and not just a weaker crash invariant, since
+operations are atomic; furthermore, the file system automatically maintains the
+abstraction relation for crashes during recovery since recovery itself uses a
+single transaction. Recovery must still do some work since the abstraction
+relation held prior to the crash using in-memory state that has been lost. We
+give the precise specification proven in Dafny in \autoref{appendix:proof}, and
+also argue how it fits into the forward simulation proof.
+
+\subsection{Linking the transaction system and Dafny correctness theorems}
+\label{sec:proof:linking}
+
+Using the mechanized theorems, we can show that the overall system is correct,
+namely that the running code implements the abstract NFS dispatch loop:
+
+\begin{theorem}[\sys correctness]
+  $\mathrm{link}(\sdfy, \txncode) \refines \snfs$. Initialization requires
+  starting from an empty disk, then running the initialization implemented in
+  Dafny. After that, the system boots by first recovering the transaction
+  system's state, then running file-system recovery.
+  \label{thm:correctness}
+\end{theorem}
+
+This theorem's proof is a straightforward consequence of the mechanized theorems
+described as long as $\sdfy$ is safe; that is, the Dafny code follows the rules of
+the transaction system. As long as this
+holds we simply apply the theorems in order to show
+$\mathrm{link}(\sdfy, \txncode) \refines \sdfy \refines \snfs$, since
+the definition of refinement is transitive.
+
+The proof requires Dafny operations to be encapsulated in transactions
+and follow the transaction system's safety restrictions.
+The code in Dafny does not generally manage starting and
+committing a transaction; this is handled by a single wrapper function written
+in Go. The wrapper creates a transaction, calls a Dafny method on it,
+and then aborts if the method returns an error code and commits otherwise.
+It is easy to confirm that this function follows the calling sequence required
+by the transaction system.
+
+Many transaction safety restrictions are preconditions on the
+transaction-system APIs, which are enforced as Dafny preconditions.  The most
+restrictive part of safety is that transactions are not allowed to read or write
+shared memory, other than through the Txn layer. The Dafny code does allocate
+heap objects and read them, but these are only used locally, and thus are
+unaffected by concurrency; we work through this argument more formally in
+\autoref{appendix:proof}. To confirm that there is no shared mutable state, we
+checked that the Dafny class implementing the file system has no mutable
+variables, other than the transaction system and its allocators.  Dafny does not
+support mutable global variables outside of any class, so checking the class is sufficient.
+
+Notice that this linking proof makes minimal assumptions about the code in
+Dafny, other than the fact that it is verified. In particular, the same argument
+would equally apply to a different NFS implementation, or even a system with an
+entirely different specification, as long as the equivalent of
+\autoref{thm:dafny} was still proven in Dafny, and the Dafny code did not use
+shared mutable state.
+
+% Formally, even if $\sdfy$ is not safe, it is sufficient if there
+% exists any other program $\widetilde{\server}_{\mathrm{dfy}}$ with equivalent behavior which is
+% safe; we can apply \autoref{thm:txn} to this alternate program and get the same
+% refinement result. Such a program would be a systematic transformation of the
+% Dafny code that replaced any allocation with a local variable forwarded to the
+% remainder of the code, and inlined any global constants. This transformation
+% would could fail if Dafny wrote outside of its local allocations, but there are
+% no mutable variables to write to. Finally, we manually check that any buffers
+% returned from Dafny are used in a read-only manner.
+
+The Txn layer's allocator methods are important for this approach to work.
+The allocator cannot be implemented in Dafny because it is shared mutable state.
+Instead, we expose the allocator API as part of a transaction, albeit with a loose
+specification that says \cc{Alloc} may return
+any number and \cc{Free} may be called on any unused block.
+As we explain in \autoref{sec:txn-proof}, under this specification, \cc{Alloc} and \cc{Free} both behave
+atomically in a transaction. The
+true allocation state is stored on disk, in the bitmap blocks for
+example, and the Dafny code must validate that the address returned by \cc{Alloc} is actually
+free.
+
+% It is possible that one transaction calls
+% \cc{Free} and another allocates the same number before the disk is updated,
+% because freeing does not happen at commit time, but the allocator's policy is
+% designed to delay allocating recently freed blocks so this is extremely
+% unlikely.

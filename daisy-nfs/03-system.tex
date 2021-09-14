@@ -1,0 +1,179 @@
+\section{System design}%
+\label{sec:system}
+
+% \begin{figure}
+%   \center
+%   \includegraphics{drawn-diagrams/system-overview.png}
+%   \caption{The structure of the code.}
+%   \label{fig:system}
+% \end{figure}
+
+\begin{figure}
+  \center
+  \input{daisy-nfs/fig/system-overview.tex}
+  \caption{The structure of the code.}
+  \label{fig:system}
+\end{figure}
+
+As shown in \autoref{fig:system}, \sys is implemented in three layers:
+1) a dispatch loop that speaks the NFS wire protocol and calls the
+appropriate method for each operation; 2) a Dafny class that
+implements each method; and 3) a transaction system that applies the
+updates of each method to the disk atomically.  The dispatch loop is
+unverified; we assume that the server correctly decodes messages,
+calls the right method for an operation, and encodes the response. The
+middle layer implementing the file-system operations is implemented
+and verified in Dafny, which has a backend for Go.  The
+third layer is directly written in Go and verified using Coq and
+Perennial.  By implementing the file system on top of the transaction
+system, we can implement each NFS method in Dafny as sequential code
+calling into a concurrent transaction system library. The NFS
+operations supported by \sys are listed in \autoref{fig:nfs}.
+
+\subsection{Dafny file system}
+
+%% We focus on the
+%% design of the transaction system here, but the file system also has several
+%% internal abstractions. These abstractions are primarily interesting in a
+%% verification context so we discuss them later in \autoref{sec:design}.
+
+%% The file-system implementation calls the transaction system to store all
+%% file-system data, ensuring that it is written atomically and durably.
+
+% \begin{figure}
+%   \begin{center}
+%   \includegraphics[width=\columnwidth]{drawn-diagrams/disk-layout.png}
+%   \end{center}
+%   \caption{The layout of the file system on top of the transaction system's
+%     disk. The number of inode blocks and data bitmap blocks is a compile-time
+%     constant, but easy to change without affecting the proofs.}
+%   \label{fig:layout}
+% \end{figure}
+
+\begin{figure}
+  %\includegraphics[width=\columnwidth]{drawn-diagrams/disk-layout.png}
+  \input{daisy-nfs/fig/fslayout.tex}
+  \caption{The layout of the file system on top of the transaction system's
+    disk. The number of inode blocks and data bitmap blocks is a compile-time
+    constant, but easy to change without affecting the proofs.}
+  \label{fig:layout}
+\end{figure}
+
+The file system is responsible for implementing files and directories
+onto an array of disk blocks that is exported by the transaction
+system.  The disk layout used by the file system is shown in
+\autoref{fig:layout}, with regions for inode blocks, bitmap blocks,
+and data blocks for files and directories. This figure is in terms of
+the disk exported by the transaction system; the transaction system
+itself has a 513-block write-ahead log to support multi-block atomic
+writes to the disk.
+
+The high-level organization of the file system separates three concerns, each
+building upon the previous: (1) implementing large (about 512GB), fixed-size
+files with zeros in place of unallocated data; (2) implementing files with
+byte-level granularity by tracking a size field; and (3) implementing
+directories by encoding them as files with a special type together with
+operations to manipulate those files. \autoref{sec:design} explains the
+internals of the file-system design in more detail, alongside the structure of
+the Dafny proof.
+
+%% Each
+%% operation takes place in a single transaction at run time, but this transaction
+%% is built up by calling methods through several abstraction layers before
+%% eventually producing a sequence of transactional reads and writes.
+
+% The proof requires that each 4KB block be accessed with a consistent size. We
+% represent that in the specification with a fixed ``schema'' specifying the
+% size of every block address, which is fixed by the caller while calling the
+% initialization function. The schema is never passed to the code and only used
+% to enforce the consistent-size restriction in the precondition of \cc{Read}
+% and \cc{Write}. These restrictions are reflected by representing the
+% transaction system not as an array of bytes but as a mapping from
+% ``addresses'' specifying a block number and offset to ``objects'' which can be
+% either a boolean or a list of bytes. The schema is a static mapping from block
+% number to size such that all the objects are of that size.
+
+\subsection{Transaction system}
+
+
+\begin{figure}
+\begin{verbatim}
+type Addr struct {
+  Blkno  uint64
+  Offset uint64
+}
+
+// starting and stopping a transaction
+func Begin() *Txn
+func Abort(tx *Txn)
+func Commit(tx *Txn)
+
+// operations within a transaction
+func Read(tx *Txn, a Addr, sz uint64) []byte
+func ReadBit(tx *Txn, a Addr) bool
+func Write(tx *Txn, a Addr, d []byte)
+func WriteBit(tx *Txn, a Addr, d bool)
+
+// allocator API
+func NewAllocator(max uint64) *Allocator
+func Alloc(a *Allocator) uint64
+func Free(a *Allocator, n uint64)
+\end{verbatim}
+  \caption{The API for the transaction system and allocator, both of which are
+    available within the Dafny file-system implementation. Reads and writes
+    between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
+    for other threads, while \cc{Abort} guarantees the transaction has no
+    effect. The allocator's \cc{Alloc} and \cc{Free} operations are safe to call
+    concurrently.}
+\label{fig:txn-api}
+\end{figure}
+
+The transaction system handles concurrency and crash safety, and its
+API is listed in full in \autoref{fig:txn-api}.  The file system
+creates an empty transaction by calling \cc{Begin()}. The entire
+transaction appears to execute atomically when the caller finishes
+with \cc{Commit}, or the transaction is discarded with no effect on
+\cc{Abort}. Reads and writes operate on addresses which specify a
+position by giving a block number and an offset in bits (always less
+than $4096 \cdot 8$, the number of bits in a block). The \cc{Read}
+method requires an explicit size argument while the size of a
+\cc{Write} is implicit in the size of the \cc{data} slice. We separate
+out the bit-sized operations to \cc{ReadBit} and \cc{WriteBit} (rather
+than using a single-element byte slice) to simplify the specification.
+
+\autoref{fig:txn-api} also shows the allocator API alongside the
+transaction API because its implementation is also part of the
+concurrent code that the Dafny file system has access to.
+
+%% The state of the transaction system (the transactional disk transactions
+%% manipulate) looks much like a flat array of bytes.
+%% However, the caller cannot
+%% read and write arbitrary regions of this array due to restrictions in the
+%% gojournal code and proof. all reads and writes must be within a single 4kb block
+%% on disk, and of a power-of-two number of bytes or a single bit.
+
+% In practice the file system uses three kinds of objects: full blocks are used
+% for data (both for directories and data files), bit objects comprise the inode
+% and block allocators, and 128-byte objects are used to represent inodes. The
+% file-system statically allocates regions for the inodes, allocator bitmaps,
+% and data blocks, so that object sizes never change.
+
+The transaction system uses two-phase locking and GoJournal, which was
+verified in prior work~\cite{chajed:gojournal}, to implement
+transactions.  While a transaction is running, it acquires locks for
+any addresses it reads or writes, and on abort or commit, it releases
+all locks held. Transactions that don't conflict can prepare in
+parallel, and GoJournal will batch concurrently committed
+transactions for efficiency.
+
+Acquiring multiple locks during a transaction creates the possibility
+for deadlocks, if two threads acquire a pair of locks in the opposite
+order. The two-phase locking implementation does not implement a
+specific lock acquisition order, leaving it to the file system to
+avoid deadlock --- for example, the implementation of \cc{RENAME}
+makes sure to lock the smaller inode number first if the rename is
+between different directories.
+
+%% The journal provides a way to write multiple addresses atomically,
+%% but it is illegal to access the same address concurrently from two different
+%% transactions.

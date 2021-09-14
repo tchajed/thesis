@@ -63,6 +63,7 @@
 \usepackage[nameinlink]{cleveref}
 
 \usepackage{iris}
+\usepackage{pftools}
 \usepackage{amsmath}
 \usepackage{amssymb}
 
@@ -92,6 +93,14 @@
 \DeclareUnicodeCharacter{2264}{$\leq$}
 %% end GoJournal
 
+%% DaisyNFS stuff
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem*{definition}{Definition}
+% for \ding
+\usepackage{pifont}
+%% end DaisyNFS
+
 % do not reset page numbers at \mainmatter
 \let\mainmatterorig\mainmatter
 \renewcommand\mainmatter
@@ -112,6 +121,8 @@
 \newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
 \newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
 \newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
+\newcommand{\tej}[1]{\insertnote{red}{TC}{#1}}
+\newcommand{\todocite}[1]{\textcolor{red}{[cite #1]}}
 
 % a command to indicate current editing progress
 \newcommand{\resume}{

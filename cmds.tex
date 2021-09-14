@@ -44,3 +44,31 @@
 \newcommand{\simplenfsRatio}{8}
 %
 \newcommand{\simplenfsCrashLOC}{\loc{44}}
+
+%%% DaisyNFS
+\newcommand{\sys}{DaisyNFS\xspace}
+
+% soundness definitions
+\newcommand{\refines}{\sqsubseteq}
+\newcommand{\progeq}{\approx}
+
+% ``type arg'', to write something like Goose<L>. I'm using angle brackets to
+% match C++ and Rust.
+\newcommand{\targ}[1]{\langle #1 \rangle}
+\newcommand{\layer}{L}
+% the type of operations O
+\newcommand{\OP}{\mathcal{O}}
+\newcommand{\crash}{\operatorname{crash}}
+\newcommand{\gooselayer}[1]{\mathtt{Go}\targ{\mathrm{#1}}}
+\newcommand{\compile}{C}
+\newcommand{\impl}{I}
+\newcommand{\init}{\operatorname{init}}
+
+\newcommand{\server}{\texttt{s}}
+\newcommand{\sdfy}{\ensuremath{\server_{\mathrm{dfy}}}}
+\newcommand{\sdfyAlt}{\ensuremath{\tilde{\server}_{\mathrm{dfy}}}}
+\newcommand{\stxn}{\sdfy}
+\newcommand{\snfs}{\ensuremath{\server_{\mathrm{NFS}}}}
+\newcommand{\txncode}{\texttt{txn}}
+\newcommand{\linked}[1]{\ensuremath{\mathrm{link}(#1, \txncode)}}
+\newcommand{\linkedcode}{\linked{\sdfy}}

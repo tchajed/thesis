@@ -1,0 +1,152 @@
+\section{Specifying \sys}%
+\label{sec:soundness}
+
+The specification for \sys is a state-machine describing the ideal
+version of \sys, namely that it appears to transition and respond
+atomically according to the NFS state machine to all requests. The
+implementation is a binary \cc{daisy-nfsd} that implements the NFS
+protocol, running on top of a
+disk. The \sys correctness
+theorem is a \emph{refinement} property, which intuitively says that
+for any sequence of requests and responses observed from the
+implementation, the ideal, atomic specification could produce the same
+results. As a result a client interacting with the server can pretend
+that it is the NFS state machine and ignore the complexities of its
+implementation.  This section focuses on the NFS specification in
+Dafny.  The correctness theorem is formally stated and proven in
+\autoref{sec:proof}.
+
+To make mathematically precise the specification prose in RFC 1813, we
+developed a state-machine representation of NFS, with its state and
+transitions defined in Dafny. The formalization requires first
+defining what state operations modify, and then a transition for each
+NFS operation that specifies how it changes the state and what return
+values are allowed. While most of the specification is deterministic,
+some operations have to be specified with non-determinism; for
+example, we allow returning an out-of-space error in many operations,
+and the specification allows any timestamp to be picked for the
+current time. The RFC is precise about arguments and allowed return
+values, and the text is good about explaining the intended behavior,
+but it does not describe the state an NFS server maintains. We use the
+following definition in Dafny for that state (slightly simplified):
+
+\begin{verbatim}
+type Ino = uint64
+type Path = seq<byte>
+datatype Attrs = Attrs(mode: uint32, ...)
+datatype File =
+  | ByteFile(data: seq<byte>, attrs: Attrs)
+  | Dir(dir: map<Path, Ino>, attrs: Attrs)
+
+// the abstract state of the file system
+type FilesysData = map<Ino, File>
+\end{verbatim}
+
+This says that the NFS server conceptually maintains a mapping from
+inode numbers to files, where a file can either be a regular file with
+bytes, or a directory. Either type of file has a number of attributes, storing
+metadata like the file's mode (permission bits) and modification time. A
+directory is a partial map from file names
+(which are just bytes) to inode numbers. Note that \sys doesn't
+represent the file system as a tree but as a collection of
+links, which is sufficient to model all NFS operations, because
+NFS clients resolve pathnames.
+
+% \mfk{the rest of this
+%   paragraph is lacking a clear narrative.}
+% In any case a
+% tree wouldn't be a sufficient state for NFS since modifying one file
+% affects any other hard links to the same file (note though that \sys
+% does not currently support hard links).
+
+The NFS state machine models each operation as a non-deterministic transition
+that answers when it is allowed for an operation to change the state from
+\cc{fs} to \cc{fs'} and return \cc{r}. The return value is always wrapped in a
+\cc{Result} type, which can be either \cc{Ok(v)} for a normal return or an error
+code for one of the errors defined in the standard. We systematically guarantee
+that the state is unchanged when an operation returns an error (though this is
+stronger than the text of the RFC); the transaction system makes this easy to
+achieve by aborting the whole transaction. For example,
+\autoref{fig:getsz} shows the
+specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
+the inode \cc{ino}.
+
+\begin{figure}
+\begin{verbatim}
+predicate GETSZ_spec(ino: Ino,
+  fs: FilesysData, fs': FilesysData,
+  r: Result<uint64>)
+{
+  fs' == fs &&
+  (r.ErrBadHandle? ==> ino !in fs) &&
+  (r.ErrIsDir? ==>
+     ino in fs &&
+     fs[ino].Dir?) &&
+  (r.Ok? ==>
+     ino in fs &&
+     fs[ino].ByteFile? &&
+     r.v == |fs[ino].data|)
+}
+\end{verbatim}
+\caption{Specification of a hypothetical \cc{GETSZ} operation, a simplification
+  of the real \cc{GETATTR} operation.}
+\label{fig:getsz}
+\end{figure}
+
+There are four clauses in the specification. The first just says that this
+operation is read-only. The second is one possible error: if the server returns
+\cc{ErrBadHandle}, then \cc{ino} is not allocated. The third is a different
+error, which says this operation might return \cc{ErrIsDir} for directories.
+Finally the final case says that if the operation is successful, it returns the
+length of the data in \cc{fs[ino]}. Dafny checks several consistency properties
+of this specification itself; for example, a use of \cc{fs[ino]} will not even
+compile if the specification does not earlier imply \cc{ino in fs}.
+
+We developed a state-machine model of the regular file and directory operations
+in NFS in this style, including specifying what certain errors
+signify. \autoref{fig:nfs} lists the entire NFS API and what parts we verified.
+
+\renewcommand{\check}{\textcolor{ForestGreen}{\checkmark}}
+\newcommand{\nope}{\textcolor{Maroon}{\ding{55}}}
+
+\begin{figure}
+  \center
+\begin{tabular}{m{5cm}c}
+  \toprule
+  Operation & {\small verified} \\
+  \midrule
+  \multicolumn{2}{c}{File and directory operations} \\
+  \cc{GETATTR}, \cc{SETATTR} & \check \\
+  \cc{CREATE}, \cc{WRITE}, \cc{READ}, \cc{REMOVE} & \check \\
+  \cc{MKDIR}, \cc{LOOKUP}, \cc{READDIR}, \cc{RENAME}, \cc{REMOVE} & \check \\[10pt]
+
+  \multicolumn{2}{c}{Unsupported features} \\
+  \cc{READLINK}, \cc{SYMLINK}, \cc{LINK}, \cc{MKNOD} & \nope \\
+  \cc{READDIRPLUS}, \cc{ACCESS} & \nope \\[10pt]
+
+  \multicolumn{2}{c}{Configuration} \\
+  \cc{FSINFO}, \cc{PATHCONF}, \cc{FSSTAT} & \nope \\[10pt]
+
+  \multicolumn{2}{c}{Trivial operations} \\
+  \cc{NULL}, \cc{COMMIT} & \check \\
+  \bottomrule
+\end{tabular}
+\caption{NFS API and which operations \sys supports and verifies.}
+\label{fig:nfs}
+\end{figure}
+
+\sys implements \cc{FSINFO} and \cc{PATHCONF}, which give the client static
+configuration information about the file system (for example, the maximum size
+of a write or the maximum path length). These return constants and thus have no
+specification. \sys also implements \cc{FSSTAT} to report total and free space,
+but it does not have a meaningful specification.
+
+\sys could support some of the remaining operations with some more effort.
+Symlinks are essentially a file that holds a path, which can be read with
+\cc{READLINK}. \cc{MKNOD} similarly creates a new type of special file.
+Specifying these operations would require mostly mechanical changes to the
+specification to accommodate the new file types.
+\cc{LINK} is more complicated because in addition to tracking
+the link count of every file in the state, the specification for \cc{REMOVE}
+needs to say that the link count is decremented and that the file is deleted if
+its link count drops to zero.
