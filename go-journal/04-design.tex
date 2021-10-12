@@ -21,6 +21,10 @@
 %% prepares the \cc{op} with the buffered writes needed to implement the RPC ---
 %% followed by a call to \cc{Commit(true)} to finally make the transaction durable.
 
+\tej{Bunch of work in this section. First explain why this layer is needed in
+GoTxn, and second less emphasis on a caller since the spec is only used once
+to prove a generic transaction correct.}
+
 The goal of \txn's specification is to support convenient reasoning about atomic
 operations, like the NFS \scc{write} implementation in \autoref{fig:nfswrite} and \autoref{fig:write}.
 In this section we walk through how the specification
@@ -166,6 +170,9 @@ writes. A caller obtains these predicates with a logical operation we call
 \emph{lifting} that converts ownership of $a \mapsto_{d} o$ into $a \mapsto_{\mathit{op}} o$, granting the
 ability to read and write.
 
+\tej{lifting between disk/txn is still important, but lifting of predicates is
+irrelevant to GoTxn}
+
 To make it easier to work with lifting, the specification allows lifting an
 entire \emph{predicate} $P$ and transforms all of its points-to facts
 simultaneously, which we denote this paper denotes by switching subscripts. For
@@ -298,6 +305,10 @@ $Q_{c}$, the crash condition, describing what holds if the system crashes during
 When the caller wants to prove something about code that acquires a lock using
 the crash-aware specification, it must do so with $I_c(\cc{i})$ in its crash
 condition for the critical section:
+\tej{something messier is needed to reason about the lock/release happening in
+the 2PL code; the underlying spec I believe is that acquiring a crash lock
+gives a crash borrow, and then the 2PL code has to open/close it for each read
+or write operation; releasing the lock is easy in that case.}
 %
 \begin{align*}
 &\hoareC{P \sep I(\cc{i})}{\cc{f()}}{Q \sep I(\cc{i})}{I_c(\cc{i})} \\
@@ -410,6 +421,11 @@ fails in order to return the original durable data.
 
 \subsection{Summary}
 \label{s:design:summary}
+
+\tej{Summary was nice before but now need to figure out how to summarize the
+  GoJournal spec or combine it with the 2PL proof or something in between. It
+  would be nice to explain something about the GoJournal spec for sure, if only
+  to make the explanation a bit more modular.}
 
 The combination of above features mean the developer is mostly left with
 sequential crash-free reasoning about how each operation (for example, each NFS3 RPC

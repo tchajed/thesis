@@ -1,8 +1,13 @@
 The transaction system is the most challenging part of implementing and
 verifying DaisyNFS.
 
+The transaction system is implemented by first implementing and verifying
+\emph{journaling}, which provides crash atomicity but requires the caller to
+guarantee concurrent operations do not conflict. On top of journaling we
+implement a transactional API with two-phase locking, an algorithm that ensures
+operations don't conflict with an automatic and general locking policy.
+
 \input{go-journal/01-intro}
-\input{go-journal/02-related}
 \input{go-journal/02-related}
 \input{go-journal/03-system}
 \input{go-journal/04-design}

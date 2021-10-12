@@ -36,7 +36,7 @@ concurrency at all, for which we build a framework that applies to efficient
 code (written in Go) and can handle the sorts of reasoning in the file system.
 The second challenge is the complexity of the implementation, which we address
 with a novel, verification-friendly file-system design that allows us to reason
-about each operation as if it were atomic, resulting in much simpler sequential proofs.
+about each operation as if it were atomic, resulting in much simpler sequential reasoning.
 
 More concretely the verified
 artifact from this thesis is \textbf{DaisyNFS}, which implements the Network
@@ -49,11 +49,13 @@ operation is implemented atomically (with respect to both other threads and on
 crash), and behaves according to a formal model of the NFS specification as laid
 out in prose in RFC 1813.
 
-DaisyNFS has a novel file-system design that relies on a \emph{transaction
-system} to make verification practical. The advantage of this design is that the
+DaisyNFS has a novel file-system design where all disk access goes through a
+\emph{transaction system} we call GoTxn. The advantage of this design is that the
 transaction system makes calling code appear to run in sequential transactions,
 isolating crash safety and concurrency concerns to the transaction system
-implementation. While other file systems (including the most common Linux file
+implementation. As a side effect of having simpler sequential reasoning, we were
+able to focus our effort on writing file-system features and getting good
+performance. While other file systems (including the most common Linux file
 system, ext4, and the Windows NTFS file system) also use transactions, DaisyNFS
 uses them in a principled way such that every file-system operation is
 automatically made atomic. In many other file systems there remains state
@@ -62,18 +64,17 @@ developer must still coordinate between the transaction and outside state, for
 example by adding additional locking.
 
 A key technical contribution that allows us to verify this file-system design is
-a formal specification for how the transaction system guarantees atomicity. Our
-formal specification is backed by a machine-checked proof against an
+a formal specification of how the transaction system guarantees atomicity. Our
+formal specification is backed by a machine-checked proof against the GoTxn
 implementation, giving confidence that this specification is actually achieved.
-The challenge in formalizing the details is that the transaction system requires
-calling code to follow some rules to guarantee atomicity --- for example,
-transactions that read or write state unknown to the transaction system cannot
-be made atomic.
+A challenge in this specification is formalizing under what conditions the
+transaction system is able to guarantee atomicity --- for example, transactions
+that read or write global state outside the transaction system cannot be made atomic.
 
 The transaction system has a high-performance implementation since it is the
 bottleneck for the file-system's performance, resulting in tricky concurrency
-and crash safety patterns. This thesis develops specialized infrastructure for
-carrying out this reasoning: \textbf{Perennial} is a new program logic for
+and crash safety patterns. This thesis develops new foundations that make this
+reasoning possible for efficient implementations: \textbf{Perennial} is a new program logic for
 reasoning about the combination of concurrency and crash safety, and
 \textbf{Goose} is a tool for reasoning about a Go implementation using Perennial.
 
@@ -88,10 +89,9 @@ makes the following contributions:
   \item Goose: a system for reasoning about Go using Perennial. We needed a
   new and flexible system to support our custom verification infrastructure, and
   Go was a good platform for writing code and improving its performance.
-  \item A proof of a transaction system showing that transactions have the
+  \item GoTxn: a verified transaction system with a proof showing transactions have the
     illusion of sequential, atomic execution, with respect to both crashes and other
-    threads. The proof uses Perennial to establish a theorem about any client of the
-    transaction system.
+    threads. The proof uses Perennial to establish a theorem about any calling code.
   \item DaisyNFS: a file system that takes advantage of the transaction system's
     correctness theorem to reason about each transaction in Dafny, a
     sequential verification language. A key contribution is a linking theorem
@@ -255,13 +255,13 @@ for concurrency. Iris includes a concurrent program logic which we are able to
 extend with crash-safety reasoning while preserving the concurrency reasoning
 features, without reimplementing them from scratch.
 
-Using our new program logic, we verified a transaction system.
+Using our new program logic, we verified GoTxn, a concurrent transaction system.
 What we prove about the transaction system is that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
 specification includes some important details, but this intuition still holds.
 
-Next, we use the transaction system in Dafny as the basis for a file system.
+Next, we use GoTxn in Dafny as the basis for a file system.
 The transaction system is implemented as an ordinary Go package, with methods to
 start a transaction, execute reads and writes within it, and finally commit or
 abort it. Using Dafny's \cc{extern} feature we make these methods available with

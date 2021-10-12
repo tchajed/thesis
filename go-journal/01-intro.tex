@@ -86,37 +86,6 @@ code divides up functionality among Go packages.
 % crash safety; in the process of doing so we found one design bug that
 % was not caught by unit tests (\S\ref{sec:eval:bugs}).
 
-% \mfk{make clear that this \gnfs imports the \txn package.}
-To test the performance and completeness of \txn, we built \gnfs, a functional
-(but unverified) NFSv3
-server that can be mounted through the Linux NFS client. \gnfs imports \txn
-and uses it to achieve crash consistency for NFS operations. We focus on
-NFSv3 because it is widely used in practice, its performance matters
-for applications, and it has a crash-safety and correctness
-specification in the form of RFC 1813~\cite{RFC:1813}.  The
-crash-safety properties are advanced; for example, the protocol supports unstable
-writes which let the implementation delay flushing them to disk.
-
-On a combination of microbenchmarks and a software-development workload,
-\gnfs achieves at least 90\% of the throughput of Linux's in-kernel NFS server
-exporting ext4 running on either a RAM disk or fast NVMe storage. On slower
-SSD storage without using unstable writes \gnfs gets 20\% of Linux's throughput
-due to inefficient I/O. \txn's
-concurrency is crucial to performance: the throughput of \gnfs scales
-with the number of clients, but if \txn is modified to execute
-sequentially (as in previous verified storage systems), even with 20 clients \gnfs achieves only
-double the throughput of a single client.
-
-To demonstrate that \txn's specifications enable effective verification of client applications,
-we implemented and verified a simplified NFS server, which we call \simplenfs,
-covering the core operations, such as \scc{read}, \scc{write},
-\scc{getattr}, and \scc{setattr} (which can shrink and grow a file).
-By using \txn's specifications, the proof for \simplenfs largely involves crash-free reasoning
-(only \simplenfsCrashLOC{} lines of code, out of a total of \simplenfsLOC{}, require explicit reasoning about crashes).
-This translates into a lower proof overhead: \simplenfs requires \simplenfsLOP{}
-lines of proof for \simplenfsLOC{} lines of Go code.  \txn itself requires
-\gotxnLOP{} lines of proof for \gotxnLOC{} lines of Go code.
-
 The contributions of this paper are (1) \txn, a concurrent
 journaling system with a machine-checked proof of correctness and
 crash-safety; (2) the Perennial 2.0 framework, with extensions to the original
@@ -132,14 +101,6 @@ journal operations, which is sufficient to prove \simplenfs.  \txn is also
 less general than JBD2 (e.g., \txn does not support floating commit
 blocks), and less general than database transaction systems (e.g.,
 \txn does not support undoing journaled operations).
-While \txn provides atomic updates for crash consistency, it does not
-implement automatic concurrency control. Objects accessed by a journal operation
-cannot be concurrently accessed by another thread.
-\txn provides a verified library for locking objects tracked by the journal, which clients
-can use to implement concurrency control.
-% While \txn provides
-% a library for locking objects tracked by the journal,
-% \txn does not implement automatic concurrency control for transactions.
 
 %%% Local Variables:
 %%% mode: latex

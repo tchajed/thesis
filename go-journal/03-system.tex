@@ -15,6 +15,8 @@ package's requirements and guarantees are. Then,
 % give the formal specification~(\autoref{s:design}) and interesting details of
 % the proof~(\autoref{s:proof}).
 
+\tej{extend this section to cover GoTxn}
+
 \subsection{Programming with \txn}
 \label{s:system:api}
 
@@ -118,6 +120,7 @@ to only one file.
     \toprule
     \textbf{Layer} & \textbf{Description} \\
     \midrule
+    \scc{txn} & Concurrency control using two-phase locking \\
     \scc{jrnl} & In-memory object operations \\
     \scc{obj} & Journaling sub-block writes \\
     \scc{wal} & Whole-block write-ahead logging \\

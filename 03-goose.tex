@@ -8,8 +8,7 @@ proven for the model should hold for the real Go code.
 The verification infrastructure for the transaction system is all
 developed as part of this thesis. This chapter describes the overall
 approach, which we call Goose. (We will also use Goose in some places to
-refer to the subset of Go supported.) The next chapter goes into the
-reasoning in Perennial on top. Before we can translate Go code, we need
+refer to the subset of Go supported.) Before we can translate Go code, we need
 some way of writing a model of the source code. It turns out to be
 convenient to use another programming language for this purpose, which
 we call GooseLang. After translating, we will want to carry out proofs
@@ -21,9 +20,7 @@ thesis for a reader interested in verifying Go code but not the
 specifics of the transaction system proof or the file system built on
 top. Crash safety is also of little importance in this chapter. We focus
 on normal execution of Go here; crashes are modeled simply by stopping
-execution and wiping out all of the state except for the disk. The next
-chapter on Perennial talks about how to reason about crashes as
-specified in this way.
+execution and wiping out all of the state except for the disk.
 
 \section{Why Go?}
 
@@ -176,10 +173,11 @@ the translation of every function call.
 
 We do not support Go's defer statement. It would be nice to support some
 common and simple patterns, particularly for unlocking, by translating
-\cc{defer} statically; Go's general \cc{defer} is much more
-complicated since it can actually be issued anywhere in a function and
+\cc{defer} statically; Go's general \cc{defer} statement is much more
+complicated to model since it can actually be issued dynamically and
 pushes to a stack of calls that are executed in reverse order at return
-time.
+time. This generality is rarely exploited so it would be useful to model even
+just uses of \cc{defer} that can be statically analyzed.
 
 We do not support mutual recursion between Go functions, and
 additionally require the translation to be in the right order so
@@ -191,9 +189,7 @@ to model Go definition management imposes a limitation compared to Go,
 but is much simpler to work with compared to modeling a Go package as a
 set of mutually recursive definitions. In such a model it would be
 necessary to first give specifications to every definition that may be
-assumed by other proofs, and to ensure the proof isn't circular each
-function would have to be proven in some order that only assumes
-previous results.
+assumed by other proofs, and to ensure the proof isn't circular.
 
 \section{Modeling pointers}
 
