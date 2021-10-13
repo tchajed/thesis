@@ -1,6 +1,3 @@
-\section{Related work}
-\label{s:related}
-
 To the best of our knowledge, \txn is the first verified concurrent,
 crash-safe journaling system. The verification of \txn builds on a
 large body of previous work, as described in the rest of this
@@ -29,35 +26,6 @@ generally refers only to Perennial 2.0.
 %in Go used in \txn.
 
 
-%This figure is for the next section, but we need to put it here so the placement
-%in the paper works out.
-\begin{figure*}[t]
-  \centering
-  \small
-  \begin{tabular}{lll}
-    \toprule
-        {\textbf{Method}} & {\textbf{Description}} & {\textbf{Spec}} \\
-  \midrule
-\cc{func Begin() *Op} & Start operation & \hyperlink{tgt:begin-spec}{\S\ref{s:design:lifting}} \\
-\cc{func (*Op) ReadBuf(addr Addr, sz uint64) *Buf} & Read a buffer & \autoref{s:design:read-write} \\
-\cc{func (*Buf) SetDirty()} & Mark a buffer as modified & \autoref{s:design:read-write} \\
-\cc{func (*Op) OverWrite(a Addr, sz uint64, data []byte)} & Write without reading & \autoref{s:design:read-write} \\
-\cc{func (*Op) Commit(wait bool) bool}  & Commit by appending to in-memory log. & \autoref{s:design:commit} \\
-& If \cc{wait=true}, also wait until changes are on disk. & \\
-\cc{func Flush() bool} & Flush in-memory log & \\
-    \midrule
-\cc{func (*Lockmap) Acquire(i uint64)} & Acquire \cc{i}th lock & %
-                                         \autoref{s:design:crashlock} \\
-\cc{func (*Lockmap) Release(i uint64)} & Release \cc{i}th lock & %
-                                         \autoref{s:design:crashlock} \\
-\bottomrule
-
-  \end{tabular}
-
-  \caption{\txn interface and API for lockmap.  Not shown are auxiliary
-    interfaces for initialization; checking operation size; etc.}
-  \label{fig:buftxn}
-\end{figure*}
 
 Some of Perennial 2.0's features are needed to support the \txn top-level
 specification and enable verification on top of this interface. The reason this

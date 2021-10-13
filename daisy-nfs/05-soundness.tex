@@ -41,7 +41,8 @@ mechanized in Coq.
 % It would be an interesting direction for future work to automate this step.
 
 \begin{figure}[ht]
-\begin{tabular}{lp{4.5cm}r}
+  \centering
+\begin{tabular}{lp{4.4cm}r}
 \toprule
 Layer & Operations & \\
 \midrule
@@ -146,7 +147,7 @@ two theorems.
 \subsection{Correctness theorem for the transaction system}
 \label{sec:proof:txn}
 
-\cc{Txn} layer semantics serves as the interface between the Perennial and Dafny
+The \cc{Txn} layer semantics serves as the interface between the Perennial and Dafny
 proofs.  It specifies that transactions are atomic in the sense that code
 enclosed within a transaction \cc{Begin} and \cc{Commit} happens all at once (or
 does nothing, if \cc{Abort} is executed), without interleaving of steps by other

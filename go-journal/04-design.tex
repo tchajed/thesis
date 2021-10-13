@@ -399,6 +399,8 @@ commits this operation using the following specification for \cc{Commit}:
   %\tagH{CommitSpec}
 \end{align*}
 
+\tej{should immediately explain how this is used to prove 2PL Commit in
+refinement proof}
 This specification nicely captures how \cc{Commit} works: if we started with data
 $P_d$ on disk, then modified it to $Q_{op}$ in memory, then if \cc{Commit} succeeds
 the new data $Q_d$ is on disk. If \cc{Commit} fails (which happens if the

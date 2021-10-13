@@ -25,7 +25,7 @@ execution and wiping out all of the state except for the disk.
 \section{Why Go?}
 
 Go turns out to be a very convenient language for building verification
-infrastructure. The goose translator effectively gives a semantics to
+infrastructure. The Goose translator effectively gives a semantics to
 the source code, in the form of the semantics of the generated GooseLang
 code. For the verification to be meaningful, the translation must
 preserve the semantics of the source, or at least over-approximate it.
@@ -76,7 +76,13 @@ behaviors of a program).
 
 VST also models C for the purpose of interactive proofs.
 
-\emph{Much more to say here}
+Extraction in the other direction is sometimes used, particularly for ease of
+verification; see Verdi, FSCQ, and Fiat. Rather than starting with efficient
+code (and requiring the developer to write it), it is possible to instead make
+the extraction process generate more efficient code (cite Clement's
+fiat-to-facade work).
+
+\tej{Much more to say here}
 
 \section{High-level overview}
 
@@ -103,9 +109,15 @@ Appending to a slice is a complicated operation, and it was easier to
 write it correctly as a program rather than directly as a transition in
 the semantics. The one cost to this design strategy is that an arbitrary
 GooseLang program is much more general than translated Go programs. This
-has no impact on verifying any \emph{specific} Go program, and so far
-has not been a burden for the proofs we do have for arbitrary GooseLang
-programs.
+has no impact on verifying any \emph{specific} Go program.
+
+The extra generality of GooseLang does have some downsides since at one point in
+the development, in the transaction system's specification, we refer to an
+arbitrary GooseLang program. This theorem is made a bit more complicated since
+to there are some ill-defined GooseLang programs that no Go program could
+generate which the theorem needs to exclude. The transaction system
+specification uses a standard technique of restricting to well-typed GooseLang
+programs, and encoding syntactic restrictions in that type system.
 
 An important aspect of GooseLang is supporting interactive proofs on top
 of the translated code. The interactive proofs use separation logic, a
@@ -569,7 +581,7 @@ $\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}$
 Map iteration has a more sophisticated specification [citation
 needed]:
 
-TODO: write down iteration spec
+\tej{write down iteration spec}
 
 \section{Testing Goose}
 
@@ -616,7 +628,7 @@ its semantics is expressed as a transition system between expressions.
 It is easy to give the semantics of a primitive at the \emph{head} of an
 expression; for example, we can say what $Store(l, v)$ does in a given
 heap if $l$ and $v$ are already values (it stores $v$ in the heap
-and evaluates to \cc{\#()}, the unit value). It is also easy to
+and evaluates to \texttt{\#()}, the unit value). It is also easy to
 interpret \emph{pure} reductions like \cc{x + y} where \cc{x}
 and \cc{y} are values since the semantics of these pure expressions
 is already given as a Gallina function.

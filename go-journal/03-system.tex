@@ -20,6 +20,35 @@ package's requirements and guarantees are. Then,
 \subsection{Programming with \txn}
 \label{s:system:api}
 
+\begin{figure*}[t]
+  \centering
+  \small
+  \begin{tabular}{p{7cm}p{6cm}l}
+    \toprule
+        {\textbf{Method}} & {\textbf{Description}} & {\textbf{Spec}} \\
+  \midrule
+\texttt{func Begin() *Op} & Start operation & \hyperlink{tgt:begin-spec}{\S\ref{s:design:lifting}} \\
+\texttt{func (*Op) ReadBuf(addr Addr, sz uint64) *Buf} & Read a buffer & \S\ref{s:design:read-write} \\
+\texttt{func (*Buf) SetDirty()} & Mark a buffer as modified & \S\ref{s:design:read-write} \\
+\texttt{func (*Op) OverWrite(a Addr, sz uint64, data []byte)} & Write without reading & \S\ref{s:design:read-write} \\
+\texttt{func (*Op) Commit(wait bool) bool}  & Commit by appending to in-memory log. & \S\ref{s:design:commit} \\
+& If \cc{wait=true}, also wait until changes are on disk. & \\
+\texttt{func Flush() bool} & Flush in-memory log & \\
+    \midrule
+\texttt{func (*Lockmap) Acquire(i uint64)} & Acquire \cc{i}th lock & %
+                                         \S\ref{s:design:crashlock} \\
+\texttt{func (*Lockmap) Release(i uint64)} & Release \cc{i}th lock & %
+                                         \S\ref{s:design:crashlock} \\
+\bottomrule
+
+  \end{tabular}
+
+  \caption{\txn interface and API for lockmap.  Not shown are auxiliary
+    interfaces for initialization; checking operation size; etc.}
+  \label{fig:buftxn}
+\end{figure*}
+
+
 Developers use the journal to turn several storage operations into an atomic journal operation that commits to disk using the \txn
 interface listed in \autoref{fig:buftxn}.  \cc{Begin} starts a
 journal operation, returning a \cc{*Op} object, which keeps track of the
@@ -84,6 +113,7 @@ Guava Striped documentation describes the idea well~\cite{guava-striped}.
   \label{fig:write}
 \end{figure}
 
+\tej{use DaisyNFS as an example}
 \autoref{fig:nfswrite} and \autoref{fig:write} show how \simplenfs
 uses the \txn API and the lockmap.  The server runs each NFS request in a
 separate Go thread running a single journal operation. \autoref{fig:nfswrite}
