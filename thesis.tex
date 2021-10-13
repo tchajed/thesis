@@ -1,15 +1,32 @@
-\documentclass[fontsize=12pt,paper=letter,cleardoublepage=plain,twoside=false]{scrbook}
+\documentclass[11pt,twoside,final]{mitthesis}
+%\documentclass[fontsize=12pt,paper=letter,cleardoublepage=plain,twoside=false]{scrbook}
+
+\usepackage[T1]{fontenc}
+\usepackage{amssymb}
+%\usepackage[defaultsans]{lato}
+% [lf] - Use lining figures by default.  Mostly because I say things
+% like "CPU 0" a lot in the text and old style figures make that look
+% really weird.
+%\usepackage[lf,footnotefigures]{MinionPro} % After amssymb
+\usepackage[toc,bib]{tabfigures}
+
+% No Minion Pro?  Uncomment the next line to use Times
+%\usepackage{times,mathptmx}
+%\usepackage{crimson}
+\usepackage[bitstream-charter]{mathdesign}
+
+\usepackage{mathrsfs}
 
 % adapted from https://github.com/jonhoo/thesis/
 
 % for 1.5 line spacing
 \usepackage{setspace}
 \onehalfspacing
-% single spacing for table of contents
-\AfterTOCHead{\singlespacing}
+%% single spacing for table of contents
+%\AfterTOCHead{\singlespacing}
 
 % recompute page layout based on the above
-\recalctypearea
+%\recalctypearea
 
 % more colors (like RedOrange)
 \usepackage[dvipsnames]{xcolor}
@@ -83,6 +100,8 @@
 \usepackage{fancyvrb}
 \usepackage{tikz}
 \usetikzlibrary{arrows,arrows.meta, shapes.geometric,decorations.pathreplacing,calc,positioning,matrix,tikzmark}
+\tikzstyle{every node}=[font=\small]
+
 
 \DeclareOldFontCommand{\bf}{\normalfont\bfseries}{\mathbf}
 % manually-generated code listings
@@ -101,18 +120,18 @@
 \usepackage{pifont}
 %% end DaisyNFS
 
-% do not reset page numbers at \mainmatter
-\let\mainmatterorig\mainmatter
-\renewcommand\mainmatter
- {\edef\p{\arabic{page}}%
-  \mainmatterorig
-  % we need to compute the actual current page number. we know the page number
-  % from _before_ we called \mainmatter. but what is it now? well, it is
-  % certainly that +1. but we also need to account for the next chapter starting
-  % on a "right" (odd) page. we do this by adding the page number modulo two.
-  % TODO: double check before final version
-  \setcounter{page}{\p+1+(\p-\p/2*2)}%
- }
+%% do not reset page numbers at \mainmatter
+%\let\mainmatterorig\mainmatter
+%\renewcommand\mainmatter
+% {\edef\p{\arabic{page}}%
+%  \mainmatterorig
+%  % we need to compute the actual current page number. we know the page number
+%  % from _before_ we called \mainmatter. but what is it now? well, it is
+%  % certainly that +1. but we also need to account for the next chapter starting
+%  % on a "right" (odd) page. we do this by adding the page number modulo two.
+%  % TODO: double check before final version
+%  \setcounter{page}{\p+1+(\p-\p/2*2)}%
+% }
 
 % an environment for todos
 \newenvironment{inprogress}
@@ -156,7 +175,7 @@
 \author{Tej Chajed}
 \begin{document}
 
-\frontmatter
+%\frontmatter
 
 % always arabic page numbering (default is roman in \frontmatter)
 \pagenumbering{arabic}
@@ -174,7 +193,7 @@ paper~\cite{chajed:gojournal}.
 
 \tableofcontents
 
-\mainmatter
+%\mainmatter
 
 \chapter{Introduction}%
 \label{sec:introduction}
