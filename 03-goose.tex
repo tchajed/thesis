@@ -518,7 +518,7 @@ about subslicing in terms of the slice model:
 
 $sliceFull(s, l) \vdash sliceFull(sliceTake(s, i), take(l, i))$
 
-This entailment precisely captures how retaining ownerhsip of the
+This entailment precisely captures how retaining ownership of the
 capacity of $sliceTake(s, i)$ requires giving up the remainder of
 $s$.
 
@@ -553,7 +553,8 @@ inefficiently, using an association list) using recursive GooseLang
 code. GooseLang is an untyped language, so our first attempts had basic
 errors like missing arguments. We improved our confidence in this
 implementation both by testing it and by verifying it. Both of these
-essentially rule out type errors, and the specification is simple enough
+essentially rule out type errors (regardless of what specification we give),
+and the specification is simple enough
 to be a reliable test of behavior. Both simple tests and verification
 cover easy mistakes like reading the oldest write to a key rather than
 the latest, or duplicate keys during iteration (the implementation must
@@ -565,7 +566,7 @@ treat a map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation $mapVal(v, m)$ that relates
 this encoded value to a Gallina map $m$, which uses \cc{gmap} from
-stdpp; for simplicity we use \cc{gmap uint64 val} and limit map
+stdpp; for simplicity we use \cc{gmap u64 val} and limit map
 keys to integers. Values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
 all use $mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)$. The
@@ -594,7 +595,7 @@ this is case, the proof is sound in that if the modeled system always
 satisfies some property the code will, too.
 
 One subtlety in the trust we place in Goose is that it only applies when
-Goose translates code succesfully, that code compiles in Coq, and the
+Goose translates code successfully, that code compiles in Coq, and the
 model has no undefined behavior. If any of these fail, then the proof of
 the system would either not be possible or not go through. Therefore the
 most important bugs are those where the translation's behavior differs
@@ -645,7 +646,7 @@ can step to $e'$, then $K[e]$ can step to $K[e']$. Thus the
 semantics has a rule that works when any such $K$ exists, while the
 interpreter recurses through an expression (in the right order) and
 evaluates a sub-expression, then fills it into the context. We prove
-this correct, showing that the interpeter and semantics agree on an
+this correct, showing that the interpreter and semantics agree on an
 evaluation order. (Specifically, the proof shows that the interpreter
 produces one of the valid evaluation orders; the semantics is intended
 to have a deterministic order, but this is not proven.)
