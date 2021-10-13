@@ -180,16 +180,20 @@
 % always arabic page numbering (default is roman in \frontmatter)
 \pagenumbering{arabic}
 
-\section*{Acknowledgments}
-\begin{spacing}{1}
-  \ifoptionfinal{\input{00-acknowledgements.tex}}{Will be included in the final submission.}
-\end{spacing}
-\cleardoublepage
+\input{title}
 
-\section*{Prior Publication}
-Parts of this thesis were previously published in a conference
-paper~\cite{chajed:gojournal}.
-\cleardoublepage
+%% suppress these while writing
+
+%\section*{Acknowledgments}
+%\begin{spacing}{1}
+%  \ifoptionfinal{\input{00-acknowledgements.tex}}{Will be included in the final submission.}
+%\end{spacing}
+%\cleardoublepage
+%
+%\section*{Prior Publication}
+%Parts of this thesis were previously published in a conference
+%paper~\cite{chajed:gojournal}.
+%\cleardoublepage
 
 \tableofcontents
 
@@ -203,7 +207,7 @@ paper~\cite{chajed:gojournal}.
 \label{sec:related}
 \input{02-related-work.tex}
 
-\chapter{Goose}%
+\chapter{Goose, a tool for verifying Go code}%
 \label{sec:goose}
 \input{03-goose.tex}
 
@@ -211,11 +215,11 @@ paper~\cite{chajed:gojournal}.
 %\label{sec:perennial}
 %\input{04-perennial.tex}
 
-\chapter{Transaction system}%
+\chapter{GoTxn, the transaction system}%
 \label{sec:txn}
 \input{05-txn.tex}
 
-\chapter{DaisyNFS}%
+\chapter{DaisyNFS, the file system}%
 \label{sec:daisy-nfs}
 \input{06-daisy-nfs.tex}
 
