@@ -14,12 +14,12 @@
 
 \draw node (dispatch) [layer=Go] {Dispatch Loop};
 \draw node (goout) [genlayer,below of=dispatch] {Go output};
-\draw node (txn) [layer=Go,below of=goout] {Txn System};
+\draw node (txn) [layer=Go,below of=goout] {GoTxn};
 
 \draw node (coq) [left=1.5cm of txn, align=center] {Verification \\ in Perennial};
 \draw node (dafny) [left=1.25cm of goout, layer=Dafny] {File-system \\ Operations};
 
-\draw node (out) [below=1cm of txn] {\sys Library};
+\draw node (out) [below=1cm of txn] {\texttt{daisy-nfsd} binary};
 
 \draw [thick] (dispatch.south) -- (goout.north);
 \draw [thick] (goout.south) -- (txn.north);

@@ -1,13 +1,25 @@
-The transaction system is the most challenging part of implementing and
-verifying DaisyNFS.
+GoTxn is a transaction system we implemented and verified as the foundation for
+DaisyNFS. The goal is to handle crash safety and concurrency for arbitrary
+operations within this layer, exporting an interface where transactions appear
+to run atomically. Reasoning within a transaction is left to the caller, but
+this reasoning is now sequential so it is easier to implement sophisticated and
+efficient code on top.
 
-The transaction system is implemented by first implementing and verifying
-\emph{journaling}, which provides crash atomicity but requires the caller to
-guarantee concurrent operations do not conflict. On top of journaling we
-implement a transactional API with two-phase locking, an algorithm that ensures
-operations don't conflict with an automatic and general locking policy.
+In this chapter we set out the precise specification that GoTxn provides. The
+GoTxn implementation is built up in several layers of abstraction. We outline
+this implementation and sketch the most interesting parts of the proof. Of
+foremost importance is that GoTxn consists primarily of a \emph{journaling
+system}, GoJournal~\cite{chajed:gojournal}. The journaling system makes
+operations crash atomic but requires the caller to guarantee concurrent
+operations do not conflict. GoTxn automatically implements this guarantee using
+the two-phase locking algorithm. While two-phase locking involves only a hundred
+lines of code or so, it changes the specification dramatically since the caller
+gets the illusion of sequential execution without any concurrency control.
 
-\input{go-journal/01-intro}
+\tej{cut the GoJournal intro, make sure to bring back anything important}
+
+%\input{go-journal/01-intro}
+\input{go-journal/01-spec}
 %\input{go-journal/02-related}
 \input{go-journal/03-system}
 \input{go-journal/04-design}
