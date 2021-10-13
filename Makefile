@@ -12,7 +12,7 @@ DEPS := $(wildcard *.tex) \
 all: thesis.pdf
 
 thesis.pdf: thesis.tex $(DEPS)
-	latexrun --latex-args='-shell-escape' $<
+	latexrun --latex-args='-shell-escape' --bibtex-args=-min-crossrefs=100 $<
 
 PROPOSAL_DEPS := proposal-abstract.tex \
 	01-introduction.tex \
