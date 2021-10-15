@@ -9,24 +9,6 @@ two software stacks of significant size and complexity.
 
 \subsection{Verifying storage systems}
 
-\paragraph{Directly related systems} \sys directly builds upon
-GoJournal~\cite{chajed:gojournal} to implement the transaction system, together
-with its new version of the Perennial framework~\cite{chajed:perennial} that is
-used to verify the transaction system's proof. This infrastructure is a program
-logic designed for storage systems that need a combination of concurrency and
-reasoning about crashes at any time, built on top of the Iris
-framework~\cite{jung:iris-1} in Coq.
-
-The transaction system differs from GoJournal in that the GoJournal
-specification requires the caller to prove that concurrent transactions do not
-attempt to read or write the same objects, whereas the transaction system
-guarantees this transparently with per-object locks. The specification styles
-are also different: whereas the GoJournal proof is a set of specifications
-within the Perennial logic, the transaction system's proof uses a more general
-refinement-based definition that we can apply to the Dafny code. This is
-necessary to combine the tools, since Dafny cannot express the GoJournal
-specification's concurrency restrictions directly.
-
 \paragraph{Directly related applications}  The authors of the
 Perennial system verified a crash-safe, concurrent mail server under
 the assumption that the file system is crash-safe. \sys is a
@@ -35,13 +17,6 @@ a mail server: the mail server is about 150 lines with a monolithic
 proof while \sys combines a transaction system (itself 1,300 lines) with
 a 3,000-line file system, each of which involve many intermediate
 abstractions.
-
-The authors of GoJournal verify a simple NFS file server on top of
-GoJournal, but that server is not complete enough to run real
-applications (it supports only one directory and can read/write only
-small files).  Furthermore, the simple NFS server does its own locking
-and so the proof must reason about concurrency, increasing the proof
-overhead compared to \sys.
 
 %% The Dafny side of \sys is a new implementation but its design and aspects of the
 %% proof strategy were inspired by other verified file systems like

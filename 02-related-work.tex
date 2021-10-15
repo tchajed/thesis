@@ -48,26 +48,27 @@ in-place.
 
 \section{Crash-safety foundations}
 
-\section{Work we build upon}%
+systems with custom infrastructure: FSCQ, Yggdrasil, VeriBetrKV
+
+FTCSL
+
+persistent memory semantics
+
+\section{Concurrency foundations}
+
+Old stuff like Views, FCSL; VST and CCAL. Few systems but do have CertiKOS.
 
 Iris
 
-\section{Verified sequential systems}
+\section{Other stuff}
 
-FSCQ, Yggdrasil, VeriBetrKV
-
-\section{Verified concurrency reasoning}
-
-Lots of frameworks. Systems like CertiKOS, Hyper-V, etc.
-
-\section{Verified concurrent
-storage}
-
-FTCSL. Flashix (needs detailed comparison).
+ext4 semantics from Azalea's group
 
 \section{Related to GoTxn}
 
 comparison of system to jbd2
+
+Push/Pull model
 
 DFSCQ logging system. ARIES and its FTCSL proof
 
@@ -78,5 +79,13 @@ DFSCQ logging system. ARIES and its FTCSL proof
 some similarities to design of Yggdrasil
 
 indirect block verification-friendly design from DFSCQ
+
+The Dafny side of DaisyNFS is a new implementation but its design and aspects of
+the proof strategy were inspired by other verified file systems like
+DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
+in Konradi's master's thesis~\cite{akonradi-meng}) and
+Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
+
+AtomFS does concurrency reasoning
 
 \input{daisy-nfs/02-related}
