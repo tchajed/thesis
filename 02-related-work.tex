@@ -1,5 +1,52 @@
-Out of all related work, Flashix most directly tackles reasoning about a
-concurrent storage system.
+DaisyNFS draws on several lines of research. This chapter both explains the
+research DaisyNFS directly builds upon and other work solving similar problems.
+
+\section{The Flashix file system}
+
+The Flashix project deserves special attention since it also develops a verified
+concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
+Flashix has different goals since it is a file system for flash storage, a
+lower-level technology than the drives DaisyNFS targets. The verification
+infrastructure used is designed for the specific use case of a flash file
+system, including the techniques used for concurrency and crash safety, whereas
+Perennial is a general reasoning system. Flashix is implemented using abstract
+data types in a high-level language; a code generator transforms this code into
+executable C, but this process is both not verified and has difficulty producing
+the most efficient code using in-place updates.
+
+While Flashix does have mechanized proofs, the approaches for both concurrency
+and crash safety are layered on top in such a way that the top-level
+specification and proof are not entirely within the proof assistant. Perennial
+on the other hand formalizes the complete specification down to a simple
+semantics for crashes and concurrency. We do need some argument to connect the
+transaction system proof to the theorems proven in Dafny, which is a limitation
+of combining verification frameworks, but the upshot is a much lower proof
+overhead.
+
+The Flashix project found that components in the stack intertwine due to the
+realism of the system; modularity helped but the interfaces still had many
+dependencies. We had a similar experience within the transaction system, where
+performance constrained the APIs of internal layers and forced us to export
+complicated APIs. GoTxn was perhaps trickier than the components of Flashix
+because we model code at a lower level of abstraction, so even issues like
+concurrency and memory safety show up in each interface. We were inspired to
+develop the DaisyNFS design to get truly sequential reasoning by the pain in
+verifying GoTxn, and found modularity and clean abstractions much easier once
+code ran within a transaction.
+
+Where it lacks in generality, Flashix does make up for in verifying a taller
+storage stack than DaisyNFS. Flash storage has a more limited API than a
+standard drive --- in particular flash blocks must be completely erased before
+being reused. A flash file system works with this limitation with \emph{garbage
+collection}, where occasionally the system identifies a mostly-unused block,
+moves its valid data elsewhere, and then erases it to reclaim space. This is
+implemented by maintaining a logical-to-physical block mapping similar to
+virtual memory. DaisyNFS does not require any of this code. We do generally run
+on SSDs which internally use flash blocks and themselves implement garbage
+collection and a logical block mapping so that they can support overwriting data
+in-place.
+
+\section{Crash-safety foundations}
 
 \section{Work we build upon}%
 
@@ -17,15 +64,6 @@ Lots of frameworks. Systems like CertiKOS, Hyper-V, etc.
 storage}
 
 FTCSL. Flashix (needs detailed comparison).
-
-\section{Related to Goose}
-
-Translating into a model: VST, RefinedC
-
-Struct model and reasoning principles in particular are very similar to
-VST
-
-\tej{Goose related work might belong in its chapter}
 
 \section{Related to GoTxn}
 
