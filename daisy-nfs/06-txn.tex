@@ -27,7 +27,7 @@ data structure already implemented and verified in GoJournal.
 We isolate the reasoning about these locks into a set of Hoare-logic proofs
 about the two-phase locking methods. This intermediate specification exposes the
 durable state of the transaction system using ghost variables to the refinement
-proof. GoJournal exposes logical resources representing the on-disk and
+proof. \tej{that's all we have to say about the 2PL's Hoare specs?} GoJournal exposes logical resources representing the on-disk and
 in-memory value of each object. The two-phase locking system wraps both of these
 resources in a lock that maintains a correspondence with the transaction
 system's ghost variables. To handle crashes, the proof uses Perennial's

@@ -3,7 +3,7 @@
 % And using its specs reads a little clunky to me -JDT
 %\section{Specifying \txn and using its specs}
 
-\section{Specifying \txn}
+\section{Specifying GoJournal}
 \label{s:design}
 
 %% This section walks through the \txn specification as well as how an application
@@ -24,6 +24,10 @@
 \tej{Bunch of work in this section. First explain why this layer is needed in
 GoTxn, and second less emphasis on a caller since the spec is only used once
 to prove a generic transaction correct.}
+
+\tej{some of the GoJournal paper's motivation (about the difficulty of capturing
+the crash atomicity of a journal) do apply to this section, and need to be
+introduced locally since the chapter is otherwise about a transaction system}
 
 The goal of \txn's specification is to support convenient reasoning about atomic
 operations, like the NFS \scc{write} implementation in \autoref{fig:nfswrite} and \autoref{fig:write}.
