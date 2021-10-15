@@ -1,226 +1,4 @@
-\section{System design}
-\label{s:system}
-
-This section explains the transaction system in more detail. First,
-\autoref{s:system:api} gives the programming interface, which we will export to
-Dafny to implement DaisyNFS. We can then give an informal layout of how a
-storage system uses GoTxn to simplify crash safety and concurrency reasoning.
-Then, \autoref{s:system:impl} explains how the transaction is implemented,
-especially the journaling system that makes up the majority of the transaction
-system's code.
-
-\tej{extend this section to cover GoTxn}
-
-\subsection{Programming with \txn}
-\label{s:system:api}
-
-\begin{figure*}[t]
-  \centering
-  \small
-  \begin{tabular}{p{7cm}p{6cm}l}
-    \toprule
-        {\textbf{Method}} & {\textbf{Description}} & {\textbf{Spec}} \\
-  \midrule
-\texttt{func Begin() *Op} & Start operation & \hyperlink{tgt:begin-spec}{\S\ref{s:design:lifting}} \\
-\texttt{func (*Op) ReadBuf(addr Addr, sz uint64) *Buf} & Read a buffer & \S\ref{s:design:read-write} \\
-\texttt{func (*Buf) SetDirty()} & Mark a buffer as modified & \S\ref{s:design:read-write} \\
-\texttt{func (*Op) OverWrite(a Addr, sz uint64, data []byte)} & Write without reading & \S\ref{s:design:read-write} \\
-\texttt{func (*Op) Commit(wait bool) bool}  & Commit by appending to in-memory log. & \S\ref{s:design:commit} \\
-& If \cc{wait=true}, also wait until changes are on disk. & \\
-\texttt{func Flush() bool} & Flush in-memory log & \\
-    \midrule
-\texttt{func (*Lockmap) Acquire(i uint64)} & Acquire \cc{i}th lock & %
-                                         \S\ref{s:design:crashlock} \\
-\texttt{func (*Lockmap) Release(i uint64)} & Release \cc{i}th lock & %
-                                         \S\ref{s:design:crashlock} \\
-\bottomrule
-
-  \end{tabular}
-
-  \caption{\txn interface and API for lockmap.  Not shown are auxiliary
-    interfaces for initialization; checking operation size; etc.}
-  \label{fig:buftxn}
-\end{figure*}
-
-
-Developers use the journal to turn several storage operations into an atomic journal operation that commits to disk using the \txn
-interface listed in \autoref{fig:buftxn}.  \cc{Begin} starts a
-journal operation, returning a \cc{*Op} object, which keeps track of the
-objects read or written in the operation.  An object is addressed by the
-\cc{Addr} struct, which names a block address and bit offset within the block. \simplenfs
-has objects for on-disk blocks and on-disk inodes, while the
-complete NFS server also uses objects for individual allocator bits.
-
-\cc{ReadBuf} reads an object into an in-memory \cc{*Buf} struct, returning the latest value of the
-object within this journal operation.  If the operation hasn't read the
-object yet, it reads the latest value from disk (or from a recently
-committed operation).  A journal operation can modify the returned buffer in place and
-then mark the buffer as dirty with \cc{SetDirty}. To overwrite an object without
-reading it the application can call \cc{OverWrite}. When the operation is
-fully prepared, the application commits it atomically using \cc{Commit}; setting
-\cc{wait=true} additionally forces the journal to flush the results to disk.
-In either case the writes in the operation appear together on disk or not at
-all even if the system crashes. The application can also call \cc{Flush} to
-make the journal persist several committed but unstable operations to disk.
-
-While \txn provides crash-safe atomic updates to disk with this interface, it is the developer's job
-to provide concurrency control to prevent concurrent operations from manipulating
-the same on-disk objects. In a file system a common strategy for concurrency
-control is to use a per-file lock that protects both the file metadata and any
-data blocks associated with the file, and this strategy is the one
-used by \gnfs and \simplenfs.
-To make it easier for a file system to maintain these locks,
-\txn includes a lockmap library that behaves as if it were a large array of
-locks but with a more memory-efficient implementation; the
-Guava Striped documentation describes the idea well~\cite{guava-striped}.
-%which in \gnfs
-%and \simplenfs is used to lock files by inode number.
-
-
-\begin{figure}
-  \input{go-journal/code/nfswrite}
-  \vspace{-\baselineskip}
-  \caption{RPC handler for NFS \scc{write} showing locking and committing a
-    journal operation.}
-  \label{fig:nfswrite}
-\end{figure}
-
-% \begin{figure}
-%   \input{go-journal/code/nfswritecommit}
-%   \vspace{-\baselineskip}
-%   \caption{\cc{NFS3_WRITE_locked} runs with the file locked.}
-%   \label{fig:writecommit}
-% \end{figure}
-
-%\begin{figure}
-%  \input{go-journal/code/nfswritewp}
-%  \vspace{-\baselineskip}
-%  \caption{Implementation of the \scc{write} operation.}
-%  \label{fig:writewp}
-%\end{figure}
-
-\begin{figure}
-  \input{go-journal/code/write}
-  \vspace{-\baselineskip}
-  \caption{\cc{NFS3_WRITE_op} prepares a journal operation \cc{op} for the \scc{write}
-    RPC.}
-  \label{fig:write}
-\end{figure}
-
-\tej{use DaisyNFS as an example}
-\autoref{fig:nfswrite} and \autoref{fig:write} show how \simplenfs
-uses the \txn API and the lockmap.  The server runs each NFS request in a
-separate Go thread running a single journal operation. \autoref{fig:nfswrite}
-shows the RPC handler for an NFS \scc{write} RPC, in particular acquiring a
-per-inode lock (lines 6 and 8) and preparing an operation starting at line 14.
-
-The handler is split into several nested functions for ease of verification.
-\autoref{fig:write} shows how the \scc{write} RPC's journal operation of type
-\cc{*Op} is prepared. For example, lines 18--21 read and modify the block data,
-while line 30 modifies the inode. The combination of per-file locking
-and using the journal for disk access frees
-the developer from thinking about either concurrency or crashes during the
-entire \cc{NFS3_WRITE_op} code, which we will show is also the case in the proof using Perennial's
-specification techniques in \autoref{s:design}.
-% The reason that \cc{WriteInode} is a separate function is because other RPC
-% handlers may call it (e.g., \scc{setattr})
-
-For ease of explanation, \simplenfs has the limitation that
-each file consists of only one block, but note that \scc{write}
-modifies two on-disk objects: the inode and the block owned by
-the file; the two together must be written atomically, which the proof shows
-using the \txn specification.  Also note that there is no explicit
-locking of blocks; ownership of the data block is implicit because a block can belong
-to only one file.
-% In the proof, this is captured by the per-file invariant (\autoref{s:design:rep}).
-
-\subsection{Transaction system}
-
-\tej{merge with previous subsection}
-
-\begin{figure}
-\begin{verbatim}
-type Addr struct {
-  Blkno  uint64
-  Offset uint64
-}
-
-// starting and stopping a transaction
-func Begin() *Txn
-func Abort(tx *Txn)
-func Commit(tx *Txn)
-
-// operations within a transaction
-func Read(tx *Txn, a Addr, sz uint64) []byte
-func ReadBit(tx *Txn, a Addr) bool
-func Write(tx *Txn, a Addr, d []byte)
-func WriteBit(tx *Txn, a Addr, d bool)
-
-// allocator API
-func NewAllocator(max uint64) *Allocator
-func Alloc(a *Allocator) uint64
-func Free(a *Allocator, n uint64)
-\end{verbatim}
-  \caption{The API for the transaction system and allocator, both of which are
-    available within the Dafny file-system implementation. Reads and writes
-    between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
-    for other threads, while \cc{Abort} guarantees the transaction has no
-    effect. The allocator's \cc{Alloc} and \cc{Free} operations are safe to call
-    concurrently.}
-\label{fig:txn-api}
-\end{figure}
-
-The transaction system handles concurrency and crash safety, and its
-API is listed in full in \autoref{fig:txn-api}.  The file system
-creates an empty transaction by calling \cc{Begin()}. The entire
-transaction appears to execute atomically when the caller finishes
-with \cc{Commit}, or the transaction is discarded with no effect on
-\cc{Abort}. Reads and writes operate on addresses which specify a
-position by giving a block number and an offset in bits (always less
-than $4096 \cdot 8$, the number of bits in a block). The \cc{Read}
-method requires an explicit size argument while the size of a
-\cc{Write} is implicit in the size of the \cc{data} slice. We separate
-out the bit-sized operations to \cc{ReadBit} and \cc{WriteBit} (rather
-than using a single-element byte slice) to simplify the specification.
-
-\autoref{fig:txn-api} also shows the allocator API alongside the
-transaction API because its implementation is also part of the
-concurrent code that the Dafny file system has access to.
-
-%% The state of the transaction system (the transactional disk transactions
-%% manipulate) looks much like a flat array of bytes.
-%% However, the caller cannot
-%% read and write arbitrary regions of this array due to restrictions in the
-%% gojournal code and proof. all reads and writes must be within a single 4kb block
-%% on disk, and of a power-of-two number of bytes or a single bit.
-
-% In practice the file system uses three kinds of objects: full blocks are used
-% for data (both for directories and data files), bit objects comprise the inode
-% and block allocators, and 128-byte objects are used to represent inodes. The
-% file-system statically allocates regions for the inodes, allocator bitmaps,
-% and data blocks, so that object sizes never change.
-
-The transaction system uses two-phase locking and GoJournal, which was
-verified in prior work~\cite{chajed:gojournal}, to implement
-transactions.  While a transaction is running, it acquires locks for
-any addresses it reads or writes, and on abort or commit, it releases
-all locks held. Transactions that don't conflict can prepare in
-parallel, and GoJournal will batch concurrently committed
-transactions for efficiency.
-
-Acquiring multiple locks during a transaction creates the possibility
-for deadlocks, if two threads acquire a pair of locks in the opposite
-order. The two-phase locking implementation does not implement a
-specific lock acquisition order, leaving it to the file system to
-avoid deadlock --- for example, the implementation of \cc{RENAME}
-makes sure to lock the smaller inode number first if the rename is
-between different directories.
-
-%% The journal provides a way to write multiple addresses atomically,
-%% but it is illegal to access the same address concurrently from two different
-%% transactions.
-
-\subsection{\txn implementation}
+\section{Implementing GoTxn}
 \label{s:system:impl}
 
 \begin{figure}
@@ -238,18 +16,29 @@ between different directories.
     \midrule
   \end{tabular}
   \caption{\txn layers.}
-  \label{fig:layers}
+  \label{fig:gotxn-layers}
 \end{figure}
 
-The journal is structured into several layers, as shown in \autoref{fig:layers}.
-At a high level, the system is split into two halves. The low-level half is a
-write-ahead log that behaves like a disk with an atomic multiwrite operation,
-which appears to update multiple disk blocks simultaneously even if the system
-crashes. The upper half, called the object system,
-allows callers to perform read and write operations on objects
+The transaction system is structured into several layers, as shown in \autoref{fig:gotxn-layers}.
+At a high level, three of the abstractions are useful to understand the overall
+structure. The first useful abstraction is the write-ahead log, which behaves
+like a disk with an atomic multiwrite operation. Reads and writes still operate
+on 4KB blocks, but a multiwrite appears to update multiple disk blocks
+simultaneously even if the system crashes. On top of the write-ahead log the \scc{obj}
+and \scc{jrnl} layers
+allow callers to perform read and write operations on objects
 smaller than a block (``sub-block'' objects).  Writes are
 buffered in memory until the caller chooses to commit, at which point a multiwrite to the
 write-ahead log commits the writes to disk.
+
+The \scc{jrnl} layer implements a journaling system which gives the caller a
+useful abstraction over the disk that makes it easy to update the disk in a
+crash atomic way but which requires that the caller implement appropriate
+concurrency control. The \scc{txn} layer automatically implements the required
+concurrency control; this isn't much code beyond the journal, but it does
+dramatically change the specification since the caller sees any sequence of
+reads and writes as atomic both with respect to threads and crashes without
+having to implement any locking.
 
 The write-ahead log is implemented by organizing the disk into a small,
 fixed-size circular buffer and a remaining data region. Data is first atomically

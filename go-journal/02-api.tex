@@ -1,0 +1,95 @@
+\section{Programming with GoTxn}
+\label{s:gotxn-api}
+
+\begin{figure}
+\begin{verbatim}
+type Addr struct {
+  Blkno  uint64
+  Offset uint64
+}
+
+// starting and stopping a transaction
+func Begin() *Txn
+func Abort(tx *Txn)
+func Commit(tx *Txn)
+
+// operations within a transaction
+func Read(tx *Txn, a Addr, sz uint64) []byte
+func ReadBit(tx *Txn, a Addr) bool
+func Write(tx *Txn, a Addr, d []byte)
+func WriteBit(tx *Txn, a Addr, d bool)
+
+// allocator API
+func NewAllocator(max uint64) *Allocator
+func Alloc(a *Allocator) uint64
+func Free(a *Allocator, n uint64)
+\end{verbatim}
+  \caption{The API for the transaction system and allocator. Reads and writes
+    between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
+    for other threads, while \cc{Abort} guarantees the transaction has no
+    effect. The allocator's \cc{Alloc} and \cc{Free} operations are safe to call
+    concurrently.}
+\label{fig:txn-api}
+\end{figure}
+
+The transaction system gives the caller a way to read and write on-disk
+objects (which can be smaller than the 4KB block size of the underlying disk),
+in such a way that a whole sequence of reads and writes appears atomic. The
+programming interface is listed in \autoref{fig:txn-api}. In practice this makes
+it easier to implement a file system by handling the challenges of crash safety
+and concurrency, leaving the file system to implement its data structures and
+business logic using disk objects.
+
+To use GoTxn, the file system follows a similar pattern for each operation of
+wrapping all of the code for that operation in a single transaction. Operations
+start by creating an empty transaction with \cc{Begin()}.
+The entire
+transaction appears to execute atomically when the operation finishes it
+with \cc{Commit}, or the transaction is discarded with no effect on
+\cc{Abort}. Reads and writes operate on addresses which specify a
+position by giving a block number and an offset in bits (always less
+than $4096 \cdot 8$, the number of bits in a block). The \cc{Read}
+method requires an explicit size argument while the size of a
+\cc{Write} is implicit in the size of the \cc{data} slice. We separate
+out the bit-sized operations to \cc{ReadBit} and \cc{WriteBit} (rather
+than using a single-element byte slice) to simplify the specification.
+
+\autoref{fig:txn-api} also includes an API for allocation alongside the
+transaction API. \autoref{sec:daisy-nfs} will explain in more detail why this
+API must be part of the transaction system in, since it is relevant to the
+file-system design. The allocator should be considered part of the transaction
+system API insofar as transactions are allowed to use this concurrent allocator.
+In general using shared memory within a transaction is not permitted since it
+would compromise the atomicity guarantees --- the transaction system acquires
+locks to make reads and writes seem atomic, but it doesn't have any locking
+discipline for other state.
+
+%% The state of the transaction system (the transactional disk transactions
+%% manipulate) looks much like a flat array of bytes.
+%% However, the caller cannot
+%% read and write arbitrary regions of this array due to restrictions in the
+%% gojournal code and proof. all reads and writes must be within a single 4kb block
+%% on disk, and of a power-of-two number of bytes or a single bit.
+
+% In practice the file system uses three kinds of objects: full blocks are used
+% for data (both for directories and data files), bit objects comprise the inode
+% and block allocators, and 128-byte objects are used to represent inodes. The
+% file-system statically allocates regions for the inodes, allocator bitmaps,
+% and data blocks, so that object sizes never change.
+
+The transaction system uses two-phase locking on top of a verified journal,
+GoJournal. The journaling system makes writes atomic but relies on the two-phase
+locking implementation to avoid conflicts between concurrent transactions.
+While a transaction is running, it acquires locks for
+any addresses it reads or writes, and on abort or commit, it releases
+all locks held. Transactions that don't conflict can prepare in
+parallel, and GoJournal will batch concurrently committed
+transactions for efficiency.
+
+Acquiring multiple locks during a transaction creates the possibility
+for deadlocks, if two threads acquire a pair of locks in the opposite
+order. The two-phase locking implementation does not implement a
+specific lock acquisition order, leaving it to the file system to
+avoid deadlock --- for example, the implementation of \cc{RENAME}
+makes sure to lock the smaller inode number first if the rename is
+between different directories.
