@@ -52,30 +52,6 @@ behaviors of $p_{s}$. Whenever we state $p_{c} \refines p_{s}$ we leave implicit
 a definition of initial states $\mathrm{init}(\sigma_{s}, \sigma_{c})$, which
 will generally say both states are all zeros and of the same size.
 
-\begin{figure}[ht]
-  \center
-  \input{daisy-nfs/fig/proof-overview.tex}
-  \caption{The overall structure of the proof combines theorems proven in Perennial
-    and Dafny, each tool used for the reasoning it is best suited to.}
-  \label{fig:proof-overview}
-\end{figure}
-
-\autoref{fig:proof-overview} gives the overall structure of the proof, which
-relates these three programs via refinement. The high-level strategy is to break the proof down
-into three steps: 1) state and prove \autoref{thm:txn} in Perennial, the correctness
-of the transaction system, 2) state and prove \autoref{thm:dafny} in Dafny, the
-correctness of the Dafny methods (as transactions), and 3) prove a specification
-for the whole compiled system, \autoref{thm:correctness}, by applying the other
-two theorems.
-
-% \begin{figure}
-%   \center
-%   \includegraphics[width=\columnwidth]{drawn-diagrams/proof-overview.png}
-%   \caption{The overall structure of the proof combines theorems proven in Coq
-%     and Dafny, each tool used for the reasoning it is best suited to.}
-%   \label{fig:proof-overview}
-% \end{figure}
-
 \subsection{Correctness theorem for the transaction system}
 \label{sec:proof:txn}
 

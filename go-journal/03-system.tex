@@ -1,19 +1,13 @@
 \section{System design}
 \label{s:system}
 
-The verified artifact of this paper is \txn, a Go package that gives clients an
-abstraction of a disk with crash-safe writes. This section aims to convey what
-the journal is, why its implementation deserves verification, and how systems can be built
-using it. First, \autoref{s:system:api} explains how a developer uses
-\txn to write a concurrent storage system, informally laying out what the
-package's requirements and guarantees are. Then,
-\autoref{s:system:impl} explains how the journal is implemented.
-% Finally, \autoref{sec:overview} lays out the verification methodology for
-% \txn and applications built on top of it.
-
-% Later sections
-% give the formal specification~(\autoref{s:design}) and interesting details of
-% the proof~(\autoref{s:proof}).
+This section explains the transaction system in more detail. First,
+\autoref{s:system:api} gives the programming interface, which we will export to
+Dafny to implement DaisyNFS. We can then give an informal layout of how a
+storage system uses GoTxn to simplify crash safety and concurrency reasoning.
+Then, \autoref{s:system:impl} explains how the transaction is implemented,
+especially the journaling system that makes up the majority of the transaction
+system's code.
 
 \tej{extend this section to cover GoTxn}
 
