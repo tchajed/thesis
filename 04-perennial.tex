@@ -1,4 +1,18 @@
+\tej{this chapter has not been written or planned}
+
 Perennial is a verification framework for crash safety and concurrency, built on
 top of Iris. We give only the background needed for a systems audience to
-understand the GoJournal proof strategy; the full details require a great deal
-more technical background, especially on Iris.
+understand the GoJournal proof strategy.
+
+Need background on standard weakest preconditions (explaining relation to Hoare
+logic) and separation logic.
+
+The main idea is to extend standard weakest preconditions with an additional
+postcondition we call a crash obligation. Then we can reason about recovery
+using a usual recovery idempotence rule, even across crashes.
+
+\tej{Not sure exactly what we need to say to connect it to GoJournal. I would
+like to get enough of a handle on this to explain how we encode the specs for
+a crash abstraction, like the circular buffer at least, which means explaning
+HOCAP and the crash obligation canceling pattern, and how that fits into the
+top-level recovery idempotence.}
