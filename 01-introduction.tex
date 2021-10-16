@@ -60,8 +60,8 @@ system, ext4, and the Windows NTFS file system) also use transactions, DaisyNFS
 uses them in a principled way such that every file-system operation is
 automatically made atomic. In many other file systems there remains state
 outside the transaction system, resulting in a subtle implementation where the
-developer must still coordinate between the transaction and outside state, for
-example by adding additional locking.
+developer must still coordinate between the updates within a transaction and the
+updates outside, for example by adding additional locking.
 
 A key technical contribution that allows us to verify this file-system design is
 a formal specification of how the transaction system guarantees atomicity. Our
