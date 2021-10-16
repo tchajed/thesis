@@ -138,7 +138,8 @@ semantics'' which is a separation logic for interactive proofs (it also
 has an interpreter to test and debug, which produces all of the
 behaviors of a program).
 
-VST also models C for the purpose of interactive proofs.
+VST also models C for the purpose of interactive proofs. Its struct model is
+similar to the Goose struct model.
 
 Extraction in the other direction is sometimes used, particularly for ease of
 verification; see Verdi, FSCQ, Fiat, and \fstar. Rather than starting with efficient
@@ -146,7 +147,10 @@ code (and requiring the developer to write it), it is possible to instead make
 the extraction process generate more efficient code (cite Clement's
 fiat-to-facade work).
 
-\tej{Much more to say here}
+RustBelt models the core of Rust, but does not have automatic translation.
+
+HeapLang is designed as a modeling language for concurrent programs (without
+automatic translation), which is why it was a good starting point for GooseLang.
 
 \section{High-level overview}
 
