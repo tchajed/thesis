@@ -54,42 +54,71 @@ achieved. All of the verified libraries are usable but pain points remain; some
 of these are simply a matter of engineering effort or fixing bugs, but we have
 also found code patterns that weren't well captured in the reasoning.
 
-\section{Why Go?}
-
-\tej{need to connect to goals and motivation}
+\subsection{Why Go?}
 
 Go turns out to be a very convenient language for building verification
-infrastructure. The Goose translator effectively gives a semantics to
-the source code, in the form of the semantics of the generated GooseLang
-code. For the verification to be meaningful, the translation must
-preserve the semantics of the source, or at least over-approximate it.
+infrastructure. It is productive enough to build systems that get good
+performance. The language is simple, facilitating a sound translation.
 
-We needed to build the translator while being careful to capture the
-source code accurately. One highly practical aspect of Go is that it has
-good tooling, including libraries for parsing and type-checking Go
-source code. Not only do these libraries save time in implementing
-Goose, they greatly improve reliability since they are written by
-experts (the Go compiler team, extracting code from the compiler
-itself).
+For our first goal, flexibility, Go has enough features to build good systems
+in. It has efficient and useful built-in slice and map collections, while we can
+verify data structures writtn on top. The runtime handles concurrency
+efficiently and has good support for synchronization using locks and condition
+variables, allowing a low-level implementation.
 
-In addition to having an accurate syntax tree and even types for the
-source code, Go is a simple language. There wasn't much in the way of
-syntax that we needed before the Goose subset of Go was sufficient to
-write real systems, and even idiomatic Go didn't require much more than
-the basics. The remaining restrictions in Goose were easy enough to work
-with that we could implement GoJournal the way we wanted to.
+There is also an advantage to Go as a programming environment rather than
+programming language. The tooling for testing, debugging, and profiling is
+extremely good, making it easy to fix bugs (before verification or in unverified
+code) and find performance problems while optimizing. We were able to use
+low-level interfaces to the operating system to access the disk, which even
+helps with soundness since it's easier to understand the OS in isolation rather
+than when combined with a library. Garbage collection simplifies some code and
+carries a relatively low performance impact due to the efficient runtime.
 
-Finally, Go is a good language to build systems in. It has efficient and
-useful built-in slice and map collections, and anything we build on top
-is verified. The runtime handles concurrency efficiently and has good
-support for synchronization using locks and condition variables,
-allowing a low-level implementation. We were able to use low-level
-interfaces to the operating system to access the disk. Garbage
-collection simplifies some code and carries a relatively low performance
-impact due to the efficient runtime. The tooling for testing, debugging,
-and profiling is extremely good, making it easy to fix bugs (before
-verification or in unverified code) and find performance problems while
-optimizing.
+For the second goal, soundness, it helps that Go is a simple language. The Goose
+translator effectively gives a semantics to the source code; in a complex
+language this can be a daunting task (such as attempts to formalize JavaScript and
+Python~\cite{guha:lambda-js,politz:python-semantics}). It isn't too
+difficult to give Go a semantics, especially the Goose subset. Go's tooling
+helped, including libraries for parsing and type-checking Go source code. Not
+only do these libraries save time in implementing Goose, they greatly improve
+reliability since they are written by experts (the Go compiler team, extracting
+code from the compiler itself).
+
+\subsection{Why not C?}
+
+C would actually make sense, but we felt Go had a better cost-benefit tradeoff
+for GoTxn. Using C would have the benefit of supporting even lower-level code,
+with manual memory management. C code is also easy to integrate into the kernel,
+if one wanted to deploy a verified component of an operating system. The main
+cost would be more difficult tooling to parse and typecheck C; the translation
+might need to be built with clang or some other existing tool. It would make
+sense to adopt the Goose approach to C, and a C version would probably retain
+similar reasoning principles and restrictions on the source code.
+
+\subsection{Why not Rust?}
+
+Using Rust as a source language seems attractive but would likely not be much
+better than Go. One subtlety is that while the source code is type checked, the
+model is an untyped program. If the verification engineer wanted to somehow take
+advantage of this type checking, it would be extremely difficult to express the
+assumption that the source code is well-typed without making a mistake,
+particularly for the guarantees of the Rust type system; it would be easier to
+simply re-prove whatever memory safety the type system guarantees afresh, as we
+end up doing in Goose. Type safety would still help write the original Rust
+program correctly, and especially when it comes to ownership Rust could enforce
+some discipline and catch errors before even reaching verification.
+
+Another difficulty with Rust would be the size and complexity of the language
+--- the subset supported might be restrictive enough that the experience no
+longer feels like Rust and you might as well be writing C, except for the
+lifetime system and tooling. For example, the \cc{Vec<T>} type has 152 methods
+without even including trait implementations. Using any of these methods would
+require assuming a semantics for it, which is trusted to be sound (that is,
+getting the semantics wrong could compromise the whole verification). Thus in
+practice the expansive standard library would mostly not be available; for
+soundness only a core subset would be modeled and the rest manually implemented
+and verified.
 
 \section{Related work}
 \label{s:goose:rel-work}
@@ -120,8 +149,6 @@ fiat-to-facade work).
 \tej{Much more to say here}
 
 \section{High-level overview}
-
-\tej{connect this to goals and motivation framing}
 
 The goal of the translation is to model a Go program using GooseLang,
 which is a programming language defined in Coq for this purpose. When we
