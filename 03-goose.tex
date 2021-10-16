@@ -358,15 +358,15 @@ equivalence breaks a large typed points-to into individual fields (with
 the values computed from $v$), while in the other direction it allows
 to prove a $l \mapsto_t v$ by gathering up all the fields.
 
-The struct field points-to is indispensible in proofs, because the
+The struct field points-to is indispensable in proofs, because the
 pattern of \cc{x.f} in Go when $x$ is a pointer is in fact a field
 load (in C, this would be written \cc{x->f}). The model
 for loading a struct field is a function \cc{loadField(x, t, f)}
 which is implemented in two steps, first computing the offset to field
-$f$ and the other to load it (in both cases the struct type $t$
+$f$ and then dereferencing the computed pointer (in both cases the struct type $t$
 describes how to interpret field $f$). Having a field points-to gives
 a natural specification for this type of load:
-$\{ l \mapsto_{t.f} v \} \mathtt{loadField}(x, t, f) \{ RET v, l \mapsto_{t.f} v\}$.
+$\hoare{l \mapsto_{t.f} v}{\mathtt{loadField}(x, t, f)}{\Ret{v} l \mapsto_{t.f} v}$.
 
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
@@ -457,37 +457,46 @@ model from the reasoning principles --- we verify specifications against
 the concrete model, so that only the model is trusted and not the
 separation logic specifications.
 
+\newcommand{\sliceRep}{\mathtt{sliceRep}}
+\newcommand{\sliceCap}{\mathtt{sliceCap}}
+
 The GooseLang model of slices is based on two abstract predicates:
-$sliceRep(s, l)$ and $sliceCap(s)$. To model the slice values
+$\sliceRep(s, l)$ and $\sliceCap(s)$. To model the slice values
 themselves we use $s : Slice$ where $Slice$ is a Gallina record; a
 function $SliceVal(s) : Val$ converts the Gallina representation to
 the GooseLang tuple that the slice model uses. We will only present the
 \emph{untyped} version of this specification where $l : list val$, but
 GooseLang also has a typed version where $l : list T$ where there is
-some (Gallina) function $to\_val : T -> Val$. The typed version is
+some (Gallina) function $\mathtt{to\_val} : T -> Val$. The typed version is
 practically convenient in proofs but is only a small extension to the
 untyped version.
 
-The first predicate $sliceRep(s, l)$ gives the abstract value of
+The first predicate $\sliceRep(s, l)$ gives the abstract value of
 $s$, the list of values it contains, excluding additional capacity. It
 also represents ownership over all these elements, in terms of the
 underlying struct points-to facts. We use this predicate to specify
 loads and stores:
 
 \[
-  sliceRep(s, l) * i < |l|\} s[i] \{RET v. v = l !! i * sliceRep(s, l)\}
+  \hoareV{\sliceRep(s, l) * i < |l|}%
+{\mathtt{s[i]}}%
+{\Ret{v} v = l !! i * \sliceRep(s, l)}
 \]
-
 \[
-  sliceRep(s, l) * i < |l|\} s[i] = v \{RET v. v = l !! i * sliceRep(s, l[i := v])\}
+  \hoareV{\sliceRep(s, l) * i < |l|}%
+ {\mathtt{s[i] = v}}%
+{\Ret{v} v = l !! i * \sliceRep(s, l[i := v])}
 \]
 
-Next, $sliceCap(s)$ is an abstract predicate that represents
+Next, $\sliceCap(s)$ is an abstract predicate that represents
 \emph{ownership over the capacity} of $s$. It is necessary to append,
 since appending might need to write to the capacity, but unneeded to
 read and write to a slice.
-
-$\{sliceRep(s, l) * sliceCap(s)\} \mathtt{append(s, x)} \{RET s', sliceRep(s', l ++ [x]) * sliceCap(s')\}$
+\[
+\hoareV{\sliceRep(s, l) * \sliceCap(s)}%
+{\mathtt{append(s, x)}}%
+{\Ret{s'} \sliceRep(s', l ++ [x]) * \sliceCap(s')}
+\]
 
 This specification is fairly simple. In fact, we often use a shorthand
 $sliceFull(s, l) = sliceRep(s, l) * sliceCap(s)$ when the proof will
