@@ -1,35 +1,55 @@
-\tej{probably want to introduce Goose differently, be more goal focused}
+A key component of any infrastructure for systems verification is the connection
+between the proof and the executable code. The rest of this thesis focuses on
+crash safety and concurrency as challenges to reasoning about storage systems.
+This chapter is about Goose, which solves a more fundamental and practical
+problem of reasoning about efficient code.
 
-The transaction system is implemented in Go and verified in Perennial.
-To carry this out, we need a way to connect the implementation to
-something Perennial can reason about. The approach we take is to
-translate the implementation into a model in Perennial. As long as the
-model exhibits all the behaviors of the real code, then a specification
-proven for the model should hold for the real Go code.
+The basic setup we take for Goose is to first write the implementation in
+ordinary Go, automatically translate the code to a model in the Coq proof
+assistant, then carry out the proof on top of the model. Goose encompasses is
+the entire process: it includes the translation tool itself, the way we model Go
+code, and finally the reasoning principles for proving properties of translated
+Go. (We will also use ``Goose'' in some places to refer to the subset of Go
+supported by the translation tool.)
 
-The verification infrastructure for the transaction system is all
-developed as part of this thesis. This chapter describes the overall
-approach, which we call Goose. (We will also use Goose in some places to
-refer to the subset of Go supported.) Before we can translate Go code, we need
-some way of writing a model of the source code. It turns out to be
-convenient to use another programming language for this purpose, which
-we call GooseLang. After translating, we will want to carry out proofs
-on top of the generated GooseLang code, so GooseLang comes equipped with
-reasoning principles in Perennial.
+This chapter is intentionally fairly independent of the rest of the thesis for a
+reader interested in verifying Go code but not the specifics of the
+transaction-system proof or the file system built on top. Concurrency is
+relevant to accurately modeling and reasoning about Go, but crash safety is also
+of little importance in this chapter. Crashes are modeled simply by stopping
+execution and wiping out all of the state except for the disk, which does not
+relate to the specifics of Go.
 
-This chapter is intentionally fairly independent of the rest of the
-thesis for a reader interested in verifying Go code but not the
-specifics of the transaction system proof or the file system built on
-top. Crash safety is also of little importance in this chapter. We focus
-on normal execution of Go here; crashes are modeled simply by stopping
-execution and wiping out all of the state except for the disk.
+\section{Goals and motivation}
 
-\section{Goals and contributions}
+There are two main goals for Goose: \textbf{flexibility} in writing code and
+\textbf{soundness}. Flexibility is a goal so that the developer can write
+efficient, high-performance code, as long as the proof engineer can also reason
+about it (in this thesis the developer and proof engineer are frequently the
+same). Goose is sound if the model captures the behaviors of the code, which is
+required for the proofs to say something meaningful about the executable Go
+code. If the code could go wrong in some way that the model doesn't capture, we
+might finish a correctness proof but still have a bug; soundness makes sure this
+doesn't happen.
 
-\tej{name what Goose is trying to do earlier --- borrow from the high-level
-overview below}
+There are alternate setups for verification where the connection between the
+proofs and the code is not given by a model and translation, but the Goose
+approach prioritizes flexibility in order to write fast code. The transaction
+system sometimes does something efficient to shave off a bit of time, and its
+proof pays the price by including a more complex correctness argument.
+
+Soundness isn't a property we can immediately measure, since the translation
+might miss subtleties of the source code that we have not noticed. However, the
+design of Goose tries to achieve soundness. Sometimes soundness and flexibility
+are in tension. In general the tradeoff was in favor of performance, so if the
+some language feature is needed for good performance, Goose models it, but if it
+is a mere convenience the translator might reject idiomatic code and force the
+programmer to do something unusual. The result is that Goose is pleasant and
+productive enough to write in, but requires some practice for a Go programmer.
 
 \section{Why Go?}
+
+\tej{need to connect to goals and motivation}
 
 Go turns out to be a very convenient language for building verification
 infrastructure. The Goose translator effectively gives a semantics to
@@ -65,6 +85,7 @@ verification or in unverified code) and find performance problems while
 optimizing.
 
 \section{Related work}
+\label{s:goose:rel-work}
 
 There are many approaches and systems people have used to verify
 implementations.
@@ -84,7 +105,7 @@ behaviors of a program).
 VST also models C for the purpose of interactive proofs.
 
 Extraction in the other direction is sometimes used, particularly for ease of
-verification; see Verdi, FSCQ, and Fiat. Rather than starting with efficient
+verification; see Verdi, FSCQ, Fiat, and \fstar. Rather than starting with efficient
 code (and requiring the developer to write it), it is possible to instead make
 the extraction process generate more efficient code (cite Clement's
 fiat-to-facade work).
@@ -92,6 +113,8 @@ fiat-to-facade work).
 \tej{Much more to say here}
 
 \section{High-level overview}
+
+\tej{connect this to goals and motivation framing}
 
 The goal of the translation is to model a Go program using GooseLang,
 which is a programming language defined in Coq for this purpose. When we
