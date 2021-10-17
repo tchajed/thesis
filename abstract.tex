@@ -8,13 +8,12 @@ to show the file-system code always meets its specification.
 
 This thesis develops DaisyNFS, a verified, concurrent, and performant file
 system. The first contribution is new verification foundations for crashes and
-concurrency that make it possible to reason about high-performance, realistic storage
-systems at all. The second contribution is the design and implementation of the
-file system on top. DaisyNFS has a verification-friendly design based on
-transactions so that most of
-the code enjoys sequential reasoning. Underlying the file system is a
-verified, high-performance transaction system with sophisticated concurrency.
-The overall file system is performant compared to Linux NFS exporting ext4 over
-a range of benchmarks --- at least 75\% the throughput in even single-threaded,
-in-memory workloads, and comparable performance when multiple clients are
-writing concurrently.
+concurrency that make it possible to reason about high-performance, realistic
+storage systems at all. The second contribution is the design and implementation
+of the file system on top. DaisyNFS has a verification-friendly design based on
+transactions so that most of the code enjoys sequential reasoning. Underlying
+the file system is a verified, high-performance transaction system with
+sophisticated concurrency. The overall file system is performant compared to
+Linux NFS exporting ext4 over a range of benchmarks --- at least 75\% the
+throughput with a single client and in-memory disk, and comparable performance
+when multiple clients are writing concurrently.
