@@ -9,7 +9,7 @@ DEPS := $(wildcard *.tex) \
                go-journal/fig/*.tex go-journal/tables/*.tex) \
 	$(wildcard *.bib)
 
-all: thesis.pdf abstract.txt
+default: thesis.pdf abstract.txt
 
 thesis.pdf: thesis.tex $(DEPS)
 	latexrun --latex-args='-shell-escape' --bibtex-args=-min-crossrefs=100 $<

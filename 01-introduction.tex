@@ -200,6 +200,8 @@ does not appear to have atomically durable writes. If one thread writes, another
 thread can concurrently read the buffered value before it is flushed, but a
 crash immediately afterward will lose the write and revert to the old value.
 
+\tej{add more discussion about bugs?}
+
 \section{Approach}
 
 What does it mean to give a machine checked, formal proof of a system? At a high
@@ -290,7 +292,7 @@ code wrapped in a transaction. Later we will have more to say about the file
 system's proof, but for now suffice it to say that we show it correctly
 implements the NFS protocol.
 
-\tej{we haven't been putting emphasis on linking; especially strange to be the conclusion}
+\tej{we haven't been putting emphasis on linking lately}
 Since we use two different formal systems, we do not set up and prove a single,
 unified theorem about the whole file system, which is indeed not even
 implemented in one language. Instead, the file system is compiled by linking the
@@ -304,3 +306,58 @@ compose easily. Later we discuss what parts of the system are \emph{trusted} to
 guarantee that the whole system is correct; notably, we learn from Coq and Dafny
 that the transaction system and file-system code are independently correct, and
 the trust only lies in the interface between them.
+
+\subsection{Contributions}
+
+The thesis makes contributions at each layer of the verification stack.
+Organized in terms of systems:
+
+\begin{itemize}
+  \item Perennial is the first verification framework for reasoning about crash
+        safety and concurrency. It is a program logic that proves theorems about
+        the behavior of a concurrent system, including the possibility of
+        crashing and rebooting at any time.
+  \item Goose is a tool for verifying Go programs with Perennial. While the
+        specific ideas show up in other projects, Goose combines them into a
+        practical system that enabled verification of GoTxn using Perennial.
+  \item GoTxn is a high-performance, verified transaction system. The
+        top-level specification and proof of GoTxn are novel, especially because
+        they are backed by a machine-checked proof against an implementation
+        rather than only abstract. The proof uses new proof techniques to
+        verify layers of the storage stack independently and then compose the
+        proofs together.
+  \item DaisyNFS is a file system with a novel design based on transactions.
+        With the specification implemented by GoTxn, DaisyNFS is able to reason
+        about each transaction body sequentially. Because reasoning is
+        completely sequential, the proof is written in Dafny and exhibits a high
+        degree of automation.
+\end{itemize}
+
+The ideas in Perennial and Goose are applied to GoTxn, but they could be used
+for reasoning about other concurrent storage systems written in Go. Similarly,
+this thesis applied GoTxn to a verified file system, but it could also be used
+as the basis for other verified storage systems, like a persistent key-value
+store. It is possible to build upon GoTxn within Perennial (including using the
+journal and manually reasoning about locking and concurrency), or to follow the
+DaisyNFS design and verify each transaction in Dafny.
+
+\subsection{Reading guide for the thesis}
+
+The thesis has five chapters that are intended to be fairly independent.
+
+\autoref{sec:related} covers related work across Perennial, GoTxn, and DaisyNFS.
+The Goose related work is in a separate chapter since it requires a bit more
+context. \tej{I could change this, but I like the Goose chapter being truly
+self-contained}
+
+\autoref{sec:goose} is about Goose and talks about verifying Go code generally,
+with nothing specific to GoTxn or even storage systems.
+
+\autoref{sec:perennial} is (planned to be) a brief overview of Perennial, to
+give a sense for how the GoTxn proofs work. The GoTxn chapter, \autoref{sec:txn}
+is still intended to be mostly self-contained, except that understanding
+Perennial will help understand some descriptions of the proof. The specification
+for GoTxn does not reference the Perennial logic at all.
+
+\autoref{sec:daisy-nfs} describes the way DaisyNFS connects Dafny to GoTxn, the
+file-system design, and the Dafny proof.
