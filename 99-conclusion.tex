@@ -1,1 +1,25 @@
 DaisyNFS is a verified, concurrent, crash-safe file system.
+
+\section{Discussion}
+
+It's surprisingly hard to deal with memory safety/ownership in these systems. We
+struggled with memory safety in specifications, when we were forced to describe
+an API as a transition system, even though separation logic could handle things
+beautifully. Changing data structures to support read-only sharing was hard, if
+things weren't engineered to support sharing originally (lots of fractional
+permissions everywhere). Read-only locking was hard enough that we never did it.
+In contrast Flashix has a trick where they have a reader-writer lock over the
+entire directory structure, and at least it means read concurrency is pretty
+good.
+
+If I were to do this again, I would insist on zero copy wherever practical from
+the beginning. It's the last thing that seems to hurt performance (and
+measurable in all memory benchmarks), and changing things is quite painful. This
+is pretty closely related to the previous point about memory safety.
+
+\section{Future work}
+
+Model disk as asynchronous. Support asynchronous commit in GoTxn.  Use GoJournal
+directly in conjunction with non-transactional state. Try to take advantage of
+sequential reasoning from within Perennial --- how nice can this be, if we put
+effort into it and learn from Dafny? We never really tried.
