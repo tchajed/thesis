@@ -139,9 +139,21 @@
   {\vspace{.5em}}
 \newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
 \newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
-\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
-\newcommand{\tej}[1]{\insertnote{red}{Tej}{#1}}
+%\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
+%\newcommand{\tej}[1]{\insertnote{red}{Tej}{#1}}
 \newcommand{\todocite}[1]{\textcolor{red}{[cite #1]}}
+
+% https://tex.stackexchange.com/questions/52697/automated-lists-for-todos-in-latex-document
+\newcounter{todo}
+\newcommand\todo[1]{\refstepcounter{todo}\textcolor{red}{#1}\addcontentsline{tod}{subsection}{\thetodo.~#1}}%
+\newcommand{\tej}[1]{\textcolor{red}{\textbf{Tej:}} \todo{#1}}
+
+\makeatletter
+\newcommand\todoname{todo}
+\newcommand\listtodoname{List of TODOs}
+\newcommand\listoftodos{%
+  \section*{\listtodoname}\@starttoc{tod}}
+\makeatother
 
 % a command to indicate current editing progress
 \newcommand{\resume}{
@@ -200,7 +212,10 @@
 %\cleardoublepage
 
 \tableofcontents
+\clearpage
 \listoffigures
+\clearpage
+\listoftodos
 
 %\mainmatter
 
