@@ -1,18 +1,72 @@
-\tej{this chapter has not been written or planned}
+Perennial is a framework for reasoning about crash safety and concurrency that
+we developed in order to verify GoTxn. The main component of Perennial is a
+program logic based on concurrent separation logic, with extensions for
+reasoning about crash and recovery behaviors.
 
-Perennial is a verification framework for crash safety and concurrency, built on
-top of Iris. We give only the background needed for a systems audience to
-understand the GoJournal proof strategy.
+This chapter describes Perennial's reasoning techniques used in the GoTxn proof.
+Perennial is built on top of the Iris concurrency framework, and inherits its
+support for reasoning about concurrency; the novelty is in reasoning about
+crashes and recovery. Some knowledge of Iris is needed to fully appreciate this
+chapter, but the intuition needed to understand the GoTxn chapter should be
+clear to anyone.
 
-Need background on standard weakest preconditions (explaining relation to Hoare
-logic) and separation logic.
+\section{Primer on Iris and separation logic}
 
-The main idea is to extend standard weakest preconditions with an additional
-postcondition we call a crash obligation. Then we can reason about recovery
-using a usual recovery idempotence rule, even across crashes.
+Hoare triples (and weakest-precondition formulation), points-to assertion
 
-\tej{Not sure exactly what we need to say to connect it to GoJournal. I would
-like to get enough of a handle on this to explain how we encode the specs for
-a crash abstraction, like the circular buffer at least, which means explaning
-HOCAP and the crash obligation canceling pattern, and how that fits into the
-top-level recovery idempotence.}
+Iris: invariants, ghost state, fancy updates (actually only basic update part)
+
+Describe three types of ghost state: ``plain'' ghost variables, monotonic nat,
+one-shot updates (gmap\_auth shouldn't actually be needed)
+
+Might not need persistently modality, shouldn't need later modality
+
+Deriving new types of ghost state from old
+
+\tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
+introducing Iris}
+
+\section{Crash weakest preconditions}
+
+Introduce WPC and its meaning
+
+crash framing
+
+Most important rule: allocating an invariant cancels from the crash invariant
+(encoding Perennial 1.0 reasoning)
+
+Crash-aware locks (shouldn't really need crash borrows, only use them as part of
+2PL proof because the code doesn't open and close the locks in a bracketed way)
+
+\section{Recovery reasoning}
+
+WPR and idempotence rule
+
+generation numbers to explain how resources transition across a crash
+(post-crash modality helps make this concrete in the form of a theorem)
+
+In practice, recovery is the thing that sets up the invariants, cancels from its
+crash condition, and then always starts up with the contents of those
+invariants due to the recovery idempotence rule.
+
+\section{Soundness}
+
+explain how a soundness theorem relates a WPR to a statement about repeated
+execution
+
+mention that a bunch of complexity is hidden in proving that soundness theorem,
+some coming from Iris base logic and some from the definition of WPC, but we
+won't explain it
+
+\section{Reasoning techniques using Perennial}
+
+Using invariants in clever ways, for both standard concurrency reasoning and
+crashes
+
+Logically-atomic crash specs expose atomic updates to the state of a module
+
+Notion of a ``durable'' resource via post-crash modality + combining with an
+invariant
+
+Refinement reasoning uses lower-level tools from Perennial for a different
+soundness theorem
