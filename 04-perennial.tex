@@ -10,41 +10,8 @@ crashes and recovery. Some knowledge of Iris is needed to fully appreciate this
 chapter, but the intuition needed to understand the GoTxn chapter should be
 clear to anyone.
 
-\section{Primer on Iris and separation logic}
-
 \input{perennial/01-iris}
-
-\section{Crash weakest preconditions}
-
-Introduce WPC and its meaning
-
-crash framing
-
-Most important rule: allocating an invariant cancels from the crash invariant
-(encoding Perennial 1.0 reasoning)
-
-Crash-aware locks (shouldn't really need crash borrows, only use them as part of
-2PL proof because the code doesn't open and close the locks in a bracketed way)
-
-\section{Recovery reasoning}
-
-WPR and idempotence rule
-
-generation numbers to explain how resources transition across a crash
-(post-crash modality helps make this concrete in the form of a theorem)
-
-In practice, recovery is the thing that sets up the invariants, cancels from its
-crash condition, and then always starts up with the contents of those
-invariants due to the recovery idempotence rule.
-
-\section{Soundness}
-
-explain how a soundness theorem relates a WPR to a statement about repeated
-execution
-
-mention that a bunch of complexity is hidden in proving that soundness theorem,
-some coming from Iris base logic and some from the definition of WPC, but we
-won't explain it
+\input{perennial/02-perennial}
 
 \section{Reasoning techniques using Perennial}
 
