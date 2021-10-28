@@ -1,0 +1,125 @@
+A program logic is a formal system for specifying and reasoning about programs.
+One of the simplest program logics is Hoare logic, still the basis for much
+sequential reasoning today. The judgments of Hoare logic consist of
+specifications of the form $\hoare{P}{e}{Q}$, which is interpreted as meaning
+``if $e$ is run in a state where $P$ holds and it terminates, then the final
+state will satisfy $Q$''. The logic has various rules for proving and combining
+these specifications.
+
+Separation logic is an extension of Hoare logic that has proven profitable for
+reasoning about heap-manipulating programs with pointers and concurrency
+(surprisingly, the same techniques help solve both problems). A good
+introduction to the basic ideas of separation logic is found in O'Hearn's
+``Separation Logic'' article~\cite{ohearn:seplogic}. Here we will give a more
+terse overview to introduce the relevant notation.
+
+Separation logic introduces some notation for the logical assertions that
+describe the heap. The core assertion to talk about pointers is $p \mapsto v$,
+which says that the pointer $p$ when dereferenced has value $v$, or more simply
+``$p$ points to $v$''. Separation logic introduces a new logical connective
+$P \sep Q$, pronounced ``$P$ and separately $Q$'', which says that the heap can
+be divided into two disjoint pieces, one satisfying $P$ and the other satisfying
+$Q$. We can relate two propositions with $P \proves Q$, where $\proves$ can be
+read as either ``entails'' or ``proves'', which says that in any heap where $P$
+holds, $Q$ must also hold.
+
+When working in separation logic, specifications like $\hoare{P}{e}{Q}$ are
+generally stated in a ``small footprint'' style where $P$ mentions only the
+state $e$ relies on for its execution. This intuition is backed by the
+celebrated frame rule, which says that if $\hoare{P}{e}{Q}$ holds, any disjoint
+state is unaffected, namely $\hoare{P \sep F}{e}{Q \sep F}$.
+
+Instead of working with Hoare triples, it is convenient to instead define
+specifications in a different style of \emph{weakest preconditions}. We will use
+$\wpre{e}{Q}$ to denote the weakest precondition of $e$ with postcondition $Q$;
+if $e$ is run in a state satisfying $\wpre{e}{Q}$ and terminates, the final
+state will satisfy $Q$. For some inuition behind weakest preconditions note that
+$P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
+explanation of weakest preconditions vs Hoare triples can be found in
+``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
+
+\tej{include a selection of proof rules, load/store and maybe a sequencing
+rule?}
+
+Iris generalizes separation logic to also reason about concurrency. A full
+explanation of the Iris logic is out-of-scope for the thesis; ``Iris from the
+ground up''~\cite{jung:iris-jfp} is a comprehensive introduction while the
+original ``Iris 1.0'' paper~\cite{jung:iris-1} is a shorter introduction for a
+reader already familiar with separation logic. Two features of Iris are most
+relevant since they are used in the GoTxn proof: ghost state and invariants.
+
+Ghost state is a technique for reasoning about a program by augmenting its
+physical state (local variables and the heap) with some additional \emph{ghost
+state} which is maintained only for the sake of the proof and has no affect on
+the program's execution (hence the term ``ghost''). It is easier to understand
+ghost state as a programming language feature, as in Dafny, than in Iris, so let
+us first see how they help there and then return to Iris.
+
+In Dafny, a variable can be marked \cc{ghost}. Ghost variables can be written
+and read in the proof, but Dafny enforces that the ghost variables' values never
+influences execution; they can only be used to inform uses of lemmas,
+assertions, and other proof annotations. Then at runtime ghost variables and all
+uses of them are \emph{erased} before running the program. Why would we add a
+ghost variable to a program? The simplest examples are ones where a proof
+assertion needs to refer to the old value of a physical variable, say before a
+loop; it can be stored in a ghost variable to make explicit that the program
+does not need to remember the value, only the proof.
+
+%% for a concrete example see bubble sort in
+%% https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf
+
+We can think about the technique of ghost variables as carrying out the proof in
+two steps. First, for every normal execution (without ghost variables), the
+proof constructs a ``parallel'' execution that tracks the ghost state alongside
+physical state. The rest of the proof is carried out on the parallel execution,
+but the proofs apply to the normal execution because by design they have the
+same behavior. We have reason to believe verifying the program with ghost
+variables is easier to verify because the ghost variables can track important
+information about the history of the program, such as in the example above of
+the pre-loop values of the local variables.
+
+In Iris, the proof is a separate entity from the code. The program logic still
+has a way to use ghost variables, with proof rules that construct and update a
+ghost variable, applied at the appropriate points in the proof rather than added
+to the code. The high-level idea for why this works --- the parallel execution ---
+remains the same. In fact the argument is a bit simpler because it is obvious
+that the ghost variables do not affect program execution, since their creation
+and updates only appear in the proof.
+
+So far, we've explained ghost state as being ghost variables, with the familiar
+API where they can be read and written. Iris ghost state is a bit more
+sophisticated in order to support concurrency reasoning. First, Iris has
+separation logic assertions for \emph{ownership} of ghost state, which can be
+split and divided among threads. Second, ghost state can have restrictions on
+how it may be updated.
+
+A simple example to illustrate both principles is Iris's fractional ghost
+variables. \tej{TODO: explain these, and idea of read-only vs write permissions}
+
+\tej{somewhere in here we'll explain the notation for updates, without going
+  into the basic vs fancy updates or masks at all}
+
+In this thesis we describe constructing ghost state to carry out parts of the
+proof. In reality all ghost state in Iris is constructed by defining an
+algebraic structured $M$ called a ``resource algebra'', and ownership is always
+ownership of an element $a \in M$, but we will not explain the details --- see
+``Iris from the ground up''~\cite{jung:iris-jfp}. When we explain some ghost
+state, it will be in terms of some resources and rules that allow updating those
+resources. The Iris logic ensures that the updates are ``sound'', enforcing a
+global property that updates to a resource in one part of the proof never
+invalidate resources owned by concurrent threads at the same time.
+
+A fundamental reasoning principle for concurrency is the notion of an
+\emph{invariant}. Threads will eventually need to share state, and invariants
+are the main way to reason about how threads coordinate on that shared state.
+Invariants in Iris are another resource: we write $\knowInv{}{I}$ for the
+assertion that says $I$ is an invariant. Once this invariant is established, the
+proof rules in Iris guarantee that $I$ holds at all steps of the program. A
+thread that has $\knowInv{}{I}$ in its precondition can make use of the
+invariant by ``opening'' it, but only for a single program step; it must be
+returned afterward to guarantee the invariant holds for other threads.
+
+Might not need persistently modality, shouldn't need later modality
+
+\tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
+introducing Iris}

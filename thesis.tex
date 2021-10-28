@@ -79,6 +79,12 @@
 \usepackage[breaklinks, pdfborder={0 0 0}]{hyperref}
 \usepackage[nameinlink]{cleveref}
 
+% restore these definitions to color wp/wpc and braces
+% \newcommand{\syntax}[1]{\textcolor{blue}{#1}}
+% \newcommand{\syntaxbraced}[1]{\cleft[blue]\{#1\cright[blue]\}}
+\newcommand{\syntax}[1]{#1}
+\newcommand{\syntaxbraced}[1]{\{#1\}}
+
 \usepackage{iris}
 \usepackage{pftools}
 \usepackage{amsmath}
