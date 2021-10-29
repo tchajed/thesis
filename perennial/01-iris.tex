@@ -42,8 +42,30 @@ $P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
 explanation of weakest preconditions vs Hoare triples can be found in
 ``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
 
-\tej{include a selection of proof rules, load/store and maybe a sequencing
-rule?}
+\begin{figure}
+\begin{mathpar}
+\inferH{wp-frame}%
+{\hoare{P}{e}{Q}}%
+{\hoare{P \sep F}{e}{Q \sep F}}
+
+\inferH{wp-mono}%
+{P \proves P' \and \forall v. ([v/x] Q' \proves [v/x] Q) \and \hoare{P'}{e}{Q'}}%
+{\hoare{P}{e}{Q}}
+
+\inferH{wp-seq}%
+{\hoare{P}{e_1}{Q} \and \hoare{Q}{e_2}{R}}%
+{\hoare{P}{e_1;\, e_2}{R}}
+
+\inferH{wp-load}%
+{}{\hoare{p \mapsto v}{\load{p}}{\Ret{v} p \mapsto v}}
+
+\inferH{wp-store}%
+{}{\hoare{p \mapsto v}{\store{p}{v'}}{p \mapsto v'}}
+
+\end{mathpar}
+\caption{Selection of proof rules for sequential separation logic.}
+\label{fig:wp-rules}
+\end{figure}
 
 \subsection{Concurrency with Iris}
 
@@ -66,10 +88,10 @@ and read in the proof, but Dafny enforces that the ghost variables' values never
 influences execution; they can only be used to inform uses of lemmas,
 assertions, and other proof annotations. Then at runtime ghost variables and all
 uses of them are \emph{erased} before running the program. Why would we add a
-ghost variable to a program? The simplest examples are ones where a proof
-assertion needs to refer to the old value of a physical variable, say before a
-loop; it can be stored in a ghost variable to make explicit that the program
-does not need to remember the value, only the proof.
+ghost variable to a program? The simplest examples are code where a ghost
+variable holds the old value of some variable, say prior to a loop; this lets
+the proof refer to the old value while clarifying that the regular execution
+does not need it.
 
 %% for a concrete example see bubble sort in
 %% https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf
@@ -125,7 +147,7 @@ thread that has $\knowInv{}{I}$ in its precondition can make use of the
 invariant by ``opening'' it, but only for a single program step; it must be
 returned afterward to guarantee the invariant holds for other threads.
 
-Might not need persistently modality, shouldn't need later modality
+\tej{Might not need persistently modality, shouldn't need later modality}
 
 \tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
 introducing Iris}
