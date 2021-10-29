@@ -18,7 +18,7 @@
 %{\wpc\expr{\Ret\var  \wpc{\lctx[\var]}{\Ret\varB \propB}{\propcB}}{\propcB} \proves \wpc{\lctx[\expr]}{\Ret\varB \propB}{\propcB}}
 
 \inferH{wpc-frame}
-{}{\propB * \wpc\expr{\Ret\var \prop}{\propc} \proves \wpc\expr{\Ret\var \propB*\prop}{\propB*\propc}}
+{}{\propB * \wpc\expr{\prop}{\propc} \proves \wpc\expr{\propB*\prop}{\propB*\propc}}
 
 \inferH{wp-wpc}
 {}{\wpre\expr{\Ret\var \prop} \dashv\proves \wpc\expr{\Ret\var \prop}{\TRUE}}
@@ -55,13 +55,48 @@ specifications}, but we used the terminology in the original FSCQ paper and it h
 stuck since then. Crash specs are a bit more catchy, anyway.} In \autoref{sec:perennial:recovery} we'll connect these
 crash specifications to the memory wipe and reboot that happens right afterward.
 
-\begin{figure}
+\begin{figure}[ht]
   \wpcseqfig
 \caption{Basic structural rules for crash weakest preconditions.}%
 \label{fig:wpc-seq}
 \end{figure}
 
-crash framing
+One rule in Perennial that is often used is the crash frame rule,
+\ruleref{wpc-frame}. Like the traditional frame rule, this is a reasoning
+principle for ignoring some resources while proving part of a program. When
+reasoning about crashes, framing is useful way to dismiss the crash condition
+when it refers to durable resources that aren't needed for reasoning about some
+part of the code.
+
+The way the rule works is that in analogy to \ruleref{wp-frame}, the premise
+is a proof of $Q$ (the frame) and separately $\wpc{e}{P}{P_{c}}$. However, in
+addition to framing from the postcondition, Perennial also frames from the crash
+condition. A common case is where $P_{c} = \TRUE$, which is useful when $e$ is a
+purely in-memory piece of code. In that case we can combine framing
+and \ruleref{wp-wpc} to reason about part of a crash Hoare quadruple using
+crash-free reasoning, by temporarily ignoring the durable resources $P_d$ in the
+precondition:
+
+\[
+  \infer{\hoare{P}{e_1}{Q} \and \hoareC{Q \sep P_d}{e_2}{R}{Q_c}}%
+  {\hoareC{P \sep P_d}{e_1\, e_2}{R}{Q_c}}
+\]
+
+Another example of combining WPC and WP (crash and crash-free) reasoning is in
+the \ruleref{wpc-atomic} rule. The precondition $\atomic(e)$ says this rule only
+applies to atomic expressions, which take a single step, and the conclusion is a
+WPC for this expression. The premise involves a connective $P \land Q$. This is
+a \emph{non-separating conjunction} or ``logical and''. $P \land Q$ holds in
+some state when $P$ and $Q$ both hold, but unlike $P \sep Q$ they do not have to
+be over disjoint parts of the state, so for example
+$p \mapsto v \proves p \mapsto v \land p \mapsto v$ is trivially true. To prove
+$\wpc{e}{P}{P_c}$, we need to prove that $P_c$ holds, and using the same pre-execution
+resources that $e$ runs to produce $P$ and $P_{c}$ for the same post-execution
+resources. The intuitive reason why this rule is sound is that $e$ takes a
+single step, so it is sufficient to show the crash condition now (the first
+$P_{c}$) and after $e$ executes (the second $P_{c}$). At the same time, the
+proof of the crash condition \emph{overlaps with} rather than being disjoint
+from the proof of $\wpre{e}{P}$.
 
 Most important rule: allocating an invariant cancels from the crash invariant
 (encoding Perennial 1.0 reasoning)

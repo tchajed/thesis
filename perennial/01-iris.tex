@@ -34,7 +34,7 @@ celebrated frame rule, which says that if $\hoare{P}{e}{Q}$ holds, any disjoint
 state is unaffected, namely $\hoare{P \sep F}{e}{Q \sep F}$.
 
 Instead of working with Hoare triples, it is convenient to instead define
-specifications in a different style of \emph{weakest preconditions}. We will use
+specifications in a different style of \emph{weakest preconditions} (WPs). We will use
 $\wpre{e}{Q}$ to denote the weakest precondition of $e$ with postcondition $Q$;
 if $e$ is run in a state satisfying $\wpre{e}{Q}$ and terminates, the final
 state will satisfy $Q$. For some inuition behind weakest preconditions note that
@@ -42,11 +42,17 @@ $P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
 explanation of weakest preconditions vs Hoare triples can be found in
 ``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
 
+As an example of weakest precondition reasoning, the frame rule becomes
+\ruleref{wp-frame} in terms of WPs. Reading this rule forwards, if we have $F$
+and separately $\wpre{e}{Q}$, then we can move $F$ to the postcondition because
+separation logic guarantees the proof of the WP does not affect or invalidate
+the resources in the frame $F$.
+
 \begin{figure}
 \begin{mathpar}
 \inferH{wp-frame}%
-{\hoare{P}{e}{Q}}%
-{\hoare{P \sep F}{e}{Q \sep F}}
+{}%
+{F * \wpre{e}{Q} \proves \wpre{e}{F * Q}}
 
 \inferH{wp-mono}%
 {P \proves P' \and \forall v. ([v/x] Q' \proves [v/x] Q) \and \hoare{P'}{e}{Q'}}%
