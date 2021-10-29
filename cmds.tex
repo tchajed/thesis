@@ -4,20 +4,36 @@
 \newcommand{\scc}[1]{\mbox{\textsc{\detokenize{#1}}}}
 \newcommand{\loc}[1]{\num[group-separator={,},group-minimum-digits=4]{#1}}
 
-%% iris.sty extensions
-\newcommand{\sep}{*}
+%% iris.sty extensions for Perennial
+
+% \newcommand{\wpc}[3]{\operatorname{wpc} \, #1 \, \{#2\} \, \{#3\}}
+\NewDocumentCommand\wpc{O{} m O{} o m m}%
+  {\textlog{\syntax{wpc}}^{#1}_{#3\IfValueT{#4}{,#4}}\spac#2\spac{\syntaxbraced{#5}}\spac{\syntaxbraced{#6}}}
+
+\newcommand{\recoverwith}{\circlearrowleft}
+\NewDocumentCommand\wpr{O{} m m O{} m m}%
+  {\textlog{\syntax{wpr}}^{#1}_{#4}\spac#2 \recoverwith #3 \spac{\syntaxbraced{#5}}\spac{\syntaxbraced{#6}}}
+
+\newcommand{\wpcw}{\textlog{wpc}}
+\newcommand{\wprw}{\textlog{wpr}}
+\newcommand{\wpw}{\textlog{wp}}
+
+\newcommand{\notval}[1]{\neg \textlog{value(#1)}}
+\newcommand{\cbmask}{\textlog{B}}
+
 \NewDocumentCommand \hoareC {m m m m}{
   \curlybracket{#1}\spac #2 \spac \curlybracket{#3}\curlybracket{#4}%
 }
 
 \NewDocumentCommand \hoareCV {O{c} m m m m}{
   {\begin{aligned}[#1]
-  &\curlybracket{#2} \\
-  &\quad{#3} \\
-  &\curlybracket{#4} \\
-  &\curlybracket{#5}
-  \end{aligned}}%
+      &\curlybracket{#2} \\
+      &\quad{#3} \\
+      &\curlybracket{#4} \\
+      &\curlybracket{#5}
+    \end{aligned}}%
 }
+\newcommand{\sep}{*}
 
 \newcommand{\SKIP}{\mathit{noop}}
 \renewcommand{\Ret}[1]{\text{\textbf{ret}}\,\, #1,\,}

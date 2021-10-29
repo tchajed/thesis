@@ -1,6 +1,65 @@
 \section{Crash weakest preconditions}
 
-Introduce WPC and its meaning
+\newcommand{\propc}{P_c}
+\newcommand{\propcB}{Q_c}
+\newcommand{\propcC}{R_c}
+
+\newcommand{\wpcseqfig}{%
+\begin{mathpar}
+\inferH{wpc-value}
+{}{\propc \land [\val/\var]\prop \proves \wpc{\val}{\Ret\var \prop}{\propc}}
+
+\inferH{wpc-mono}
+{\propc \proves \propcB \and \forall \val.\,\left([\val/\var]\prop \proves [\val/\var]\propB\right)}
+{\wpc\expr{\Ret\var \prop}{\propc} \proves \wpc\expr{\Ret\var \propB}{\propcB}}
+
+%\inferH{wpc-bind}
+%{\text{$\lctx$ is an evaluation context}}
+%{\wpc\expr{\Ret\var  \wpc{\lctx[\var]}{\Ret\varB \propB}{\propcB}}{\propcB} \proves \wpc{\lctx[\expr]}{\Ret\varB \propB}{\propcB}}
+
+\inferH{wpc-frame}
+{}{\propB * \wpc\expr{\Ret\var \prop}{\propc} \proves \wpc\expr{\Ret\var \propB*\prop}{\propB*\propc}}
+
+\inferH{wp-wpc}
+{}{\wpre\expr{\Ret\var \prop} \dashv\proves \wpc\expr{\Ret\var \prop}{\TRUE}}
+
+
+\inferH{wpc-atomic}
+{\atomic(\expr)}
+{\propc \land \wpre\expr{\Ret\var  \propc \land \prop}
+ \proves \wpc\expr{\Ret\var \prop}{\propc}}
+\end{mathpar}
+}
+
+Iris gives tools for proving specifications that capture the concurrency
+behavior of a program, but storage systems need stronger specifications that
+also cover crash safety. The formal definition of crash safety is ultimately
+stated as a property of a storage system combined with a recovery procedure.
+Crash safety is \emph{defined} in terms of the results possible after a program
+crashes mid-operation, the system reboots, and subsequently a recovery procedure
+re-initializes the program.
+
+In Perennial, most of the reasoning required for this recovery-based definition
+goes into specifying what happens if the system halts at some intermediate point
+and all threads stop running. The core specification idea for reasoning about
+this situation is a \emph{crash weakest precondition} $\wpc{e}{Q}{Q_{c}}$. Similar
+to the weakest precondition, if $e$ is run from a state satisfying this
+predicate and terminates, the resulting state will satisfy $Q$. However, in
+addition if the system halts at any time $Q_{c}$ is guaranteed to hold. We also
+sometimes write a \emph{crash Hoare quadruple} $\hoareC{P}{e}{Q}{Q_{c}}$ that is
+defined to be $P \proves \wpc{e}{Q}{Q_{c}}$. There is one subtlety in the
+terminology that while we use the term ``crash'' these postconditions hold
+\emph{just prior} to the system actually shutting down, so that the contents of
+memory is unchanged.\footnote{They might more properly be called \emph{halt
+specifications}, but we used the terminology in the original FSCQ paper and it has
+stuck since then. Crash specs are a bit more catchy, anyway.} In \autoref{sec:perennial:recovery} we'll connect these
+crash specifications to the memory wipe and reboot that happens right afterward.
+
+\begin{figure}
+  \wpcseqfig
+\caption{Basic structural rules for crash weakest preconditions.}%
+\label{fig:wpc-seq}
+\end{figure}
 
 crash framing
 
@@ -11,6 +70,7 @@ Crash-aware locks (shouldn't really need crash borrows, only use them as part of
 2PL proof because the code doesn't open and close the locks in a bracketed way)
 
 \section{Recovery reasoning}
+\label{sec:perennial:recovery}
 
 WPR and idempotence rule
 

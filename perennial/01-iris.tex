@@ -8,6 +8,8 @@ specifications of the form $\hoare{P}{e}{Q}$, which is interpreted as meaning
 state will satisfy $Q$''. The logic has various rules for proving and combining
 these specifications.
 
+\subsection{Separation logic}
+
 Separation logic is an extension of Hoare logic that has proven profitable for
 reasoning about heap-manipulating programs with pointers and concurrency
 (surprisingly, the same techniques help solve both problems). A good
@@ -42,6 +44,8 @@ explanation of weakest preconditions vs Hoare triples can be found in
 
 \tej{include a selection of proof rules, load/store and maybe a sequencing
 rule?}
+
+\subsection{Concurrency with Iris}
 
 Iris generalizes separation logic to also reason about concurrency. A full
 explanation of the Iris logic is out-of-scope for the thesis; ``Iris from the
