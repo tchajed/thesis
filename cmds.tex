@@ -50,6 +50,23 @@
 \newcommand{\SKIP}{\mathit{noop}}
 \renewcommand{\Ret}[1]{\text{\textbf{ret}}\,\, #1,\,}
 
+%% more Perennial stuff
+
+\newcommand{\lock}[1]{\textlog{acquire}(#1)}
+\newcommand{\unlock}[1]{\textlog{release}(#1)}
+\newcommand{\newlock}{\textlog{newlock}()}
+
+\newcommand{\prelock}[1]{\textlog{preLock}(#1)}
+\newcommand{\islock}[2]{\textlog{isLock}(#1, #2)}
+\newcommand{\locked}[1]{\textlog{locked}(#1)}
+
+%\newcommand{\precrashlock}[1]{\textlog{preCrashLock}(#1)}
+\newcommand{\iscrashlockNoArgs}{\textlog{isCrashLock}}
+\newcommand{\iscrashlock}[3]{\iscrashlockNoArgs(#1, #2, #3)}
+\newcommand{\crashlockedNoArgs}{\textlog{crashLocked}}
+\newcommand{\crashlocked}[3]{\crashlockedNoArgs(#1, #2, #3)}
+\newcommand{\precrashlock}[1]{\textlog{preCrashLock}(#1)}
+
 %%% GoJournal
 
 % temporary commands for compatibility

@@ -79,7 +79,7 @@ precondition:
 
 \[
   \infer{\hoare{P}{e_1}{Q} \and \hoareC{Q \sep P_d}{e_2}{R}{Q_c}}%
-  {\hoareC{P \sep P_d}{e_1\, e_2}{R}{Q_c}}
+  {\hoareC{P \sep P_d}{e_1;\, e_2}{R}{Q_c}}
 \]
 
 Another example of combining WPC and WP (crash and crash-free) reasoning is in
@@ -98,8 +98,88 @@ $P_{c}$) and after $e$ executes (the second $P_{c}$). At the same time, the
 proof of the crash condition \emph{overlaps with} rather than being disjoint
 from the proof of $\wpre{e}{P}$.
 
-Most important rule: allocating an invariant cancels from the crash invariant
-(encoding Perennial 1.0 reasoning)
+To reason about concurrency, Perennial needs some more principles for sharing
+ownership between threads. The core mechanism in concurrent separation logic for
+reasoning about concurrency is the \emph{invariant}. A thread can allocate an
+invariant by giving up $R$ to receive $\knowInv{}{R}$, an assertion that says
+$R$ is an invariant --- the precise rule is given in \ruleref{wp-inv-alloc}.
+From this point forward, the proof rules guarantee $R$ holds at every program
+step. Any thread can ``open'' $\knowInv{}{R}$ with \ruleref{inv-atomic}, which
+puts $R$ in the precondition but adds the obligation $R$ to the postcondition.
+Invariants can only be opened across an atomic step since other threads might
+rely on $R$ during the intermediate steps. Unlike a general resource $R$,
+$\knowInv{}{R}$ is duplicable; that is,
+$\knowInv{}{R} \proves \knowInv{}{R} \sep \knowInv{}{R}$ --- this is sound
+because $\knowInv{}{R}$ is not the underlying resources $R$ but merely knowledge
+that $R$ is an invariant.
+
+Invariants have a special role in Perennial. \autoref{fig:wpc-concurrent} lists
+some rules for concurrency reasoning. Perennial extends invariant allocation
+with a rule \autoref{wpc-inv-alloc}. The non-crash parts of this rule are
+identical to \autoref{wp-inv-alloc}, but applying the rule has the additional
+benefit of \emph{removing $R$ from the crash condition}. The intuitive reason
+this is sound is that since threads maintain $R$ at all intermediate steps, it
+must also hold in case the system crashes, and the thread that created the
+invariant can get ``credit'' for this on crash.
+
+\begin{figure}
+  \begin{mathpar}
+    \inferH{wp-inv-alloc}%
+    {P \sep \knowInv{}{R} \proves \wpre{e}{Q}}%
+    {P \sep R \proves \wpre{e}{Q}}
+
+    \inferH{wpc-inv-alloc}%
+    {P \sep \knowInv{}{R} \proves \wpc{e}{Q}{Q_c}}%
+    {P \sep R \proves \wpc{e}{Q}{Q_c \sep R}}
+
+    \inferH{wp-fork}%
+    {P \proves \wpre{e}{\TRUE} \and Q \proves \wpre{e'}{R}}%
+    {P \sep Q \proves \wpre{(\operatorname{fork} \{e\}; \, e')}{R}}
+
+    \inferH{inv-atomic}%
+    {\atomic(e) \and R \sep P \proves \wpre{e}{R \sep Q}}%
+    {\knowInv{}{R} \sep P \proves \wpre{e}{Q}}
+  \end{mathpar}
+  \caption{Rules for reasoning about concurrency and ownership transfer with
+    invariants.}
+  \label{fig:wpc-concurrent}
+\end{figure}
+
+Invariants especially useful for lock-free reasoning, but concurrent code
+commonly coordinates between threads using locks. \tej{explain the issue with
+locks over durable state}
+
+\begin{figure}
+  \begin{mathpar}
+    \inferH{wp-lock-alloc}%
+    {}%
+    {P \proves \wpre{\newlock}{\Ret \ell \islock{\ell}{P}}}
+
+    \inferH{wp-lock-use}%
+    {P \sep R \proves \wpre{e}{P \sep Q}}%
+    {\islock{\ell}{P} \sep R \proves \wpre{(\lock{\ell};\, e;\, \unlock{\ell})}{Q}}
+
+    \inferH{wpc-lock-alloc}%
+    {P \proves P_c}%
+    {P \proves \wpc{\newlock}{\Ret \ell \iscrashlock{\ell}{P}{P_c}}{P_c}}
+
+    \inferH{wpc-lock-use}%
+    {P \sep R \proves \wpc{e}{P \sep Q}{P_c}}%
+    {\iscrashlock{\ell}{P}{P_c} \sep R \proves \wpre{(\lock{\ell};\, e;\, \unlock{\ell})}{Q}}
+
+  \end{mathpar}
+  \caption{Rules for reasoning about concurrency and crashes with locks.}
+\end{figure}
+
+Compared to the regular lock spec (\ruleref{wp-lock-alloc} and
+\ruleref{wp-lock-use}), the crash-aware specification (\ruleref{wpc-lock-alloc}
+and \ruleref{wpc-lock-use}) associates both a regular lock invariant $P$ with
+the lock and a crash condition $P_{c}$. The rule for allocating a lock dismisses
+the crash condition, similar to allocating an invariant, and intuitively the
+reason why this rule is sound is that when the lock is used with
+\ruleref{wpc-lock-use} the caller is obliged to prove $P_{c}$ holds throughout
+the entire critical section (whereas the stronger lock invariant $P$ only needs
+to be restored at the end).
 
 Crash-aware locks (shouldn't really need crash borrows, only use them as part of
 2PL proof because the code doesn't open and close the locks in a bracketed way)
