@@ -157,14 +157,17 @@ using this fractional ghost state:
 
 The new notation $\upd P$ is an Iris \emph{update modality}. The assertion
 $\upd P$ expresses ownership of resources which could be used to become $P$ with
-some update to ghost state. For example, \ruleref{frac-alloc} shows that
-starting with no assertions it is possible to allocate a new ghost variable
-$\gamma$ with value $v$ and complete ownership over it; this is analogous to how
-the Hoare triple for allocation has no precondition. The formal rule that allows
-the user to get access to $P$ is \ruleref{upd-fire}. It corresponds to advancing
-the proof of $\wpre{e}{Q}$ by changing whatever ghost state is needed to turn
-$\upd P$ into $P$. As long as the user is proving a weakest precondition, we can
-always apply this rule to ``eliminate'' an update modality.
+some update to ghost state. The dashed box is intended to emphasize that this
+assertion is about ghost state and not about the heap, as in the points-to
+assertion $p \mapsto v$. As an example of proving an update modality,
+\ruleref{frac-alloc} shows that starting with no assertions it is possible to
+allocate a new ghost variable $\gamma$ with value $v$ and complete ownership
+over it; this is analogous to how the Hoare triple for allocation has no
+precondition. The formal rule that allows the user to get access to $P$ is
+\ruleref{upd-fire}. It corresponds to advancing the proof of $\wpre{e}{Q}$ by
+changing whatever ghost state is needed to turn $\upd P$ into $P$. As long as
+the user is proving a weakest precondition, we can always apply this rule to
+``eliminate'' an update modality.
 
 Fractional ghost state can be updated after creation with \autoref{frac-update}.
 The update requires full ownership. Fractional ghost variables can instead be
