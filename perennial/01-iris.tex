@@ -127,11 +127,51 @@ separation logic assertions for \emph{ownership} of ghost state, which can be
 split and divided among threads. Second, ghost state can have restrictions on
 how it may be updated.
 
-A simple example to illustrate both principles is Iris's fractional ghost
-variables. \tej{TODO: explain these, and idea of read-only vs write permissions}
+\newcommand{\dashedbox}[1]{\boxedassert[densely dashed]{#1}[]}
+\newcommand{\ghostvar}[2][]{\dashedbox{\gamma \mapsto_{#1} #2}}
 
-\tej{somewhere in here we'll explain the notation for updates, without going
-  into the basic vs fancy updates or masks at all}
+A simple example to illustrate both principles is Iris's fractional ghost
+variables. We will write $\ghostvar[q]{v}$ to indicate that $\gamma$ has value
+$v$ (of any fixed type) and that we own a (positive) fraction $q$ of it.
+Complete ownership $\ghostvar[1]{v}$ is common enough that we will also write it
+$\ghostvar{v}$, with no fraction. There are several rules for manipulating and
+using this fractional ghost state:
+
+\begin{mathpar}
+  \inferH{frac-alloc}{}%
+  {\proves \upd \exists \gamma.\, \ghostvar{v}}
+
+  \inferH{frac-update}{}%
+  {\ghostvar{v} \proves \upd \ghostvar{v'}}
+
+  \inferH{frac-split}{}%
+  {\ghostvar[q_1 + q_2]{v} \provesIff \ghostvar[q_1]{v} \sep \ghostvar[q_2]{v}}
+
+  \inferH{frac-agree}{}%
+  {\ghostvar[q_1]{v_1} \sep \ghostvar[q_2]{v_2} \proves v_1 = v_2}
+
+  \inferH{upd-fire}%
+  {P \proves \wpre{e}{Q}}%
+  {\upd P \proves \wpre{e}{Q}}
+\end{mathpar}
+
+The new notation $\upd P$ is an Iris \emph{update modality}. The assertion
+$\upd P$ expresses ownership of resources which could be used to become $P$ with
+some update to ghost state. For example, \ruleref{frac-alloc} shows that
+starting with no assertions it is possible to allocate a new ghost variable
+$\gamma$ with value $v$ and complete ownership over it; this is analogous to how
+the Hoare triple for allocation has no precondition. The formal rule that allows
+the user to get access to $P$ is \ruleref{upd-fire}. It corresponds to advancing
+the proof of $\wpre{e}{Q}$ by changing whatever ghost state is needed to turn
+$\upd P$ into $P$. As long as the user is proving a weakest precondition, we can
+always apply this rule to ``eliminate'' an update modality.
+
+Fractional ghost state can be updated after creation with \autoref{frac-update}.
+The update requires full ownership. Fractional ghost variables can instead be
+split into smaller pieces with \autoref{frac-split}; these pieces can no longer
+be updated (since this would invalidate the rest of the assertions), but two
+assertions for the same ghost variable must be for equal values since the
+underlying variable has only one value.
 
 In this thesis we describe constructing ghost state to carry out parts of the
 proof. In reality all ghost state in Iris is constructed by defining an
@@ -151,7 +191,11 @@ assertion that says $I$ is an invariant. Once this invariant is established, the
 proof rules in Iris guarantee that $I$ holds at all steps of the program. A
 thread that has $\knowInv{}{I}$ in its precondition can make use of the
 invariant by ``opening'' it, but only for a single program step; it must be
-returned afterward to guarantee the invariant holds for other threads.
+returned afterward to guarantee the invariant holds for other threads. Finally,
+invariants are freely \emph{duplicable} --- that is,
+$\knowInv{}{I} \proves \knowInv{}{I} \sep \knowInv{}{I}$ --- reflecting that
+knowledge of an invariant, once it is established, is an assertion that all
+threads agree on which cannot be invalidated.
 
 \tej{Might not need persistently modality, shouldn't need later modality}
 
