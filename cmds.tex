@@ -67,6 +67,19 @@
 \newcommand{\crashlocked}[3]{\crashlockedNoArgs(#1, #2, #3)}
 \newcommand{\precrashlock}[1]{\textlog{preCrashLock}(#1)}
 
+% Disk FFI
+\newcommand{\diskwriteNoArgs}{\textlog{DiskWrite}}
+\newcommand{\diskreadNoArgs}{\textlog{DiskRead}}
+\newcommand{\diskwrite}[2]{\diskwriteNoArgs(#1, #2)}
+\newcommand{\diskread}[1]{\diskreadNoArgs(#1)}
+\newcommand{\dmapsto}{\mapsto_\textsf{d}}
+\newcommand{\vals}{vs}
+\newcommand{\block}{b}
+\newcommand{\addr}{a}
+
+\newcommand{\memory}{m}
+\newcommand{\disk}{d}
+
 % newly defined here (durable(P) := P |- post_crash(P))
 \newcommand{\durable}{\operatorname{durable}}
 
