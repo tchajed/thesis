@@ -67,6 +67,9 @@
 \newcommand{\crashlocked}[3]{\crashlockedNoArgs(#1, #2, #3)}
 \newcommand{\precrashlock}[1]{\textlog{preCrashLock}(#1)}
 
+% newly defined here (durable(P) := P |- post_crash(P))
+\newcommand{\durable}{\operatorname{durable}}
+
 %%% GoJournal
 
 % temporary commands for compatibility

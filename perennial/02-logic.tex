@@ -181,20 +181,69 @@ reason why this rule is sound is that when the lock is used with
 the entire critical section (whereas the stronger lock invariant $P$ only needs
 to be restored at the end).
 
-Crash-aware locks (shouldn't really need crash borrows, only use them as part of
-2PL proof because the code doesn't open and close the locks in a bracketed way)
-
 \section{Recovery reasoning}
 \label{sec:perennial:recovery}
 
-WPR and idempotence rule
+A practical storage system handles crashes by restoring its in-memory state of
+the system. We call the procedure that runs after a crash on every reboot the
+system's \emph{recovery procedure}. To reason about the recovery process, we
+introduce a \emph{recovery} weakest precondition $\wpr{e}{e_{r}}{P}{P_{r}}$,
+where $e$ represents the storage system, $e_{r}$ is a recovery procedure that
+will run on restart, $P$ is the postcondition for normal execution, and $P_{r}$
+is the \emph{recovery postcondition}. When $e$ is run in a state satisfying this
+$\wprw$, if it terminates normally then $P$ holds, and if the system crashes and
+$e_{r}$ terminates then $P_{r}$ holds. The latter is true even if the system
+crashes while running $e_{r}$ and restarts all over again.
 
-generation numbers to explain how resources transition across a crash
-(post-crash modality helps make this concrete in the form of a theorem)
+Perennial has only one rule to prove a $\wprw$, which reduces it to proving a
+$\wpcw$ about $e$ and an \emph{idempotent} specification for
+$e_{r}$~\cite{chen:fscq}:
 
-In practice, recovery is the thing that sets up the invariants, cancels from its
-crash condition, and then always starts up with the contents of those
-invariants due to the recovery idempotence rule.
+\[
+  \inferH{wpr-idempotence}%
+{\operatorname{durable}(P_{c}) \and P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}}%
+{\wpc{e}{P}{P_{c}} \proves \wpr{e}{e_{r}}{P}{P_{r}}}
+\]
+
+At a high level, the user proves $\wpr{e}{e_{r}}{P}{P_{r}}$ in two steps:
+\begin{enumerate}
+  \item First, prove $\wpc{e}{P}{P_c}$ to cover normal terminal and establish a
+  global crash invariant $P_{c}$ for the program.
+  \item Second, prove $P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}$ to establish the
+  recovery postcondition from the crash condition and show that recovery
+  maintains the crash invariant so that crashes during recovery are also
+  handled.
+  \item Finally, prove $\durable(P_{c})$, which asserts that the
+  crash invariant is stated using only \emph{durable} resources that survive a
+  crash.
+\end{enumerate}
+
+The final step, the durability side condition, is where the proof takes into
+account the effect of a crash. For example $\wpc{e}{P}{P_{c}}$ proves that
+$P_{c}$ holds just prior to a crash while
+$P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}$ starts reasoning just after the crash.
+Durability is defined so that if $P_{c}$ is durable, it holds across a crash.
+
+The effect of a crash is to wipe memory. Encoding this in separation logic is a
+bit tricky, since it would appear that assertions about in-memory pointers like
+$p \mapsto v$ need to be invalidated. The logic handles this by instead
+parameterizing all heap assertions and weakest preconditions with a
+\emph{generation number}. Across a crash, the generation number is incremented,
+so that old assertions are true but no longer work for loads and stores since
+they do not apply to the current heap. Then $\durable(P)$ is defined to say that
+the assertion $P$ is independent of the current generation number.
+
+In practice the way the $\wprw$ assertion is used is by applying it to an $e$
+that is a server loop that accepts operations, executes them, and replies. The
+same loop $e$ is also $e_{r}$ since it restores its state from disk. Finally, we
+separately prove that $e$ is safe to run from an initial state with an all-zero
+disk.
+
+In practice, the recovery code sets up the global invariants and appropriate
+crash locks for the whole system and thus cancels all of these assertions from
+its crash condition, contributing to the proof of $P_{c}$. Then the proof rules
+in Perennial guarantee that recovery can assume $P_{c}$ holds if the system
+crashes and reboots at any time, as given by the idempotence rule.
 
 \section{Soundness}
 
