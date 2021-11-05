@@ -207,7 +207,7 @@ $e_{r}$~\cite{chen:fscq}:
 
 At a high level, the user proves $\wpr{e}{e_{r}}{P}{P_{r}}$ in two steps:
 \begin{enumerate}
-  \item First, prove $\wpc{e}{P}{P_c}$ to cover normal terminal and establish a
+  \item First, prove $\wpc{e}{P}{P_c}$ to cover normal termination and establish a
   global crash invariant $P_{c}$ for the program.
   \item Second, prove $P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}$ to establish the
   recovery postcondition from the crash condition and show that recovery
@@ -248,13 +248,16 @@ idempotence rule.
 
 \section{Soundness}
 
-We gave an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$. The
-soundness theorem formally connects the definition of $\wprw$ to a guarantee
-about $e$ and $e_{r}$ indendently of the details of the logic. The meaning of
-the mechanisms of the logic is complicated due to features like ghost state,
-invariants, and the purely-logical notion of ownership. The soundness theorem
-establishes what an end-to-end theorem about the system \emph{means} without
-trusting the interpretation and implementation of these features.
+We gave an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$, but it is
+not obvious that the definition of $\wprw$ and $\wpcw$ implies that this
+intuitive meaning holds up. Interpreting the mechanisms of the logic is
+complicated since it requires relating logical features like ghost state,
+invariants, and ownership to the execution of the program. To address these
+concerns, Perennial comes with a \emph{soundness theorem} that formally connects
+the definitions to a guarantee about $e$ and $e_{r}$ indendently of the details
+of the logic. The soundness theorem establishes what an end-to-end theorem about
+the system \emph{means} without trusting the interpretation and implementation
+of these features.
 
 The basic version of the soundness theorem says:
 
@@ -268,9 +271,10 @@ The basic version of the soundness theorem says:
   Suppose that
   \[\bigast\limits_{a \mapsto v \in d} a \dmapsto v \proves
   \wpr{e}{e_r}{\Ret\var. X(\var)}{\Ret\varB. X_{r}(\varB)} \] is derivable in
-  Perennial. If running $e$ (recovering with $e_{r}$) in a state $\sigma$ with an
-empty heap and disk $d$ executes to an expression $e'$ in state $\sigma'$ (possibly
-with additional forked threads), then
+  Perennial. Running $e$ (recovering with $e_{r}$) in a state $\sigma$ with an
+  empty heap and disk $d$ will not get stuck, and if the execution
+  terminates with an expression $e'$ in state $\sigma'$ (possibly
+  with additional forked threads), then
   \begin{enumerate}
     \item If this execution is a normal termination and $e'$ is a value, then
     $X(e')$ holds.
@@ -281,25 +285,30 @@ with additional forked threads), then
   \end{enumerate}
 \end{theorem}
 To satisfy the premise of the soundness theorem, we get to assume points-to
-facts for all of the addresses in the initial disk. The first two conclusions
-state that the normal postcondition and recovery postcondition have the intended
-meaning for the return value of the main thread $e$ or the recovery procedure
-$e_{r}$, respectively. Finally, the third conclusion is a \emph{safety}
-statement about other threads in the system, which says that no forked threads
-will get stuck.
+facts for all of the addresses in the initial disk. First, the theorem promises
+that $e$ runs ``safely'' in the sense of not getting stuck. This immediately
+rules out a number of errors, including any calls to Go's built-in \cc{panic()}
+function and lower-level issues like reading slices out-of-bounds and data
+races.  The first two conclusions state that the normal postcondition and
+recovery postcondition have the intended meaning for the return value of the
+main thread $e$ or the recovery procedure $e_{r}$, respectively. Finally, the
+third conclusion is a safety statement about other threads in the system, which
+says that forked threads also do not encounter errors.
 
 This soundness theorem is machine-checked in the Perennial implementation. Its
 proof hides complexity in the definitions of $\wpcw$ and $\wprw$, and in the
 definitions of all the Perennial mechanisms using lower-level Iris primitives.
 
-For a system like a server, it is possible to go beyond this soundness theorem
-and use Perennial to prove a property about its whole execution rather than the
-final value (which is generally uninteresting for the main loop of a server).
-The proof of a weakest precondition also maintains the invariants at each step,
-and a stronger adequacy theorem states how these invariants relate to the
-execution. We used this more general support to prove a \emph{refinement}
-theorem for GoTxn that relates a whole execution of GoTxn's implementation to a
-simpler specification execution.
+The reader might observe that this theorem doesn't say much about intermediate
+results of the program. For a system like a server, which has no interesting
+return value, the main outcome of this theorem is the safety statement.
+It is possible to go beyond this soundness theorem to a \emph{refinement}
+soundness theorem that specifies a program by relating its observable I/O
+behavior to a simpler, more abstract program. We used this more general support
+to prove a theorem for GoTxn that relates an arbitrary program using the
+transaction system to a simpler specification program. Both the simple soundness
+theorem above and the refinement soundness theorem are proven using lower-level
+mechanisms from Iris and Perennial.
 
 \section{Implementation}
 \label{sec:perennial:impl}
