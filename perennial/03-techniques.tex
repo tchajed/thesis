@@ -1,20 +1,35 @@
-\section{Reasoning techniques using Perennial}
+\section{Reasoning techniques in Perennial}
 \label{sec:perennial:techniques}
 
-\tej{May not want this section; instead write some text in GoTxn chapter about
-how circ proof works in detail (because it happens to illustrate most of the
-techniques), and how refinement works. Then see if there's anything general to
-say about Perennial's mechanisms here for that to make sense. It might also make
-sense to explain circ here, since it's pretty easy to explain so it doesn't need
-to be motivated by the rest of GoJournal or even the WAL.}
+On top of the Perennial logic, we developed some techniques to organize proofs
+of libraries and compose them. Of particular interest is a pattern for
+\emph{logically-atomic crash specifications}, which capture that a set of
+methods in a library appear atomic with respect to both other threads and on
+crash. In order to illustrate how all of these techniques work together, this
+section walks through the specification and proof intuition for the circular
+buffer, a library used in GoTxn that has interesting crash safety and
+concurrency behavior. This library operates directly on top of the disk, so no
+background on GoTxn is needed to understand it.
 
-Using invariants in clever ways, for both standard concurrency reasoning and
-crashes
+The circular buffer (``circ'' for short) is essentially an on-disk queue of
+updates, which are pairs of an address and a disk block. It is used to implement
+write-ahead logging: disk writes are first stored in the circular buffer, and
+then eventually moved to a separate data region. It supports two operations
+during normal usage: \cc{Append(upds)} appends a list of updates to the buffer
+and \cc{TrimTill(pos)} deletes updates up to \cc{pos}. Queue positions grow
+indefinitely, but the buffer can only hold at most 511 updates at a time and it
+is the caller's responsibility to avoid overflowing with \cc{Append}. The caller
+generally does not need to read from the buffer except following a reboot, at
+which point the circular buffer can be restored from disk. In practice the
+contents of the buffer are cached by the caller, but we can ignore that for the
+purposes of the circ library.
 
-Logically-atomic crash specs expose atomic updates to the state of a module
-
-Notion of a ``durable'' resource via post-crash modality + combining with an
-invariant
-
-Refinement reasoning uses lower-level tools from Perennial for a different
-soundness theorem
+\tej{things to figure out}
+\begin{enumerate}
+  \item how does a lower bound before a crash get turned into knowledge after
+  the crash?
+  \item why does \cc{crash_obligation_alt} have both a cfupd and an invariant in
+  the postcondition?
+  \item what's the timeline of creating the next generation? (I think this is in
+  my notes but I don't understand it)
+\end{enumerate}
