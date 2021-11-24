@@ -17,14 +17,53 @@ write-ahead logging: disk writes are first stored in the circular buffer, and
 then eventually moved to a separate data region. It supports two operations
 during normal usage: \cc{Append(upds)} appends a list of updates to the buffer
 and \cc{TrimTill(pos)} deletes updates up to \cc{pos}. Queue positions grow
-indefinitely, but the buffer can only hold at most 511 updates at a time and it
-is the caller's responsibility to avoid overflowing with \cc{Append}. The caller
-generally does not need to read from the buffer except following a reboot, at
-which point the circular buffer can be restored from disk. In practice the
-contents of the buffer are cached by the caller, but we can ignore that for the
-purposes of the circ library.
+indefinitely, but the buffer can hold at most 511 updates at a time and it
+is the caller's responsibility to avoid overflowing with \cc{Append}. The only
+read operation is recovery, which restores the durable updates and current queue
+position; in practice the contents are cached, but this is the caller's concern.
 
-\tej{things to figure out}
+There are three challenges in giving the circ library a specification. First, we
+want to show that \cc{Append} appears to be atomic to the caller, even though it
+internally writes many disk blocks. Second, the library has some thread-safety
+requirements to enforce on the caller: in particular \cc{Append} and
+\cc{TrimTill} can be called concurrently from separate threads, but it is not
+safe to overlap multiple appends or multiple trim requests. Finally, the library
+relies on the caller to guarantee that append and trim are called with enough
+available space. These last two challenges are due to leaving concurrency
+control to the caller, which is more efficient than the circular buffer having
+its own redundant locking.
+
+The basic idea is that the circular buffer is specified in terms of an abstract
+state that evolves through an atomic transition for each operation. Recovery can
+recover the pre-crash state of the buffer. The state for this library consists
+of two components: a list of updates (which are pairs of an address to write to
+and a 4KB block to write there) and a 64-bit start position that indicates how
+many updates occurred prior to the current list of updates. Append, as
+mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
+is a position of this form; the effect of \cc{TrimTill(pos)} is to delete
+\cc{pos - start} updates from the beginning of the list of updates and set the
+new start position to \cc{pos}.
+
+Formally the way each operation is specified is using a style called
+HOCAP~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
+library maintains an invariant $P(\sigma)$, where $\sigma$ is the current
+abstract state; a key idea in the HOCAP specification is that this predicate $P$
+is chosen by the client. For each operation, the client passes in a
+\emph{view-shift assertion} written $P(\sigma) \vs P(\sigma') * Q$, where the
+transition from $\sigma$ to $\sigma'$ is a valid transition for the operation.
+This view shift represents a kind of once-usable ``callback'' which transforms
+$P(\sigma)$ into $P(\sigma')$, typically by updating the caller's ghost state in
+$P$. At the end of the operation, the client receives $Q$ as a kind of
+certificate that the callback ran. The intuition for why this specification
+style captures linearizability is that the library does not know anything about
+$P$ or $Q$ and thus the only way to preserve $P$ and produce $Q$ at the end is
+to call the callback at exactly the linearization point of the operation.
+
+In this section, we describe how we extend the HOCAP idea to recovery, and how
+we combine it with custom separation-logic assertions to express the circular
+buffer's preconditions.
+
+\tej{things to figure out:}
 \begin{enumerate}
   \item how does a lower bound before a crash get turned into knowledge after
   the crash?
