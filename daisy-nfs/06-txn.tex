@@ -1,19 +1,4 @@
-\section{Verifying the transaction system}
-\label{sec:txn-proof}
-
-\tej{merge with previous section, \autoref{s:proof}}
-
-The transaction system is essential to the overall file system's performance.
-The overall system is only as concurrent as the transaction
-system --- in the limit, a transaction system with a global lock will mean the
-file system achieves no speed up from using multiple cores and no work will
-actually happen concurrently. A high-performance transaction system is difficult
-to verify, so we take an existing verified journal, GoJournal, as a starting
-point.
-
-The transaction system is verified with a refinement-style specification
-described in \autoref{sec:soundness}. This section discusses some of the
-interesting details of the proof.
+% this continues the section that starts the GoJournal proof
 
 \subsection{Two-phase locking and allocator proof}
 

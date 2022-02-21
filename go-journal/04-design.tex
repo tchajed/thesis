@@ -21,13 +21,14 @@
 %% prepares the \cc{op} with the buffered writes needed to implement the RPC ---
 %% followed by a call to \cc{Commit(true)} to finally make the transaction durable.
 
-\tej{Bunch of work in this section. First explain why this layer is needed in
-GoTxn, and second less emphasis on a caller since the spec is only used once
-to prove a generic transaction correct.}
+\tej{Bunch of work in this section. Need to explain why this layer supports the
+  refinement proof in GoTxn, with no emphasis on reasoning for the caller.}
 
 \tej{some of the GoJournal paper's motivation (about the difficulty of capturing
 the crash atomicity of a journal) do apply to this section, and need to be
 introduced locally since the chapter is otherwise about a transaction system}
+
+\resume
 
 The goal of \txn's specification is to support convenient reasoning about atomic
 operations, like the NFS \scc{write} implementation in \autoref{fig:nfswrite} and \autoref{fig:write}.

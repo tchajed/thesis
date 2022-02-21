@@ -232,6 +232,8 @@ principles aim to hide that complexity to make proofs practical.
 \tej{also need to describe Hoare triples and separation logic, might as well do
 that here since it's part of the foundations of reasoning about GooseLang}
 
+\resume
+
 \section{Supported and unsupported
 features}
 
@@ -281,7 +283,9 @@ set of mutually recursive definitions. In such a model it would be
 necessary to first give specifications to every definition that may be
 assumed by other proofs, and to ensure the proof isn't circular.
 
-\section{Modeling pointers}
+\section{Modeling and reasoning about Go}
+
+\subsection{Modeling pointers}
 
 Pointers turn out to be slightly subtle because of concurrency. In
 short, GooseLang disallows concurrent reads and writes to the same
@@ -317,7 +321,7 @@ share memory with an invariant and must mediate access with a lock,
 which transfers ownership of the $l \mapsto v$ for multiple execution
 steps.
 
-\section{Modeling locks}
+\subsection{Locks}
 
 As is typical in Goose, locks are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
@@ -353,7 +357,7 @@ ownership, handing it out when the lock is acquired and requiring it
 back when the lock is released. We prove this specification sound
 against the GooseLang spin-lock implementation.
 
-\section{Structs}
+\subsection{Structs}
 
 One of the first features needed when writing any Go is support for
 structs. We treat a struct value as just a tuple of its fields, while
@@ -461,7 +465,7 @@ described above, a list of fields and types (the code calls this a
 ``descriptor'' and uses $d$ as the metavariable, to avoid confusion
 with a generic type $t$).
 
-\section{Slices}
+\subsection{Slices}
 
 One of the most commonly used data structures in Go is the slice
 \cc{[]T}, which is a dynamically-sized array of values of type
@@ -618,7 +622,7 @@ not be possible to prove the safety of appending to \cc{s[:i]},
 since this would conflict with the separate ownership over
 \cc{s[i:]}.
 
-\section{Maps}
+\subsection{Maps}
 
 After slices, maps are the next most commonly used collection type in
 Go. We implement maps as lists of key-value pairs, stored in a single
@@ -669,7 +673,9 @@ $\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}$
 Map iteration has a more sophisticated specification [citation
 needed]:
 
-\tej{write down iteration spec}
+\tej{write down Goose map iteration spec}
+
+\resume
 
 \section{Testing Goose}
 
@@ -752,3 +758,9 @@ Sydney Gibson, and is described in greater detail in her master's
 thesis. The thesis includes more details on evaluating the interpreter
 itself, for example documenting bugs caught by the test suite and other
 bugs that are now part of our regression tests.
+
+\section{Conclusion}
+
+\tej{need a conclusion for Goose chapter}
+
+\resume
