@@ -37,10 +37,22 @@ Instead of working with Hoare triples, it is convenient to instead define
 specifications in a different style of \emph{weakest preconditions} (WPs). We will use
 $\wpre{e}{Q}$ to denote the weakest precondition of $e$ with postcondition $Q$;
 if $e$ is run in a state satisfying $\wpre{e}{Q}$ and terminates, the final
-state will satisfy $Q$. For some inuition behind weakest preconditions note that
-$P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
+state will satisfy $Q$. Note that
+$P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$, which can help give
+some intuition around weakest preconditions. An excellent
 explanation of weakest preconditions vs Hoare triples can be found in
 ``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
+
+The term ``weakest precondition'' is because $\wpre{e}{Q}$ is supposed to be the
+\emph{weakest} predicate that implies $Q$ holds after $e$'s execution, in the
+sense that any other precondition would imply $\wpre{e}{Q}$, but we will not
+emphasize this aspect of weakest preconditions. Furthermore the literature will
+sometimes distinguish between weakest liberal preconditions that only guarantee
+$Q$ if $e$ terminates and reserve the term weakest preconditions for a predicate
+that also guarantees termination. We just use weakest precondition for the
+``liberal'' version (also called \emph{partial correctness} as opposed to
+\emph{total correctness}), because proving termination in the presence of
+concurrency is quite challenging.
 
 As an example of weakest precondition reasoning, the frame rule becomes
 \ruleref{wp-frame} in terms of WPs. Reading this rule forwards, if we have $F$
