@@ -272,22 +272,21 @@ The basic version of the soundness theorem says:
 
 \begin{theorem}[Perennial soundness]
 \label{thm:soundness}
-  Let $d \in \textdom{Disk}$ be a disk. Let $X$ and $X_r$ be predicates over
+  Let $d \in \textdom{Disk}$ be a disk. Let $\phi$ and $\phi_r$ be predicates over
   values.
-  % \ralf{``pure'' is unspecified... maybe it is easier to use two sets of values instead? that makes ``pure'' implicit and hopefully intuitive.}
   Suppose that
   \[\bigast\limits_{a \mapsto v \in d} a \dmapsto v \proves
-  \wpr{e}{e_r}{\Ret\var. X(\var)}{\Ret\varB. X_{r}(\varB)} \] is derivable in
+  \wpr{e}{e_r}{\Ret{x} \phi(x)}{\Ret{y} \phi_{r}(y)} \] is derivable in
   Perennial. Running $e$ (recovering with $e_{r}$) in a state $\sigma$ with an
   empty heap and disk $d$ will not get stuck, and if the execution
   terminates with an expression $e'$ in state $\sigma'$ (possibly
   with additional forked threads), then
   \begin{enumerate}
     \item If this execution is a normal termination and $e'$ is a value, then
-    $X(e')$ holds.
+    $\phi(e')$ holds.
     \item If this execution is a crash and recovery execution and $e'$ is a
     value produced by $e_{r}$, then
-    $X_{r}(e')$ holds.
+    $\phi_{r}(e')$ holds.
     \item Any forked threads are either a value or are reducible in $\sigma'$
   \end{enumerate}
 \end{theorem}
@@ -327,5 +326,5 @@ defines the weakest precondition $\wpre{e}{Q}$ as an assertion in the base logic
 about the execution of $e$. All of the proof rules in the program logic are
 defined as theorems in the base logic, using the definition of $\wpw$.
 
-\tej{say a lot more about how the intuition above relates to the real
-implementation (laters, namespaces, masks)}
+\tej{mention that real implementation has more complexity around laters,
+namespaces, masks in order to be sound}
