@@ -89,14 +89,21 @@ WPC for this expression. The premise involves a connective $P \land Q$. This is
 a \emph{non-separating conjunction} or ``logical and''. $P \land Q$ holds in
 some state when $P$ and $Q$ both hold, but unlike $P \sep Q$ they do not have to
 be over disjoint parts of the state, so for example
-$p \mapsto v \proves p \mapsto v \land p \mapsto v$ is trivially true. To prove
-$\wpc{e}{P}{P_c}$, we need to prove that $P_c$ holds, and using the same pre-execution
-resources that $e$ runs to produce $P$ and $P_{c}$ for the same post-execution
-resources. The intuitive reason why this rule is sound is that $e$ takes a
-single step, so it is sufficient to show the crash condition now (the first
-$P_{c}$) and after $e$ executes (the second $P_{c}$). At the same time, the
-proof of the crash condition \emph{overlaps with} rather than being disjoint
-from the proof of $\wpre{e}{P}$.
+$p \mapsto v \proves p \mapsto v \land p \mapsto v$ is trivially true.
+
+The logical ``and'' makes this spec much more powerful. If at some point at the
+proof we have resources $R$ and want to prove $\wpc{e}{P}{P_{c}}$, the rule says
+it is sufficient to prove two things: $R \proves P_{c}$ and
+$R \proves \wpre{e}{P_{c} \land P}$. Notice that unlike most separation logic
+reasoning, we don't need to split up $R$ to prove these two entailments, and
+that we have reduced crash reasoning to non-crash reasoning. There are two
+reasons why this reasoning is sound: first, $e$ takes only a single step, and
+the system either crashes or not, but not both, so we only need to show either
+the crash or post condition. If the system crashes before $e$ then
+$R \proves P_{c}$ shows the crash condition holds now, and otherwise the
+resources $R$ are still available to prove $\wpre{e}{P_{c} \land P}$. That proof
+shows that the post-crash resources satisfy both $P_{c}$ (if the system crashes
+right after $e$) and $P$ (to show the postcondition).
 
 To reason about concurrency, Perennial needs some more principles for sharing
 ownership between threads. The core mechanism in concurrent separation logic for
