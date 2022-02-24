@@ -152,9 +152,24 @@ invariant can get ``credit'' for this on crash.
   \label{fig:wpc-concurrent}
 \end{figure}
 
-Invariants especially useful for lock-free reasoning, but concurrent code
-commonly coordinates between threads using locks. \tej{explain the issue with
-locks over durable state}
+Invariants are especially useful for lock-free reasoning, but concurrent code
+commonly coordinates between threads using locks. A lock guarantees that no two
+threads own the lock at the same time. This is expressed in separation logic by
+associating a \emph{lock invariant} $P$ with each lock when it is created, which
+we think of as something the lock ``protects''. When a thread acquires the lock, it obtains
+ownership of $P$, and when it release the lock, it gives up the same ownership.
+This is sound precisely because either a single thread holds the lock, or it is
+free (in which case intuitively we can think of the lock as holding ownership).
+
+What happens if the system crashes while a lock is held?
+The standard lock specification gives a thread exclusive access to $P$ during a
+critical section (between $\lock{\ell}$ and $\unlock{\ell}$), and says nothing
+about the locked state if the system crashes in the middle of a critical
+section --- this is fine if the lock protects in-memory state that is anyway
+lost on crash, but insufficient for reasoning about locks that protect durable
+state. One intuition for what goes wrong is that a crash ``steals'' ownership of
+the locked state and forcibly transfers it to recovery, which is something we
+need to reason about in practice in a concurrent, crash-safe system.
 
 \begin{figure}
   \begin{mathpar}
@@ -178,7 +193,9 @@ locks over durable state}
   \caption{Rules for reasoning about concurrency and crashes with locks.}
 \end{figure}
 
-Compared to the regular lock spec (\ruleref{wp-lock-alloc} and
+Perennial addresses this issue by introducing a new crash-aware lock
+specification that also gives guarantees if the system crashes during a critical
+section. Compared to the regular lock spec (\ruleref{wp-lock-alloc} and
 \ruleref{wp-lock-use}), the crash-aware specification (\ruleref{wpc-lock-alloc}
 and \ruleref{wpc-lock-use}) associates both a regular lock invariant $P$ with
 the lock and a crash condition $P_{c}$. The rule for allocating a lock dismisses
@@ -256,7 +273,7 @@ idempotence rule.
 \section{Soundness}
 
 We gave an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$, but it is
-not obvious that the definition of $\wprw$ and $\wpcw$ implies that this
+not obvious that the definitions of $\wprw$ and $\wpcw$ imply that this
 intuitive meaning holds up. Interpreting the mechanisms of the logic is
 complicated since it requires relating logical features like ghost state,
 invariants, and ownership to the execution of the program. To address these
