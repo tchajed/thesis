@@ -279,11 +279,16 @@ conceptually treats all top-level definitions as simultaneous, whereas
 Coq processes definitions sequentially. Using Coq definition management
 to model Go definition management imposes a limitation compared to Go,
 but is much simpler to work with compared to modeling a Go package as a
-set of mutually recursive definitions. In such a model it would be
-necessary to first give specifications to every definition that may be
-assumed by other proofs, and to ensure the proof isn't circular.
+set of mutually recursive definitions. Reasoning about code written in such a
+model would require setting up specification for all the definitions, then
+proving them in a recursive way while ensuring that no specification is used
+before it is proven.
 
 \section{Modeling and reasoning about Go}
+
+% \newidentmacro{foobar} creates \foobar that expands to foobar, with the right
+% formatting to be an identifier.
+\newcommand{\newidentmacro}[1]{\csdef{#1}{\mathtt{#1}}}
 
 \subsection{Modeling pointers}
 
@@ -323,6 +328,9 @@ steps.
 
 \subsection{Locks}
 
+\newidentmacro{Acquire}
+\newidentmacro{CAS}
+
 As is typical in Goose, locks are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
 only synchronization primitive, implementing them requires shared
@@ -335,8 +343,8 @@ have not implemented this yet since we don't have code that uses these
 low-level synchronization primitives.
 
 The GooseLang lock model is a simple spin lock, represented as a boolean
-that is true if the lock is held. The acquire operation $Acquire(l)$
-repeatedly executes $CAS(l, false, true)$ to atomically test that the
+that is true if the lock is held. The acquire operation $\Acquire(l)$
+repeatedly executes $\CAS(l, false, true)$ to atomically test that the
 lock is false and set it to true if so, while release stores false to
 the lock. The implementation as a spin lock is merely an operational
 model that captures what the lock does: acquire blocks until the lock is
@@ -358,6 +366,11 @@ back when the lock is released. We prove this specification sound
 against the GooseLang spin-lock implementation.
 
 \subsection{Structs}
+
+\newidentmacro{LoadTyped}
+\newidentmacro{StoreTyped}
+\newidentmacro{loadField}
+\newidentmacro{storeField}
 
 One of the first features needed when writing any Go is support for
 structs. We treat a struct value as just a tuple of its fields, while
@@ -392,14 +405,14 @@ order to determine the location and extent of any given field. Using
 types to represent these shapes makes the translation much simpler,
 since we have access to the type of every sub-expression from the Go
 type checker. Any load of a value from memory is translated to a Gallina
-LoadTyped macro that takes a Coq representation of the type being loaded
+$\LoadTyped$ macro that takes a Coq representation of the type being loaded
 and uses it to determine what offsets to load.
 
 For the purpose of proofs we represent a pointer to an arbitrary type
 $t$ with a typed points-to fact of the form $l \mapsto_t v$. This
 definition expands to a number of primitive points-to facts, one for
 each base element. The specification for loading says
-$\{l \mapsto_t v\} LoadTyped(t, l) \{RET v, l \mapsto_t v\}$, which
+$\hoare{l \mapsto_t v}{\LoadTyped(t, l)}{\Ret{v} l \mapsto_t v}$, which
 (much like the non-atomic primitive Load) hides the fact that something
 non-atomic is happening and looks like an ordinary dereference.
 Similarly, StoreTyped also takes a type, although the specification
@@ -443,12 +456,12 @@ to prove a $l \mapsto_t v$ by gathering up all the fields.
 The struct field points-to is indispensable in proofs, because the
 pattern of \cc{x.f} in Go when $x$ is a pointer is in fact a field
 load (in C, this would be written \cc{x->f}). The model
-for loading a struct field is a function \cc{loadField(x, t, f)}
+for loading a struct field is a function $\loadField(x, t, f)$
 which is implemented in two steps, first computing the offset to field
 $f$ and then dereferencing the computed pointer (in both cases the struct type $t$
 describes how to interpret field $f$). Having a field points-to gives
 a natural specification for this type of load:
-$\hoare{l \mapsto_{t.f} v}{\mathtt{loadField}(x, t, f)}{\Ret{v} l \mapsto_{t.f} v}$.
+$\hoare{l \mapsto_{t.f} v}{\loadField(x, t, f)}{\Ret{v} l \mapsto_{t.f} v}$.
 
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
@@ -500,13 +513,17 @@ what the slice capacity after various operations should be, so our
 GooseLang model picks a non-deterministic capacity in several places
 (within appropriate bounds).
 
+\newidentmacro{ptr}
+\newidentmacro{len}
+\newidentmacro{cap}
+
 The most basic operations on slices are indexing and storing. The
 GooseLang model of $s$ is a three-tuple, but for clarity we will refer
-to its elements as $ptr(s)$, $len(s)$, and $cap(s)$. The
+to its elements as $\ptr(s)$, $\len(s)$, and $\cap(s)$. The
 translation of \cc{s[i]} is essentially a load from
-$ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
+$\ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
 Similarly \cc{s[i] = x} stores to the same location. We
-translate Go's \cc{len(s)} directly to $len(s)$. Go also supports
+translate Go's \cc{len(s)} directly to $\len(s)$. Go also supports
 accessing a slice's capacity, but this is rarely used and Goose does not
 support it.
 
@@ -580,26 +597,31 @@ read and write to a slice.
 {\Ret{s'} \sliceRep(s', l ++ [x]) * \sliceCap(s')}
 \]
 
+\newidentmacro{sliceFull}
+
 This specification is fairly simple. In fact, we often use a shorthand
-$sliceFull(s, l) = sliceRep(s, l) * sliceCap(s)$ when the proof will
+$\sliceFull(s, l) = \sliceRep(s, l) * \sliceCap(s)$ when the proof will
 always retain ownership of slice capacity, in which case the spec looks
 even simpler. However, the proof is non-trivial, since in one case it
-moves ownership from $sliceCap(s)$ to $sliceRep(s', l ++ [x])$
+moves ownership from $\sliceCap(s)$ to $\sliceRep(s', l ++ [x])$
 (where $ptr(s') = ptr(s)$), while in the other it constructs a
 completely new allocation for $s'$.
+
+\newidentmacro{sliceTake}
+\newidentmacro{sliceDrop}
 
 The most interesting rules are for subslicing and how they interact with
 capacity. Consider \cc{s[:i]} again. While Go has no formal
 notion of ownership, our specifications do. We can model the
 \emph{value} for \cc{s[:i]} easily enough; call it
-$sliceTake(s, i)$ (it simply reduces the length and keeps the capacity
+$\sliceTake(s, i)$ (it simply reduces the length and keeps the capacity
 of $s$, as specified by Go). Now we need to decide how ownership of
-$sliceRep(s, l) * sliceCap(s)$ should relate to ownership of
-$sliceRep(sliceTake(s, i), take(l, i))$. It turns out there are two
+$\sliceRep(s, l) * \sliceCap(s)$ should relate to ownership of
+$\sliceRep(sliceTake(s, i), take(l, i))$. It turns out there are two
 possibilities: we can either give up ownership of the remainder of $s$
-in exchange for $sliceCap(sliceTake(s, i))$, or we can ignore the
+in exchange for $\cap(\sliceTake(s, i))$, or we can ignore the
 capacity of the subslice and keep
-$sliceRep(sliceDrop(s, i), drop(l, i))$. These are incomparable and
+$\sliceRep(\sliceDrop(s, i), drop(l, i))$. These are incomparable and
 unexpressed in the code: the decision is based on whether we intend to
 append to the subslice but stop using the old slice, or whether we want
 to continue using the remainder of \cc{s}.
@@ -607,22 +629,32 @@ to continue using the remainder of \cc{s}.
 Concretely, GooseLang verifies the following entailment for reasoning
 about subslicing in terms of the slice model:
 
-$sliceFull(s, l) \vdash sliceFull(sliceTake(s, i), take(l, i))$
+$\sliceFull(s, l) \vdash \sliceFull(\sliceTake(s, i), take(l, i))$
 
 This entailment precisely captures how retaining ownership of the
-capacity of $sliceTake(s, i)$ requires giving up the remainder of
+capacity of $\sliceTake(s, i)$ requires giving up the remainder of
 $s$.
 
-$sliceRep(s, l) \dashv\vdash sliceRep(sliceTake(s, i), take(l, i)) * sliceRep(sliceDrop(s, i), drop(l, i))$
+\begin{align*}
+  &\sliceRep(s, l) \dashv\vdash \\
+  &\quad \sliceRep(\sliceTake(s, i), take(l, i)) \sep {} \\
+  &\quad \sliceRep(\sliceDrop(s, i), drop(l, i))
+\end{align*}
 
 This alternative bidirectional entailment splits $s$ into two parts,
-but gives up ownership over $sliceTake(s, i)$'s capacity in exchange
+but gives up ownership over $\sliceTake(s, i)$'s capacity in exchange
 for using those elements in \cc{s[:i]}. From this point it will
 not be possible to prove the safety of appending to \cc{s[:i]},
 since this would conflict with the separate ownership over
 \cc{s[i:]}.
 
 \subsection{Maps}
+
+\newidentmacro{mapVal}
+\newidentmacro{mapRep}
+\newidentmacro{mapDelete}
+\newidentmacro{mapInsert}
+\newidentmacro{mapIter}
 
 After slices, maps are the next most commonly used collection type in
 Go. We implement maps as lists of key-value pairs, stored in a single
@@ -655,12 +687,12 @@ The proof and specification for maps is relatively easy since they are
 non-concurrent, so the proof assumes ownership over the entire map. We
 treat a map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
-specification is based on a pure relation $mapVal(v, m)$ that relates
+specification is based on a pure relation $\mapVal(v, m)$ that relates
 this encoded value to a Gallina map $m$, which uses \cc{gmap} from
 stdpp; for simplicity we use \cc{gmap u64 val} and limit map
 keys to integers. Values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
-all use $mapRep(l, m) = \exists v, l \mapsto v * mapVal(v, m)$. The
+all use $\mapRep(l, m) = \exists v, l \mapsto v * \mapVal(v, m)$. The
 indirection is important, since the Go map value
 \cc{m : map[uint64]V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
@@ -668,7 +700,7 @@ length, and capacity --- and heap data).
 
 For example,
 
-$\{mapRep(l, m)\} mapDelete(l, k) \{mapRep(l, delete(m, k))\}$
+$\hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}$
 
 Map iteration has a more sophisticated specification [citation
 needed]:
