@@ -133,3 +133,7 @@
 \newcommand{\txncode}{\texttt{txn}}
 \newcommand{\linked}[1]{\ensuremath{\mathrm{link}(#1, \txncode)}}
 \newcommand{\linkedcode}{\linked{\sdfy}}
+
+% \newidentmacro{foobar} creates \foobar that expands to foobar, with the right
+% formatting to be an identifier.
+\newcommand{\newidentmacro}[1]{\csdef{#1}{\mathtt{#1}}}

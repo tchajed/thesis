@@ -59,9 +59,117 @@ style captures linearizability is that the library does not know anything about
 $P$ or $Q$ and thus the only way to preserve $P$ and produce $Q$ at the end is
 to call the callback at exactly the linearization point of the operation.
 
-In this section, we describe how we extend the HOCAP idea to recovery, and how
-we combine it with custom separation-logic assertions to express the circular
-buffer's preconditions.
+In this section, we describe how we extend the HOCAP idea to recovery. The focus
+is on the specification style used, without going into how the proofs are
+carried out. All these specifications are given in the context of the
+circular-buffer library, used as part of the write-ahead log. This library has
+some interesting concurrency complications that are also solved in its
+specification, so we will highlight what aspects are specific to the circular
+buffer's concerns and which are part of the general crash HOCAP pattern.
+
+The circular buffer is used as part of the write-ahead log. It stores a queue of
+updates (address-block pairs) on disk, and supports appending multiple updates
+in a way that is atomic on crash. The calling code (the write-ahead log code)
+doesn't read from the circular buffer during normal execution, only during
+recovery; the entries in the queue are cached and must be restored to preserve
+atomicity and durability.
+
+The circular buffer the following API: \tej{format this API properly}
+
+\begin{itemize}
+  \item \cc{func InitCircular() *circAppender}
+  \item \cc{func (c *circAppender) Append(end uint64, upds []Update)}
+  \item \cc{func TrimTill(start uint64)}
+  \item
+\begin{verbatim}
+func RecoverCircular()
+       (c *circAppender,
+        start uint64, end uint64, upds []Update)
+\end{verbatim}
+\end{itemize}
+
+The abstract state of the circular buffer is a queue of updates together with a
+``start position'' that tracks how many historical updates have been appended.
+We will write $\sigma$ for the abstract state of the circular buffer; the type
+of this state is a record with a field for the updates of type \cc{list(uint64 *
+Block)} and a field for the start of type \cc{uint64}. This start position is
+used to interpret the argument to \cc{TrimTill}, which deletes based on an
+absolute position. The \cc{Append} operation takes the current \cc{end} position
+of the log because the circular buffer does not internally track the end
+position (the caller needs to track the position anyway).
+
+\tej{oops, this was explained above in this section}
+A key feature of the circular buffer is that \cc{Append} and \cc{TrimTill} can
+be called concurrently --- the former is called by the logger thread to make
+writes durable while the latter is called by the installer thread to make space
+for new writes (after installing the old ones to the rest of the disk). The
+circular buffer takes only fixed size on disk, and the calling code is
+responsible for ensuring that \cc{Append} calls never overflow this fixed size
+since this would wrap around and corrupt old data. Similarly, the caller is
+responsible for calling \cc{TrimTill} with a \cc{start} that fits within the
+circular buffer.
+
+The specifications use the following separation logic resources issued by the
+circular buffer:
+
+\newidentmacro{length}
+
+\begin{itemize}
+  \item $\cc{circular_state}(\gamma, \sigma)$, which says that the current state
+  of the circular buffer is $\sigma$. The $\gamma$ argument is a ``ghost name''
+  for the ghost state associated with this instance of the circular buffer; at
+  any time there is only one circular buffer, but this name will change every
+  time the system crashes and reboots and thus distinguishes different
+  ``generations'' of the circular buffer.
+  \item $\cc{is_circular}(\gamma)$, defined to be
+  $\knowInv{}{\exists \sigma, \cc{circular_state}(\gamma, \sigma) * P(\sigma)}$.
+  \item $\cc{circ_appender}(\gamma, \ell)$. This relates the circular buffer's
+  ghost state with $\ell$, a \cc{*circularAppender} pointer that has some data
+  needed to append to the circular buffer. This resource is not persistent and
+  is owned by the logger thread.
+  \item $\cc{start_is}(\gamma, \cc{start})$ and
+  $\cc{end_is}(\gamma, \cc{end})$ give the exact current positions of the start
+  and end (that is, $\sigma.\cc{start} + \length(\sigma.\cc{updates})$) of
+  the circular buffer. These resources are not persistent and owned retained by
+  the installer and logger threads respectively.
+  \item $\cc{start_at_least}(\gamma, \cc{start})$ and
+  $\cc{end_at_least}(\gamma, \cc{end})$ give \emph{lower bounds} on the start
+  and end positions. These resources are persistent. It is possible to issue
+  such resources because the start and end monotonically increase, which is also
+  why they are persistent; once \cc{start} reaches some value that is always a
+  valid lower bound.
+\end{itemize}
+
+The specifications for the core \cc{Append} and \cc{TrimTill} operations refer
+to the start and end ghost variables through the corresponding resources. Let us
+first look at Append:
+
+\begin{align*}
+  &\{ \cc{is_circular}(\gamma) \sep {} \\
+&\quad (\forall \sigma, P(\sigma) \vs P(\sigma + \cc{upds}) * Q) \\
+&\quad \cc{circ_appender}(\gamma, \cc{c}) \sep {} \\
+&\quad \cc{end_is}(\cc{end}) \sep \cc{start_at_least}(\cc{start}) \sep (\cc{end} - \cc{start} + \length(\cc{upds}) < 511) \sep {} \\
+&\} \\
+&\qquad\cc{c.Append(end, upds)} \\
+&\{ \cc{end_is}(\cc{end} + \length(\cc{upds})) \sep Q \} \\
+\end{align*}
+
+There are several aspects to the specification, mostly in the precondition. The
+first line is the most straightforward: we need the circular buffer's invariant
+to hold, for a particular ghost name $\gamma$. The second line is part of the
+general HOCAP pattern. As described above, this is a view-shift assertion
+provided by the caller that updates the user-defined invariant $P(\sigma)$ in
+accordance with the \cc{Append} operation. We've written $\sigma + \cc{upds}$ as
+a shorthand, but the new state is really $\sigma$ with \cc{upds} appended to the
+updates field (and the same \cc{start}). Again, the idea is that this view shift
+is executed at the linearization point of the \cc{Append} operation, changing
+the state inside the $\cc{is_circular}$ invariant. The view shift produces a
+user-supplied assertion $Q$ which is returned in the postcondition. Intuitively
+this assertion is what captures that the Append proof really executed the view
+shift. \tej{quite redundant with above, maybe just move that explanation down here}
+
+The rest of the specification is specific to how the circular buffer manages
+concurrency.
 
 \tej{things to figure out from the circular buffer/WAL proofs:}
 \begin{enumerate}
@@ -69,8 +177,6 @@ buffer's preconditions.
   the crash?
   \item why does \cc{crash_obligation_alt} have both a cfupd and an invariant in
   the postcondition?
-  \item what's the timeline of creating the next generation? (I think this is in
-  my notes but I don't understand it)
 \end{enumerate}
 
 \resume
