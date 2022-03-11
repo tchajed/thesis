@@ -680,7 +680,7 @@ the latest, or duplicate keys during iteration (the implementation must
 skip over a key after observing it once).
 
 The proof and specification for maps is relatively easy since they are
-non-concurrent, so the proof assumes ownership over the entire map. We
+not safe to use concurrently, so the proof assumes ownership over the entire map. We
 treat a map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation $\mapVal(v, m)$ that relates
@@ -688,22 +688,51 @@ this encoded value to a Gallina map $m$, which uses \cc{gmap} from
 stdpp; for simplicity we use \cc{gmap u64 val} and limit map
 keys to integers. Values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
-all use $\mapRep(l, m) = \exists v, l \mapsto v * \mapVal(v, m)$. The
+all use $\mapRep(\ell, m) = \exists v.\, \ell \mapsto v * \mapVal(v, m)$. The
 indirection is important, since the Go map value
 \cc{m : map[uint64]V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
 length, and capacity --- and heap data).
 
-For example,
+For example, this is the specification for map deletion:
+\[
+\hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}
+\]
 
-$\hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}$
+Map iteration has a more sophisticated specification. Suppose we have a generic loop
+over a map in Go like the following:
 
-Map iteration has a more sophisticated specification [citation
-needed]:
+\begin{verbatim}
+for k, v := range m {
+  body(k, v)
+}
+\end{verbatim}
 
-\tej{write down Goose map iteration spec}
+The model for this entire construct is given by $\cc{MapIter}(m, body)$, where
+$m$ is a reference to the map and $body$ is an expression for the body of the
+loop. Goose translates generic loop bodies, so the Go code does not literally
+need to consist of a call to a separate function. Iteration gets a
+\emph{higher-order} specification that assumes a specification for the body,
+showing it preserves a loop invariant $P$ over the part of the map consumed so
+far:
 
-\resume
+\[
+  \infer{
+    \forall m_{0}, k, v.\,
+    k \notin m_{0} \land m[k] = v \to \\\\
+    \hoare{P(m_0)}{body(k, v)}{P( insert(m_{0}, k, v) )}
+}
+{
+  \hoare{\mapRep(\ell, m) \sep P(\emptyset)}%
+{\cc{MapIter}(\ell, body)}%
+{\mapRep(\ell, m) \sep P(m)}
+}
+\]
+
+On top of this generic specification we prove some alternate specifications that
+express the invariant in slightly different ways --- for example, it is often
+useful to express the invariant in terms of both the map iterated over so far
+and the remaining subset of the map.
 
 \section{Testing Goose}
 
