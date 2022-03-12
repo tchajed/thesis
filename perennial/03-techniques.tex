@@ -146,6 +146,29 @@ running out of space. Because the start and end are manipulated without locks
 the circular buffer implementation does not even have a way to safely
 dynamically check if there is enough space.
 
+The specification for \cc{TrimTill} is similar to Append:
+
+\begin{align*}
+  &\{ \cc{is_circular}(\gamma) \sep {} \\
+&\quad (\forall \sigma, P(\sigma) \vs P(\sigma[:\cc{newStart}]) * Q) \\
+&\quad \cc{start_is}(\cc{start}) \sep \cc{end_at_least}(\cc{end}) \sep (\cc{start} \leq \cc{newStart} \leq \cc{end}) \sep {} \\
+&\} \\
+&\qquad\cc{c.TrimTill(newStart)} \\
+&\{ \cc{start_is}(\cc{newStart}) \sep Q \} \\
+\end{align*}
+
+The effect of a \cc{TrimTill}, abbreviated $\sigma[:\cc{newStart}]$, is to set
+the start position and delete the first $\cc{newStart} - \cc{start}$ updates.
+This slightly unusual API permits a trivial implementation: the code simply
+writes \cc{newStart} to disk. However, for this operation to be safe requires
+that the start not go backwards (recall the Append proof relies on a lower bound
+for \cc{start}) and not go past the current end position (concretely this would
+logically delete updates that haven't yet been written!). The precondition
+encodes these by taking a precise current \cc{start} position and a lower bound
+on the end, and then requiring the new start variable be between the two. Just
+like with Append, the installer thread that calls this operation always
+maintains precise knowledge (ownership) of the start of the circular buffer.
+
 \tej{things to figure out from the circular buffer/WAL proofs:}
 \begin{enumerate}
   \item why does \cc{crash_obligation_alt} have both a cfupd and an invariant in
