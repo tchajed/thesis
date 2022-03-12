@@ -52,7 +52,9 @@
 \usepackage{verbatim}
 
 % for source-code listings
-\usepackage[newfloat,draft=false]{minted}
+% (latex.out fixes compatibility with latexrun, see
+% https://github.com/aclements/latexrun/issues/13#issuecomment-322550767)
+\usepackage[newfloat,outputdir=latex.out]{minted}
 
 % for formulas
 \usepackage{mathtools}
