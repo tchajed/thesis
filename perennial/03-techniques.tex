@@ -77,6 +77,8 @@ circular buffer:
   ``generations'' of the circular buffer.
   \item $\cc{is_circular}(\gamma)$, defined to be
   $\knowInv{}{\exists \sigma, \cc{circular_state}(\gamma, \sigma) * P(\sigma)}$.
+  The $P(\sigma)$ part of this invariant is part of the HOCAP specification
+  style, explained below.
   \item $\cc{circ_appender}(\gamma, \ell)$. This relates the circular buffer's
   ghost state with $\ell$, a \cc{*circularAppender} pointer that has some data
   needed to append to the circular buffer. This resource is not persistent and
