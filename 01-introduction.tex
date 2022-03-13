@@ -78,24 +78,28 @@ reasoning possible for efficient implementations: \textbf{Perennial} is a new pr
 reasoning about the combination of concurrency and crash safety, and
 \textbf{Goose} is a tool for reasoning about a Go implementation using Perennial.
 
-This thesis aims for the goal of making verifying a concurrent file system
-feasible and scalable in terms of features and performance. In particular this thesis
-makes the following contributions:
+The main result of this thesis is the techniques and design of a verified,
+concurrent file system. Several contributions support this goal:
 \begin{itemize}
-  \item Perennial 2.0: a verification framework for reasoning about crash
-  safety and concurrency. A new primitive for transferring ownership of durable
-  state helped us reason about complex interactions in the transaction system's
-  implementation.
-  \item Goose: a system for reasoning about Go using Perennial. We needed a
-  new and flexible system to support our custom verification infrastructure, and
-  Go was a good platform for writing code and improving its performance.
-  \item GoTxn: a verified transaction system with a proof showing transactions have the
-    illusion of sequential, atomic execution, with respect to both crashes and other
-    threads. The proof uses Perennial to establish a theorem about any calling code.
-  \item DaisyNFS: a file system that takes advantage of the transaction system's
-    correctness theorem to reason about each transaction in Dafny, a
-    sequential verification language. A key contribution is a linking theorem
-    that shows how the Dafny and Perennial proofs can be composed.
+  \item \textbf{Perennial} has new techniques for reasoning about crash safety
+    and concurrency. For example, Perennial integrates crash conditions into a
+    concurrent separation logic.
+  \item \textbf{Goose} connects efficient code implemented in Go to Perennial.
+    Goose is an interesting point in the design space for connecting code
+    and proofs. Some general contributions here are the model and
+    verification principles for systems code, like how structs and slices
+    (dynamically-sized arrays) are handled.
+  \item \textbf{GoTxn}'s proof has a new lifting-based specification to reason
+    about concurrent transactions separately. The model of the write-ahead
+    log is another contribution that enabled carrying out the proof in a modular
+    way.
+  \item GoTxn's \textbf{simulation-transfer theorem} captures how atomic
+    transactions enable sequential reasoning for a system implemented on top
+    even though the systme is concurrent. This justifies using sequential proofs
+    for the file system.
+  \item \textbf{DaisyNFS} is a file system that uses GoTxn's transactions. The
+    proof of its correctness uses Dafny, a
+    sequential verification language, to reason about each transaction.
 \end{itemize}
 
 DaisyNFS implements the NFSv3 protocol, a standard protocol for exposing
@@ -181,9 +185,9 @@ progress might still be interrupted on crash, so data in the process of being
 written will be lost, but this is unavoidable if the system never reached the
 point of persisting that data.
 
-File systems do offer weaker guarantees --- especially deferring when data is
-durable, so recently-written data might be lost on crash but the system always
-reverts to a consistent state --- it is generally more difficult to take
+File systems do offer weaker guarantees --- especially allowing recently-written
+data to be lost on crash in order to defer when data is
+durable --- it is generally more difficult to take
 advantage of those weaker guarantees and prove that the system still meets its
 specification. The NFS specification requires most operations to be persistent
 when they return in any case, restricting when an NFS server can take advantage
@@ -295,22 +299,25 @@ code wrapped in a transaction. Later we will have more to say about the file
 system's proof, but for now suffice it to say that we show it correctly
 implements the NFS protocol.
 
-\tej{we haven't been putting emphasis on linking lately}
-Since we use two different formal systems, we do not set up and prove a single,
-unified theorem about the whole file system, which is indeed not even
-implemented in one language. Instead, the file system is compiled by linking the
-Dafny code, after compilation to Go, with the transaction system. Similar to
-this code linking step, we prove a linking theorem, showing that the proof from
-Coq and proof from Dafny compose properly. The proofs from both systems are
-checked automatically so we call them mechanized, but this final linking step is
-outside of both systems so we must give it on paper. However, we take care to
-make the transaction system's specification strong enough that the two theorems
-compose easily. Later we discuss what parts of the system are \emph{trusted} to
-guarantee that the whole system is correct; notably, we learn from Coq and Dafny
-that the transaction system and file-system code are independently correct, and
-the trust only lies in the interface between them.
+In order to connect the file system's sequential proofs to its concurrent
+execution, we prove a general theorem about the transaction system's
+implementation. The starting point is the idea of a \emph{simulation} proof,
+which shows that a system like the file-system transactions correct implement an
+abstract specification like the NFS protocol transitions. The GoTxn
+\emph{simulation-transfer theorem} shows that for any system implemented using
+transactions with a sequential simulation proof, the concurrent system running
+with GoTxn concurrently simulates its abstract specification where each
+operation is atomic. Intuitively this theorem holds because every concurrent
+execution of the GoTxn transactions appears to be atomic, and then the
+sequential simulation proof shows those atomic transactions implement the
+abstract specification. However, the GoTxn theorem formalizes precisely what
+conditions are required for the simulation transfer, including restrictions on
+the transactions and exactly what crash safety guarantees are achieved.
 
 \subsection{Contributions}
+
+\tej{why is there another contributions section? maybe just move the first
+section here?}
 
 The thesis makes contributions at each layer of the verification stack.
 Organized in terms of systems:
