@@ -22,17 +22,17 @@ relate to the specifics of Go.
 
 \section{Goals and motivation}
 
-There are three main goals for Goose: \textbf{flexibility} in writing code, and
+There are three main goals for Goose: \textbf{flexibility} in writing code,
 \textbf{soundness} for the translation process, and \textbf{convenient
 reasoning}. Flexibility is a goal so that the developer can write efficient,
-high-performance code, as long as the proof engineer can also reason about it
-(in this thesis the developer and proof engineer are frequently the same). Goose
+high-performance code, as long as the proof engineer can also reason about it. Goose
 is sound if the model captures the behaviors of the code, which is required for
 the proofs to say something meaningful about the executable Go code. If the code
 could go wrong in some way that the model doesn't capture, we might finish a
 correctness proof but still have a bug; soundness makes sure this doesn't
-happen. Finally, Goose ships with reasoning principles for how to think about Go
-primitives like structs, slices, and maps, and aims to make these easy to use.
+happen. Finally, Goose ships with reasoning principles for how to prove
+correctness of code using Go primitives like structs, slices, and maps, and aims
+to make these easy to use.
 
 There are alternate setups for verification where the connection between the
 proofs and the code is not given by a model and translation, but the Goose
@@ -42,12 +42,16 @@ proof pays the price by including a more complex correctness argument.
 
 Soundness isn't a property we can immediately measure, since the translation
 might miss subtleties of the source code that we have not noticed. However, the
-design of Goose tries to achieve soundness. Sometimes soundness and flexibility
-are in tension. In general the tradeoff was in favor of performance, so if the
-some language feature is needed for good performance, Goose models it, but if it
-is a mere convenience the translator might reject idiomatic code and force the
-programmer to do something unusual. The result is that Goose is pleasant and
-productive enough to write in, but requires some practice for a Go programmer.
+design of Goose tries to achieve soundness through simplicity and careful choice
+of what to model. The tradeoff between simplicity and expressivity was generally
+made in favor if getting good performance and not always to write idiomatic
+code. That is, if a language feature is needed for good performance (for
+example, taking pointers to individual struct fields), then Goose models it. If
+a feature would only result in more idiomatic code and modeling it seems too
+subtle, then it might not be implemented (for example, simple uses of
+\texttt{defer} could be modeled but aren't because the feature is complicated in
+general). The result is that Goose is generally pleasant and productive enough
+to write in, but requires some practice for a Go programmer.
 
 Convenient reasoning remains a goal for Goose, but not one that was always
 achieved. All of the verified libraries are usable but pain points remain; some
@@ -142,9 +146,10 @@ VST also models C for the purpose of interactive proofs. Its struct model is
 similar to the Goose struct model.
 
 Extraction in the other direction is sometimes used, particularly for ease of
-verification; see Verdi, FSCQ, Fiat, and \fstar. Rather than starting with efficient
-code (and requiring the developer to write it), it is possible to instead make
-the extraction process generate more efficient code (cite Clement's
+verification; see Verdi, FSCQ, Fiat, and \fstar (in particular KaRaMeL; Vale
+uses a deep embedding that is pretty printed instead). Rather than starting with
+efficient code (and requiring the developer to write it), it is possible to
+instead make the extraction process generate more efficient code (cite Clement's
 fiat-to-facade work).
 
 RustBelt models the core of Rust, but does not have automatic translation.
@@ -227,7 +232,70 @@ principles aim to hide that complexity to make proofs practical.
 
 \section{GooseLang}
 
-\tej{give a formal description of the target language}
+\newcommand{\goosekw}[1]{\mathsf{\textcolor{blue}{#1}}}
+% spacing for application
+\newcommand{\app}{\:}
+% any pure binary op
+\newcommand{\binop}{\circledcirc}
+% any pure unary op
+\newcommand{\unop}{\circleddash}
+
+\begin{figure}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    &x,f &\in &\textdom{Var} \\
+    &\ell &\in &\textdom{Loc} \\
+    &n &\in & \textdom{U64} \cup \textdom{U32} \cup \textdom{U8} \\
+    &s &\in &\textdom{String} \\
+    &\binop &::= & + \ALT - \ALT * \ALT = \ALT < \ALT \dots \\
+    &\unop &::= & - \ALT \goosekw{ToString} \ALT \goosekw{ToU64} \ALT
+                         \dots \\
+    \textdom{Var}& v &::= & () \ALT \goosekw{true} \ALT \goosekw{false} \ALT n
+                            \ALT \ell \ALT s \\
+    &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
+             \goosekw{rec} \, f(x) = e \\
+    \textdom{Exp}& e &::= & x \ALT v \ALT e \app e %
+                            \ALT \goosekw{Fork} \app e
+                            \ALT \goosekw{Panic} \app s
+                            \ALT \goosekw{rec} \, f(x) = e \\
+    &&\ALT & \goosekw{if} \app e \app
+             \goosekw{then} \app e \app \goosekw{else} \app e \\
+    &&\ALT & (e, e) \ALT \pi_1 \app e \ALT \pi_2 \app e \\
+    &&\ALT & \goosekw{inj}_1 \app e \ALT \goosekw{inj}_2 \app e
+    \ALT %
+      \goosekw{case} \app e \app \goosekw{of} \app \goosekw{inj}_1 \app x
+      \Rightarrow e \app \goosekw{or} \app \goosekw{inj}_2 \app x \Rightarrow e
+    \\
+    &&\ALT & e \binop e \ALT \unop e \ALT \goosekw{ArbitraryU64} \\
+    &&\ALT & \goosekw{AllocN} \app e \app e
+             \ALT \goosekw{CmpXchg} \app e \app e \app e %
+             \ALT \goosekw{Load} \app e \\
+    &&\ALT & \goosekw{PrepareWrite} \app e %
+             \ALT \goosekw{FinishStore} \app e \app e %
+             \ALT \goosekw{StartRead} \app e %
+             \ALT \goosekw{FinishRead} \app e %
+  \end{array}
+  \end{mathpar}
+  \caption{GooseLang syntax}
+  \label{goose:syntax}
+\end{figure}
+
+\begin{figure}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{ECtx}& E &::= & \square \ALT E \app v \ALT e \app E  %
+                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
+                  &&\ALT & \goosekw{if} \app E \app \goosekw{then} \app e \app
+                           \goosekw{else} \app e \\
+                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
+                           \goosekw{inj}_i \app E \ALT \dots
+  \end{array}
+  \end{mathpar}
+  \caption{GooseLang semantics}
+  \label{goose:semantics}
+\end{figure}
+
+\tej{finish describing GooseLang semantics}
 
 \tej{also need to describe Hoare triples and separation logic, might as well do
 that here since it's part of the foundations of reasoning about GooseLang}
