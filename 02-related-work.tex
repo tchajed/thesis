@@ -110,13 +110,66 @@ concurrent reasoning the proof techniques are more sophisticated.
 
 \section{Concurrency foundations}
 
-Old stuff like Views, FCSL; VST and CCAL. Few systems but do have CertiKOS.
+There are a number of approaches proposed to verifying concurrent programs. It
+would be hard to do justice to the historical development of concurrency
+reasoning. Looking at approaches that are actively used in research and
+connected to executable implementation, two broad strategies are commonly used:
+developing concurrent \emph{program logics}, and using \emph{refinement}-based
+techniques.
 
-Iris
+Many refinement-based techniques are based on the idea of \emph{reduction},
+which appeared originally in Lipton's theory of ``movers''~\cite{lipton:movers}.
+The idea behind reduction is to reason about a program through program
+transformations that show the program is equivalent to a simpler program. These
+techniques can reason about concurrency by showing that a concurrent program is
+equivalent to a program with sequential or atomic regions. These ideas have been
+used as part of the CIVL verifier~\cite{hawblitzel:civl,kragl:civl-layers} and
+Armada~\cite{lorch:armada}; my own prior work on CSPEC~\cite{chajed:cspec} was
+also based on movers, before working on Perennial. Reduction-based techniques
+generally reason about a program through a series of transformations, each
+making the program slightly simpler, keeping the proof of each transformation's
+correctness more manageable.
 
-persistent memory semantics
+One large verified system, CertiKOS, is based on a custom verification
+infrastructure called Certified Concurrent Abstraction
+Layers~\cite{gu:certikos-ccal} which based on refinement but not reduction. This
+work is notable for verifying a system (a simple operating system) not just at
+an abstract protocol level but all the way down to concurrent code. The proof
+composes with the CompCert compiler correctness theorem to carry the guarantees
+down to the assembly code of the operating system.
+
+Program logics are an alternative approach based on giving specifications to
+each function in the program, within a logic that has useful rules for proving
+and composing specifications. Hoare logic is a classic program
+logic for sequential programs that based on pre- and post-conditions.
+Concurrency makes it harder to construct a logic that can usefully reason about
+many concurrency patterns (completeness) while also giving specifications that
+hold in the presence of concurrent threads (soundness). One productive line of
+work has been based on concurrent separation logic (CSL)~\cite{brookes:csl}.
+
+The Verified Software Toolchain is notable for connecting a CSL-based logic
+(VST-Floyd) down to proofs of C code, including a connection to CompCert to
+carry these guarantees down to assembly~\cite{cao:vst-floyd}. It has been used
+for a number of sequential verified C programs and recently to some shared
+memory C libraries.
+
+Perennial builds directly on Iris~\cite{jung:iris-jfp}. Iris is a general
+framework for concurrency, featuring a base logic with key features for
+concurrency (step indexing and separation-logic resources, including
+\emph{higher-order} resources used to define invariants for example) and a
+program logic built on the base logic. This decomposition was valuable for
+Perennial because we made two core changes to Iris: first, the program logic
+itself is extended with crash safety reasoning, and second, the framework is
+applied to our GooseLang models of Go code. In both cases the generality of Iris
+was valuable, as the framework is not tied to reasoning about a particular
+programming language or even to its usual program logic. Prior to this work,
+Iris had not typically been used for reasoning about executable code (though
+projects like RefinedC~\cite{sammler:refinedc} and our own work on Goose are
+changing that).
 
 \section{Other stuff}
+
+persistent memory semantics
 
 ext4 semantics from Azalea's group
 
