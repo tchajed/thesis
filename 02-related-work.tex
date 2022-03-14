@@ -7,23 +7,23 @@ research DaisyNFS directly builds upon and other work solving similar problems.
 
 The Flashix project deserves special attention since it also develops a verified
 concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
-Flashix has different goals since it is a file system for flash storage, a
-lower-level technology than the drives DaisyNFS targets. The verification
-infrastructure used is designed for the specific use case of a flash file
-system, including the techniques used for concurrency and crash safety, whereas
-Perennial is a general reasoning system. Flashix is implemented using abstract
-data types in a high-level language; a code generator transforms this code into
-executable C, but this process is both not verified and has difficulty producing
-the most efficient code using in-place updates.
+Flashix targets flash storage, a lower-level storage technology than the drives
+that DaisyNFS targets. The project has different goals around concurrency,
+extending a sequential verified file system with limited concurrency. Flashix
+has an idiosyncratic approach to reasoning about concurrency and crashes
+specific to their file-system design, as opposed to Perennial's general
+reasoning principles. Flashix is implemented using abstract data types in a
+high-level language; a code generator transforms this code into executable C,
+but this process is both not verified and has difficulty producing the most
+efficient code using in-place updates.
 
 While Flashix does have mechanized proofs, the approaches for both concurrency
 and crash safety are layered on top in such a way that the top-level
 specification and proof are not entirely within the proof assistant. Perennial
 on the other hand formalizes the complete specification down to a simple
-semantics for crashes and concurrency. We do need some argument to connect the
-transaction system proof to the theorems proven in Dafny, which is a limitation
-of combining verification frameworks, but the upshot is a much lower proof
-overhead.
+semantics for crashes and concurrency. Flashix also effectively has crash
+reasoning throughout the system, whereas DaisyNFS factors out this reasoning to
+GoTxn and then layers sequential proofs on top.
 
 The Flashix project found that components in the stack intertwine due to the
 realism of the system; modularity helped but the interfaces still had many
@@ -39,10 +39,10 @@ code ran within a transaction.
 Where it lacks in generality, Flashix does make up for in verifying a taller
 storage stack than DaisyNFS. Flash storage has a more limited API than a
 standard drive --- in particular flash blocks must be completely erased before
-being reused. A flash file system works with this limitation with \emph{garbage
+being reused. A flash file system works around this limitation with \emph{garbage
 collection}, where occasionally the system identifies a mostly-unused block,
 moves its valid data elsewhere, and then erases it to reclaim space. This is
-implemented by maintaining a logical-to-physical block mapping similar to
+implemented by maintaining a logical-to-physical block mapping, similar to
 virtual memory. DaisyNFS does not require any of this code. We do generally run
 on SSDs which internally use flash blocks and themselves implement garbage
 collection and a logical block mapping so that they can support overwriting data
@@ -50,17 +50,71 @@ in-place.
 
 \section{Crash-safety foundations}
 
-systems with custom infrastructure: FSCQ, Yggdrasil, VeriBetrKV
+There are a variety of foundational tools for reasoning about crash safety,
+largely for sequential systems.
 
-FTCSL
+FSCQ~\cite{chen:fscq,chen:dfscq,chen:thesis} is a verified sequential file
+system that features Crash Hoare Logic (CHL). CHL extends the basic Hoare triple
+with a \emph{crash condition} that holds at all intermediate points in the
+function's execution. Crash conditions handle a core difficulty of crashes,
+namely that they stop the system at some intermediate step. There are two
+remaining challenges: a crash wipes in-memory state, and the system might crash again
+while recovering after a crash. CHL connects the system's crash conditions to a
+specification for recovery to handle these two issues. A crash predicate
+transformation captures what can be assumed when recovery starts, and for
+crashes during recovery CHL requires that recovery be \emph{idempotent} in the
+sense that its crash condition implies its own precondition. CHL was used to
+specify and verify FSCQ~\cite{chen:fscq} and a more performant successor
+DFSCQ~\cite{chen:dfscq}.
 
-persistent memory semantics
+Yggdrasil~\cite{sigurbjarnarson:yggdrasil} takes a different approach to crash
+safety. The basic definition is \emph{crash refinement}, which says that a
+system implements an interface correctly, including a specification for what a
+crash followed by recovery is allowed to do. Note that unlike CHL this
+specification is about a collection of methods implementing an abstract,
+specification transition system, not about individual methods. Yggdrasil uses
+crash refinement to specify and verify a file system comparable to the file
+system in xv6, a teaching operating system. The implementation uses Z3 to check
+crash refinement, which the authors show is able to handle a system of this
+complexity by breaking down the implementation into small enough layers.
+
+Argosy~\cite{chajed:argosy}, which I led the development of but is not part of
+this thesis, combines aspects of FSCQ and Yggdrasil. The key new idea is to
+develop the metatheory for \emph{recovery refinement} that shows how systems
+compose when both have recovery procedures --- what is non-trivial to handle is
+that a crash in the composed recovery procedure requires starting over from the
+beginning. Recovery refinement can be viewed as an extension of crash refinement
+with verified metatheory for recovery, largely left implicit in the Yggdrasil
+paper. Argosy also shows how to encode the conditions of recovery refinement
+using CHL so that a single layer is verified using the CHL program logic.
+
+VeriBetrKV~\cite{hance:veribetrkv} takes yet another approach to reasoning about
+crashes, this time friendly to encoding in Dafny, a sequential verification
+system with integrated support for programming and verification. The main idea
+related to crash safety is to adopt the style from
+IronFleet~\cite{hawblitzel:ironfleet} and think of a storage system as a
+distributed system made up of the CPU and the storage device. The extension
+needed for crash reasoning is to add a crash transition to the storage device
+that non-deterministically wipes any buffered but unacknowledged writes, and
+then to show that when this happens it corresponds to an appropriate
+application-level transition modeling crashes (similar to the crash refinement
+definition from Yggdrasil and recovery refinement in Argosy, although this is
+associated with a code transition rather than a dedicated recovery procedure).
+VeriBetrKV is used to verify a persistent key-value store.
+
+Perennial has crash conditions that look similar to CHL's crash conditions,
+albeit as part of a concurrent program logic rather than a sequential one. We do
+carry out a refinement proof in the style of Argosy, which is similar to the
+specification style in VeriBetrKV and Yggdrasil, but because it is connected to
+concurrent reasoning the proof techniques are more sophisticated.
 
 \section{Concurrency foundations}
 
 Old stuff like Views, FCSL; VST and CCAL. Few systems but do have CertiKOS.
 
 Iris
+
+persistent memory semantics
 
 \section{Other stuff}
 
