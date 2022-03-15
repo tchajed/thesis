@@ -122,8 +122,8 @@ that $R$ is an invariant.
 
 Invariants have a special role in Perennial. \autoref{fig:wpc-concurrent} lists
 some rules for concurrency reasoning. Perennial extends invariant allocation
-with a rule \autoref{wpc-inv-alloc}. The non-crash parts of this rule are
-identical to \autoref{wp-inv-alloc}, but applying the rule has the additional
+with a rule \ruleref{wpc-inv-alloc}. The non-crash parts of this rule are
+identical to \ruleref{wp-inv-alloc}, but applying the rule has the additional
 benefit of \emph{removing $R$ from the crash condition}. The intuitive reason
 this is sound is that since threads maintain $R$ at all intermediate steps, it
 must also hold in case the system crashes, and the thread that created the
