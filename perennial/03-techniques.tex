@@ -194,12 +194,29 @@ it is doable since each layer describes its part of the crash condition.
 The circular buffer is the lowest layer of the implementation, so the way it
 fits into the larger plan is that the whole system's recovery starts by
 recovering the circular buffer's state, then uses that state to recover the next
-layer, and so on until the whole system is ready to run. The circular buffer
-supplies three things to fit into the whole-system idempotent proof: (1) an
-abstract crash predicate for the state the circular buffer requires for
-recovery, (2) a crash specification for the circular buffer's recovery procedure
-itself, and (3) a theorem that helps the caller maintain the circular buffer's
-crash predicate.
+layer, and so on until the whole system is ready to run. Schematically this
+looks like the following:
+
+\begin{minted}[linenos]{go}
+func RunSystem() {
+  c, start, upds := recoverCircular()
+  // recover rest of system from c, start, upds
+  fs := recoverFilesystem(...)
+  for {
+    req := GetRequest()
+    go func() {
+      ret := fs.Handle(req)
+      SendReply(req, ret)
+    }
+  }
+}
+\end{minted}
+
+The circular buffer supplies three things to fit into the whole-system
+idempotent proof: (1) an abstract crash predicate for the state the circular
+buffer requires for recovery, (2) a crash specification for the circular
+buffer's recovery procedure itself, and (3) a theorem that helps the caller
+maintain the circular buffer's crash predicate.
 
 The specification for recovery is:
 
@@ -225,26 +242,87 @@ defined.
 The circular buffer's proof also supplies this \cc{crash_obligation_alt}
 theorem: \tej{come up with a name for crash obligation alt}
 
+\newcommand{\cfupdw}{\mathrm{cfupd}}
+\newcommand{\cfupd}[1]{\cfupdw\left(#1\right)}
+\newcommand{\cinvw}{\mathrm{cinv}}
+\newcommand{\cinv}[1]{\mathrm{cinv}\left(#1\right)}
+
 \begin{align*}
   &\forall \sigma, P(\sigma) \vs %
   P_{\mathrm{rec}}(\sigma) \sep %
   P_{\mathrm{crash}}(\sigma) \proves \\
-  &P(\sigma) \sep \circstate(\gamma, \sigma) \vs \\
+  &\circstate(\gamma, \sigma) \sep P(\sigma) \vs \\
   &\exists \gamma'.\, \cc{is_circular}(\gamma) \sep {} \\
-  &\quad \mathrm{cfupd}\left( \exists \sigma.\, \circstate(\gamma', \sigma) \sep %
+  &\quad \cfupd{ \exists \sigma.\, \circstate(\gamma', \sigma) \sep %
     \cc{circ_resources}(\gamma', \sigma) \sep %
-    P_{\mathrm{rec}}(\sigma) \right) \sep {} \\
-  &\quad \mathrm{cinv}\left( \exists \sigma.\, \circstate(\gamma, \sigma) \sep %
+    P_{\mathrm{rec}}(\sigma) } \sep {} \\
+  &\quad \cinv{ \exists \sigma.\, \circstate(\gamma, \sigma) \sep %
     \cc{circ_exchanger}(\gamma, \gamma') \sep %
-    P_{\mathrm{crash}}(\sigma) \right) \\
+    P_{\mathrm{crash}}(\sigma) } \\
 \end{align*}
 
-There are several components to this theorem. First, the circular buffer
-has the caller provide a way to split the HOCAP predicate $P(\sigma)$ into two
-parts, $P_{\mathrm(rec)}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ ---
-intuitively the former is transferred to recovery as part of its crash
-condition, whereas the latter is ``immutable'' and held inside an invariant.
-\tej{examples? this is trivial in the circular buffer}
+There are several components to this theorem. First, the circular buffer has the
+caller provide a way to split the HOCAP predicate $P(\sigma)$ into two parts,
+$P_{\mathrm{rec}}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ --- intuitively the
+former is transferred to recovery as part of its crash condition, whereas the
+latter is ``immutable'' and held inside an invariant. \tej{examples of a P rec
+  and a P crash? this is trivial in the circular buffer} Second, the theorem
+consumes $\circstate(\gamma, \sigma) \sep P(\sigma)$ and allocates three things:
+(1) $\cc{is_circular}(\gamma)$ (notice that the premise of this theorem is the
+contents of this invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
+latter two are low-level features of Perennial that we'll now introduce yet.
+
+The assertion $\cfupd{R}$ (``crash fancy update'') is similar to a view-shift
+$\TRUE \vs R$ in that it is a single-use update that produces the resources $R$.
+However, the ``crash'' part indicates that this update can only be fired after a
+crash, so it can be used to prove a crash condition but is otherwise unusuable.
+Practically speaking, having $\cfupd{R}$ in a precondition allows the user to
+\emph{cancel} $R$ from the proof's crash condition, as reflected in the
+following rule:
+
+\[
+  \inferH{cfupd-use}
+  {P \proves \wpc{e}{Q}{Q_{c}}}%
+  {P \sep \cfupd{R} \proves \wpc{e}{Q}{Q_{c} \sep R}}
+\]
+
+In the context of the circular buffer, what the $\cfupdw$ sets up for the caller
+is that if the system crashes, the recovery proof can dismiss the circular
+buffer's crash predicate, along with $P_{\mathrm{rec}}(\sigma)$, from the
+overall crash condition. Thus using \ruleref{cfupd-use} before running the
+system both sets up the circular buffer for use (by establishing
+$\cc{is_circular}(\gamma)$) and guarantees the circular buffer's part of the
+crash condition from now on. Notice that the ghost name for the circular buffer
+changes on crash to a new $\gamma'$; the reason for this is that other threads
+(the logger and installer) have access to some of the circular buffer resources
+associated with $\gamma$. Rather than requiring those threads to ``return''
+those resources on crash and impose a crash condition on that code, we simply
+create a new instance of the circular buffer and stop using the old one. As a
+result on crash we can produce $\cc{circ_resources}(\gamma', \sigma)$ and hand
+out these resources to the caller.
+
+The third component of the theorem is a $\cinvw$ (``crash invariant'').
+$\cinv{R}$ behaves very similarly to an invariant assertion $\knowInv{}{R}$, except
+that like a crash fancy update it can only be used after a crash. The main use
+of this crash invariant is to ``freeze'' the old state of the circular buffer to
+relate its custom resources before a crash to the state after a crash, via the
+$\cc{circ_exchanger}(\gamma, \gamma')$ predicate. The circular buffer has no
+interesting exchanging but this feature is important for reasoning about
+journaling.
+
+Each layer supplies a crash obligation alt theorem. All of the layers' crash
+obligation alt theorems are called after running all the recovery code just
+before starting the system. Calling these view shifts allocates all the layers'
+invariants while simultaneously getting ``credit'' for this allocation in the
+form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
+Prior to calling crash obligation alt, the recovery procedure has access to the
+inner contents of all the invariants, reflecting that it has exclusive access,
+but in turn this proof is required to maintain a complicated crash condition.
+(One interesting side effect is that recovery code can safely call library
+functions without using locks, since this code is still guaranteed to be
+single-threaded.) Once the system starts running the invariant allows multiple
+threads to share access to this state, and the invariant implicitly guarantees
+the crash condition recovery depends on.
 
 \tej{things to figure out from the circular buffer/WAL proofs:}
 \begin{enumerate}
