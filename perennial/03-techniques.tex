@@ -67,18 +67,19 @@ The specifications use the following separation logic resources issued by the
 circular buffer:
 
 \newidentmacro{length}
+\newcommand{\circstate}{\cc{circ_state}}
 \newcommand{\startIs}{\cc{start_is}}
 \newcommand{\diskendIs}{\cc{end_is}}
 
 \begin{itemize}
-  \item $\cc{circular_state}(\gamma, \sigma)$, which says that the current state
+  \item $\circstate(\gamma, \sigma)$, which says that the current state
   of the circular buffer is $\sigma$. The $\gamma$ argument is a ``ghost name''
   for the ghost state associated with this instance of the circular buffer; at
   any time there is only one circular buffer, but this name will change every
   time the system crashes and reboots and thus distinguishes different
   ``generations'' of the circular buffer.
   \item $\cc{is_circular}(\gamma)$, defined to be
-  $\knowInv{}{\exists \sigma, \cc{circular_state}(\gamma, \sigma) * P(\sigma)}$.
+  $\knowInv{}{\exists \sigma, \circstate(\gamma, \sigma) * P(\sigma)}$.
   The $P(\sigma)$ part of this invariant is part of the HOCAP specification
   style, explained below.
   \item $\cc{circ_appender}(\gamma, \ell)$. This relates the circular buffer's
@@ -176,26 +177,77 @@ maintains precise knowledge (ownership) of the start of the circular buffer.
 Notice that neither of these specifications have a crash condition. The reason
 this is not required is because both methods already maintain an invariant in
 the \cc{is_circular} predicate, but formalizing this is a bit more
-complicated. The \ruleref{wpc-inv-alloc} rule gives the essence of the approach.
+complicated.
+
+The strategy behind proving crash safety is to prove a theorem about running a
+whole system, restarting after every crash. For example, for DaisyNFS this
+theorem applies to the server's main loop that receives a message from the
+network, processes it in a background thread, and replies over the network.
+Immediately following boot, before processing any requests, the server runs a
+recovery procedure to restore in-memory state. This whole procedure --- recovery
+followed by running the system --- gets an idempotent specification that is
+proven with \ruleref{wpr-idempotence} from \autoref{sec:perennial:recovery}. The
+crash condition for this theorem is a description of the state of the whole
+system at any intermediate step; describing this directly would be daunting, but
+it is doable since each layer describes its part of the crash condition.
+
+The circular buffer is the lowest layer of the implementation, so the way it
+fits into the larger plan is that the whole system's recovery starts by
+recovering the circular buffer's state, then uses that state to recover the next
+layer, and so on until the whole system is ready to run. The circular buffer
+supplies three things to fit into the whole-system idempotent proof: (1) an
+abstract crash predicate for the state the circular buffer requires for
+recovery, (2) a crash specification for the circular buffer's recovery procedure
+itself, and (3) a theorem that helps the caller maintain the circular buffer's
+crash predicate.
 
 The specification for recovery is:
-
-\newcommand{\circstate}{\cc{circular_state}}
 
 \begin{align*}
   &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
   &\qquad\cc{recoverCircular()} \\
-  &\{ \Ret{(\ell, \cc{diskStart}, \cc{upds})} \circstate(\gamma, \sigma) \sep {}  \\
-  &\quad \sigma = (\cc{diskStart}, \cc{upds}) \sep {} \\
+  &\{ \Ret{(\ell, \cc{diskStart}, \cc{upds})} \sigma = (\cc{diskStart}, \cc{upds}) \sep {} \\
+  &\quad \circstate(\gamma, \sigma) \sep {}  \\
   &\quad \startIs(\cc{diskStart}) \sep \diskendIs(\cc{diskStart} + \cc{len}(\cc{upds})) \sep {} \\
   &\quad \cc{circ_appender}(\gamma, \ell) \} \\
   &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
 \end{align*}
 
+The first thing to notice about the recovery specification is that it preserves
+$\circstate(\gamma, \sigma)$, which gives the current state of the circular
+buffer, both on crash and if recovery completes. It is also the case that
+$\cc{circ_appender}(\gamma, \ell) \proves \cc{circ_resources}(\gamma)$, so that
+$\cc{circ_resources}(\gamma)$ is also preserved by recovery. These two together
+are the crash predicate for the circular buffer. We say the crash predicate is
+abstract because the user of this theorem does not need to know how it is
+defined.
+
+The circular buffer's proof also supplies this \cc{crash_obligation_alt}
+theorem: \tej{come up with a name for crash obligation alt}
+
+\begin{align*}
+  &\forall \sigma, P(\sigma) \vs %
+  P_{\mathrm{rec}}(\sigma) \sep %
+  P_{\mathrm{crash}}(\sigma) \proves \\
+  &P(\sigma) \sep \circstate(\gamma, \sigma) \vs \\
+  &\exists \gamma'.\, \cc{is_circular}(\gamma) \sep {} \\
+  &\quad \mathrm{cfupd}\left( \exists \sigma.\, \circstate(\gamma', \sigma) \sep %
+    \cc{circ_resources}(\gamma', \sigma) \sep %
+    P_{\mathrm{rec}}(\sigma) \right) \sep {} \\
+  &\quad \mathrm{cinv}\left( \exists \sigma.\, \circstate(\gamma, \sigma) \sep %
+    \cc{circ_exchanger}(\gamma, \gamma') \sep %
+    P_{\mathrm{crash}}(\sigma) \right) \\
+\end{align*}
+
+There are several components to this theorem. First, the circular buffer
+has the caller provide a way to split the HOCAP predicate $P(\sigma)$ into two
+parts, $P_{\mathrm(rec)}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ ---
+intuitively the former is transferred to recovery as part of its crash
+condition, whereas the latter is ``immutable'' and held inside an invariant.
+\tej{examples? this is trivial in the circular buffer}
+
 \tej{things to figure out from the circular buffer/WAL proofs:}
 \begin{enumerate}
-  \item why does \cc{crash_obligation_alt} have both a cfupd and an invariant in
-  the postcondition?
   \item how does a lower bound on the write-ahead log sequence of disks before a
 crash get turned into knowledge after the crash in the Commit specification?
 \end{enumerate}
