@@ -1,0 +1,168 @@
+\section{GooseLang}
+
+\newcommand{\goosekw}[1]{\mathsf{\textcolor{blue}{#1}}}
+% spacing for application
+\newcommand{\app}{\:}
+% any pure binary op
+\newcommand{\binop}{\circledcirc}
+% any pure unary op
+\newcommand{\unop}{\circleddash}
+
+\newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
+  \goosekw{then} \app #2 \app \goosekw{else} \app #3}
+
+\newcommand{\recfx}{\goosekw{rec} \, f(x) = e}
+
+\begin{figure}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    &x,f &\in &\textdom{Var} \\
+    &\ell &\in &\textdom{Loc} \\
+    &n &\in & \textdom{U64} \cup \textdom{U32} \cup \textdom{U8} \\
+    &s &\in &\textdom{String} \\
+    &\binop &::= & + \ALT - \ALT * \ALT = \ALT < \ALT \dots \\
+    &\unop &::= & - \ALT \goosekw{ToString} \ALT \goosekw{ToU64} \ALT
+                         \dots \\
+    \textdom{Var}& v &::= & () \ALT \goosekw{true} \ALT \goosekw{false} \ALT n
+                            \ALT \ell \ALT s \\
+    &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
+             \recfx \\
+    \textdom{Exp}& e &::= & x \ALT v \ALT e \app e %
+                            \ALT \goosekw{Fork} \app e
+                            \ALT \goosekw{Panic} \app s
+                            \ALT \recfx \\
+    &&\ALT & \gooseif{e}{e}{e} \\
+    &&\ALT & (e, e) \ALT \pi_1 \app e \ALT \pi_2 \app e \\
+    &&\ALT & \goosekw{inj}_1 \app e \ALT \goosekw{inj}_2 \app e
+    \ALT %
+      \goosekw{case} \app e \app \goosekw{of} \app \goosekw{inj}_1 \app x
+      \Rightarrow e \app \goosekw{or} \app \goosekw{inj}_2 \app x \Rightarrow e
+    \\
+    &&\ALT & e \binop e \ALT \unop e \ALT \goosekw{ArbitraryU64} \\
+    &&\ALT & \goosekw{AllocN}(e, e)
+             \ALT \goosekw{CmpXchg}(e, e, e) %
+             \ALT \goosekw{Load}(e) \\
+    &&\ALT & \goosekw{PrepareWrite}(e) %
+             \ALT \goosekw{FinishStore}(e, e) %
+             \ALT \goosekw{StartRead}(e) %
+             \ALT \goosekw{FinishRead}(e) %
+  \end{array}
+  \end{mathpar}
+  \caption{GooseLang syntax}
+  \label{goose:syntax}
+\end{figure}
+
+\newcommand{\reduces}{\rightsquigarrow}
+\newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
+
+\begin{figure}
+  \textbf{Semantics preliminary definitions}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{ECtx}& E &::= & \square \ALT E \app v \ALT e \app E  %
+                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
+                  &&\ALT & \gooseif{E}{e}{e} \\
+                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
+                           \goosekw{inj}_i \app E \ALT \dots \\
+    \textdom{NonAtom}& z &::= & \goosekw{Reading} \app n \app v \ALT
+                                \goosekw{Writing} \app v \\
+    \textdom{Heap}& h &\in& \textdom{Loc} \overset{\mathrm{fin}}{\to}
+                        \textdom{NonAtom} \\
+    \textdom{World}& w \\
+    %\textdom{State}& \sigma &::= (h, w) \\
+    \textdom{TPool}& \mathcal{E} &\in \textdom{List}\app\textdom{Exp} \\
+    %\textdom{Config}& \rho &::= (\sigma, \mathcal{E}) \\
+  \end{array}
+  \end{mathpar}
+
+  \textbf{Pure reduction}%
+  \hfill %
+  \boxedassert[line width=0.4pt]{e \purereduction e'} %
+  \hspace{20pt}
+
+  \begin{mathpar}
+  \begin{array}{rcll}
+    v \binop v' &\purereduction & v'' & \mathrm{if} \: v'' = v \binop v' \\
+    \unop v &\purereduction & v' & \mathrm{if} \: v' = \unop v \\
+    \gooseif{\goosekw{true}}{e_1}{e_2} &\purereduction & e_1 \\
+    \gooseif{\goosekw{false}}{e_1}{e_2} &\purereduction & e_2 \\
+    \pi_i(v_1, v_2) &\purereduction &v_i \\
+    \goosekw{case} \app \goosekw{inj}_i v \app\goosekw{of}\app %
+    \goosekw{inj}_1 \app x_1 \Rightarrow e_1 \app\goosekw{or}\app%
+    \goosekw{inj}_2 \app x_2 \Rightarrow e_2%
+                &\purereduction & \subst{e_i}{x_i}{v} \\
+    (\recfx) \app v &\purereduction & \subst{\subst{e}{f}{(\recfx)}}{x}{v} \\
+    \goosekw{ArbitraryInt} &\purereduction &n & \forall n \in \textdom{U64} \\
+  \end{array}
+  \end{mathpar}
+
+  \newcommand{\mapupd}[2]{[#1 \mapsto #2]}
+
+  \textbf{Per-thread one-step reduction}%
+  \hfill %
+  \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
+  \hspace{20pt}
+
+  \begin{mathpar}
+  \begin{array}{rcll}
+    ((h, w), e) &\reduces & ((h, w), e') &\mathrm{if} \: e \purereduction e' \\
+    ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
+                          &((h\mapupd{\ell}{v}, w), \goosekw{true})%
+                                         &\mathrm{if} \: h(\ell) = v_1 \\
+    ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
+                          &((h, w), \goosekw{false})%
+                                         &\mathrm{if} \: h(\ell) = v_2 \\
+    ((h, w), \goosekw{AllocN}(n, v)) &\reduces %
+                          &((h[\ell + i \mapsto v \mid 0 \leq i < n], w), \ell) %
+                                         &\mathrm{if} \: \forall 0 \leq i < n,
+                                           \, \ell + i \notin \mathrm{dom}(h) \\
+    ((h, w), \goosekw{PrepareWrite}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Writing} \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] = \goosekw{Reading} \app 0
+                                           \app v \\
+    ((h, w), \goosekw{FinishStore}(\ell, v)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app 0 \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Writing} \app v' \\
+    ((h, w), \goosekw{StartRead}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app (n+1) \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Reading} \app n \app v \\
+    ((h, w), \goosekw{FinishRead}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app n \app v}, w), v) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Reading} \app (n+1) \app v \\
+    ((h, w), \goosekw{Load}(\ell)) &\reduces %
+                          &((h, w), v) &\mathrm{if} \: %
+                                         h[\ell] = \goosekw{Reading} \app n \app v \\
+  \end{array}
+  \end{mathpar}
+
+  \textbf{Context reduction}%
+  \hfill%
+  \boxedassert[line width=0.4pt]{((h, w), \mathcal{E}) \reduces ((h', w'), \mathcal{E}')}%
+  \hspace{20pt}
+
+  \begin{mathpar}
+    \inferH[context-reduce]%
+    {((h, w), e) \reduces ((h,', w'), e') \\ \text{$E$ is an evaluation context}}%
+    {((h, w), \mathcal{E}\mapupd{i}{E[e]}) \reduces%
+      ((h', w'), \mathcal{E}\mapupd{i}{E[e']})}
+
+    \inferH[fork-reduce]%
+    {j \notin \mathrm{dom}(\mathcal{E}) \cup \{j\} \\ \text{$E$ is an evaluation context}}%
+    {((h, w), \mathcal{E}\mapupd{i}{E[\goosekw{Fork}(e)]}) \reduces%
+      ((h, w), \mathcal{E}\mapupd{i}{E[()]}\mapupd{j}{e})
+    }
+  \end{mathpar}
+
+  \caption{GooseLang semantics}%
+  \label{goose:semantics}
+\end{figure}
+
+\tej{describe disk semantics}
+
+\tej{also need to describe Hoare triples and separation logic, might as well do
+that here since it's part of the foundations of reasoning about GooseLang}
+
+\resume
