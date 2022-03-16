@@ -1,4 +1,4 @@
-\section{GooseLang}
+\section{GooseLang syntax and semantics}
 
 \newcommand{\goosekw}[1]{\mathsf{\textcolor{blue}{#1}}}
 % spacing for application
@@ -8,12 +8,14 @@
 % any pure unary op
 \newcommand{\unop}{\circleddash}
 
+\newcommand{\external}{\mathsf{\textcolor{red}{\langle External \rangle}}}
+
 \newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
   \goosekw{then} \app #2 \app \goosekw{else} \app #3}
 
 \newcommand{\recfx}{\goosekw{rec} \, f(x) = e}
 
-\begin{figure}
+\begin{figure}[h!]
   \begin{mathpar}
   \begin{array}{llcl}
     &x,f &\in &\textdom{Var} \\
@@ -28,8 +30,8 @@
     &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
              \recfx \\
     \textdom{Exp}& e &::= & x \ALT v \ALT e \app e %
-                            \ALT \goosekw{Fork} \app e
-                            \ALT \goosekw{Panic} \app s
+                            \ALT \goosekw{Fork}(e)
+                            \ALT \goosekw{Panic}(s)
                             \ALT \recfx \\
     &&\ALT & \gooseif{e}{e}{e} \\
     &&\ALT & (e, e) \ALT \pi_1 \app e \ALT \pi_2 \app e \\
@@ -45,7 +47,8 @@
     &&\ALT & \goosekw{PrepareWrite}(e) %
              \ALT \goosekw{FinishStore}(e, e) %
              \ALT \goosekw{StartRead}(e) %
-             \ALT \goosekw{FinishRead}(e) %
+             \ALT \goosekw{FinishRead}(e) \\
+    &&\ALT & \external \\
   \end{array}
   \end{mathpar}
   \caption{GooseLang syntax}
@@ -55,26 +58,7 @@
 \newcommand{\reduces}{\rightsquigarrow}
 \newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
 
-\begin{figure}
-  \textbf{Semantics preliminary definitions}
-  \begin{mathpar}
-  \begin{array}{llcl}
-    \textdom{ECtx}& E &::= & \square \ALT E \app v \ALT e \app E  %
-                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
-                  &&\ALT & \gooseif{E}{e}{e} \\
-                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
-                           \goosekw{inj}_i \app E \ALT \dots \\
-    \textdom{NonAtom}& z &::= & \goosekw{Reading} \app n \app v \ALT
-                                \goosekw{Writing} \app v \\
-    \textdom{Heap}& h &\in& \textdom{Loc} \overset{\mathrm{fin}}{\to}
-                        \textdom{NonAtom} \\
-    \textdom{World}& w \\
-    %\textdom{State}& \sigma &::= (h, w) \\
-    \textdom{TPool}& \mathcal{E} &\in \textdom{List}\app\textdom{Exp} \\
-    %\textdom{Config}& \rho &::= (\sigma, \mathcal{E}) \\
-  \end{array}
-  \end{mathpar}
-
+\begin{figure}[hp]
   \textbf{Pure reduction}%
   \hfill %
   \boxedassert[line width=0.4pt]{e \purereduction e'} %
@@ -98,6 +82,28 @@
 
   \newcommand{\mapupd}[2]{[#1 \mapsto #2]}
 
+  \textbf{Semantics preliminary definitions}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{ECtx}& E &::= & \square \ALT E \app v \ALT e \app E  %
+                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
+                  &&\ALT & \gooseif{E}{e}{e} \\
+                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
+                           \goosekw{inj}_i \app E \\
+                  &&\ALT & \goosekw{AllocN}(E, e) \ALT \goosekw{AllocN}(v, E)
+                           \ALT \dots \\
+    \textdom{NonAtom}& z &::= & \goosekw{Reading} \app n \app v \ALT
+                                \goosekw{Writing} \app v \\
+    \textdom{Heap}& h &\in& \textdom{Loc} \overset{\mathrm{fin}}{\to}
+                        \textdom{NonAtom} \\
+    \textdom{World}& w & & \external  \\
+    %\textdom{State}& \sigma &::= (h, w) \\
+    \textdom{TPool}& \mathcal{E} &\in &\textdom{List}\app\textdom{Exp} \\
+    %\textdom{Config}& \rho &::= (\sigma, \mathcal{E}) \\
+  \end{array}
+  \end{mathpar}
+
+
   \textbf{Per-thread one-step reduction}%
   \hfill %
   \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
@@ -115,7 +121,7 @@
     ((h, w), \goosekw{AllocN}(n, v)) &\reduces %
                           &((h[\ell + i \mapsto v \mid 0 \leq i < n], w), \ell) %
                                          &\mathrm{if} \: \forall 0 \leq i < n,
-                                           \, \ell + i \notin \mathrm{dom}(h) \\
+                                           \, \ell + i \notin \dom(h) \\
     ((h, w), \goosekw{PrepareWrite}(\ell)) &\reduces %
                           &((h\mapupd{l}{\goosekw{Writing} \app v}, w), ()) %
                                          &\mathrm{if} \: h[\ell] = \goosekw{Reading} \app 0
@@ -144,13 +150,13 @@
   \hspace{20pt}
 
   \begin{mathpar}
-    \inferH[context-reduce]%
+    \inferH{context-reduce}%
     {((h, w), e) \reduces ((h,', w'), e') \\ \text{$E$ is an evaluation context}}%
     {((h, w), \mathcal{E}\mapupd{i}{E[e]}) \reduces%
       ((h', w'), \mathcal{E}\mapupd{i}{E[e']})}
 
-    \inferH[fork-reduce]%
-    {j \notin \mathrm{dom}(\mathcal{E}) \cup \{j\} \\ \text{$E$ is an evaluation context}}%
+    \inferH{fork-reduce}%
+    {j \notin \dom(\mathcal{E}) \cup \{j\} \\ \text{$E$ is an evaluation context}}%
     {((h, w), \mathcal{E}\mapupd{i}{E[\goosekw{Fork}(e)]}) \reduces%
       ((h, w), \mathcal{E}\mapupd{i}{E[()]}\mapupd{j}{e})
     }
@@ -160,7 +166,40 @@
   \label{goose:semantics}
 \end{figure}
 
-\tej{describe disk semantics}
+\begin{figure}[ht]
+  \textbf{Disk operations}
+  \begin{mathpar}
+  \begin{array}{ccc}
+    e &::= & \dots \ALT \goosekw{DiskRead}(e) \ALT \goosekw{DiskWrite}(e, e)
+             \ALT \goosekw{DiskSize} \\
+  \end{array}
+  \end{mathpar}
+  \textbf{Disk external semantics}
+  \begin{mathpar}
+  \begin{array}{lccc}
+    \textdom{Block} & b &\in& \textdom{Vec} \app 4096 \app \textdom{U8} \\
+    \textdom{World} & w &\in & \mathbb{N} \overset{\mathrm{fin}}{\to}
+                               \textdom{Block} \\
+  \end{array}
+  \end{mathpar}
+
+  \begin{mathpar}
+    \infer{\forall 0 \leq i < 4096,\, \ell + i \notin \dom(h) \\ w[a] = b}%
+    {((h, w), \goosekw{DiskRead}(a)) \reduces%
+      ((h[\ell + i \mapsto \goosekw{Reading} \app 0 \app b[i] %
+      \mid 0 \leq i < 4096], w), \ell)}
+
+    \infer{\forall 0 \leq i < 4096,\, \exists k.\, h[\ell + i] =
+      \goosekw{Reading} \app k \app b[i] }
+    {((h, w), \goosekw{DiskWrite}(a, \ell)) \reduces %
+      ((h, w[a \mapsto b]), ())}
+
+    \infer{}%
+    {((h, w), \goosekw{DiskSize}) \reduces %
+    ((h, w), 1 + \textlog{max} \app \dom(w))}
+  \end{mathpar}
+  \caption{Syntax and semantics for an external disk}
+\end{figure}
 
 \tej{also need to describe Hoare triples and separation logic, might as well do
 that here since it's part of the foundations of reasoning about GooseLang}
