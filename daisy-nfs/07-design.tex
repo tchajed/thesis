@@ -3,22 +3,19 @@
 
 We follow the standard approach for verifying software in Dafny: each
 file-system operation is implemented as a method on a class and its
-specification is given using pre- and post-conditions. In discussing the
-soundness theorem we considered the Dafny proof as one theorem. In this
-section we walk through the structure of the Dafny proof and explain some interesting
-challenges we addressed along the way.
+specification is given using pre- and post-conditions. In \autoref{sec:proof},
+we explained how the Dafny proof shows the code is a correct implementation of NFS in terms of sequential refinement. This
+section provides details about the file-system design and proof.
 
 % The proof is given by annotating the code with proof steps, which include
 % updates to ghost state, assertions to assist the automated verification, and
 % calls to lemmas.
 
-\sys is implemented and verified in several layers of abstraction. Each layer is
-implemented as a class that wraps the lower layer as a field; the highest layer
-exports the methods in the NFS API while the lowest is the transaction system.
-The transaction system is an assumed interface in Dafny and implemented in Go
-outside of Dafny. We implement the NFS wire protocol in unverified code that
-imports the filesystem class, compiled from Dafny, and calls its methods wrapped
-in a transaction.
+\sys is implemented and verified in several layers of abstraction, depicted in
+\autoref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
+lower layer as a field. The transaction system is an assumed interface in Dafny,
+while the complete server implements the NFS wire protocol and calls into the
+top-level Dafny class for each operation.
 
 % The approach we follow is inspired by xv6. We borrow some tricks from FSCQ and
 % Yggdrasil to accomodate verification (especially using more layers than the xv6
@@ -28,10 +25,10 @@ in a transaction.
 % works).
 
 \begin{figure}
-  \centering
+\small \centering
 \begin{tabular}{ll}
   \toprule
-  \textbf{Layer} & \textbf{functionality} \\
+  \textbf{Layer} & \textbf{Functionality} \\
   \midrule
   dir & Directories and top-level NFS API. \\
   typed & Inode allocation. \\
@@ -47,8 +44,8 @@ operations.}
 \label{fig:dafny-layers}
 \end{figure}
 
-Although the file system is implemented with six layers (see
-\autoref{fig:dafny-layers}), there are three difficult pieces of
+Between the layers of the file system
+there are three difficult pieces of
 functionality: organizing data blocks into metadata and data (the
 indirect and block layers), translating byte-level operations into
 block operations (the byte and typed layers), and implementing
@@ -57,66 +54,69 @@ writes (the dir layer). The modularity was essential to complete the proof in
 manageable chunks (to avoid overwhelming the developer and prover), and it would
 have been natural even without verification.
 
-\subsection{Achieving good performance}
+\subsection{Implementing the file system using transactions}
 
-An important aspect of the Dafny proof was to write code in a way that produces
-high-performance Go code. For example, it is possible to write in a highly
-functional style with immutable data structures rather than mutable objects;
-this simplifies proofs
-but generally results in lower performance. Compiling to Go exacerbates this
-problem because Dafny's built-in immutable collections (sequences and maps) are
-extremely inefficient in Go due to an impedance mismatch between Dafny and Go
-semantics. Compared to Dafny's C\# backend, the generated Go code has much
-additional pointer indirection and defensive copying.
-
-Dafny's default integer type \cc{int} is unbounded and compiled to big integer
-operations for soundness, in all target languages. We used Dafny's
-\cc{nativeType} support to instead define a type of 64-bit integers (that
-is, natural numbers less than $2^{64}$) and compile this to Go's \cc{uint64}.
-This requires overflow reasoning whenever arithmetic is involved, but the
-automation makes this palatable in the proof and the performance gain is quite
-significant.
-
-To avoid using Dafny's built-in collections we use an axiomatized interface to
-Go byte slices (\cc{[]byte} in Go) whenever raw data is required, including file
-data and paths, and then modify these slices in-place. It was possible to
-axiomatize this API without any changes to Dafny; we use a standard Dafny
-feature of \cc{:extern} classes to specify a Dafny class \cc{Bytes} in terms of
-ghost state of type \cc{seq<byte>} but then implement it as in Go as a thin
-wrapper around the native \cc{[]byte} type. Since this API is trusted we
-carefully wrote tests. To catch off-by-one errors in the specification, we wrote
-concrete tests like \verb![]byte{1,2,3}[2]! and ran them in both Go and
-(equivalent) Dafny (this test should return 3 because both languages are
-zero-indexed).
-
-We implement the file system fairly efficiently, taking advantage of Dafny's
-support for imperative code. The on-disk data structures---inodes, indirect
-blocks, and directories---are represented in memory in their serialized form and
-modified by updating this representation directly, avoiding copies to move
-between representations. At first these were written with slower purely
-functional code, which we were able to easily migrate to imperative code that
-used the functional code as a specification rather than directly executing it.
-
-\subsection{Challenges in the proof}
-
-The design of \sys is broadly similar to the operating system in xv6~\cite{xv6},
+The design of \sys is broadly similar to the file system in xv6~\cite{xv6},
 as well as Yggdrasil~\cite{sigurbjarnarson:yggdrasil}, a verified sequential
-file system. We encountered some unique challenges due to a more complete
-implementation. In this section we highlight two particular features: the
-support for large files with triply-indirect blocks in the indirect layer, and
-freeing space from deleted files.
+file system. We also adopt the recursive strategy for implementing and
+verifying indirect blocks from DFSCQ~\cite{akonradi-meng}; recursion simplifies
+the implementation of triply-indirect blocks, which are needed to reach a
+reasonable maximum file size of 512GB.\@ Unlike most file systems, DaisyNFS is designed
+to fit every operation into a transaction in order to support our goal of
+sequential reasoning. This is a non-standard design and we encountered some
+unique challenges in doing so. In this section we highlight difficulties in
+fitting two features into transactions: rename and freeing space from deleted
+files.
 
-\subsubsection{Large files}
-\label{sec:dafny:indirect}
+\subsubsection{Rename}
+\label{sec:dafny:rename}
 
-The indirect and block layers together implement an abstraction of
-files as a sequence of blocks, using some blocks in the transaction
-system as indirect blocks that contain pointers to other blocks.  Most
-of the code implementing indirect blocks is implemented recursively
-using an approach borrowed from DFSCQ~\cite{akonradi-meng}.
-In practice we configure the system with several direct and (single)
-indirect blocks in an inode to make small files more efficient, plus a
-triple-indirect block that allows files to grow to 512GB.
+The NFS RENAME operation is similar to the \cc{rename} system call: it moves a
+source file or directory to a destination location. What makes it tricky is that
+it involves more than one inode and hence introduces the possibility for
+deadlock.
+% , which we would like to avoid even if the theorems do not forbid it.
+We
+use the standard strategy of enforcing a global ordering where inodes are always
+locked in numerical order (smaller inode numbers first); this avoids a deadlock
+where a cycle of threads is waiting on each other.
+
+At this point it is worth discussing the performance considerations that lead to
+handling lock ordering in the file
+system, rather than generically in GoTxn. The transaction system could
+avoid deadlocks by either enforcing a global order over addresses or by
+timing-out operations. Enforcing a global order is inefficient for the file
+system; data blocks will never cause deadlock because the file system only
+accesses a block after locking the (unique) inode that owns it. Timing-out
+operations would lead to slow and spurious transaction failures that could more
+rapidly be avoided in the higher-level code, hence we do not attempt to detect
+deadlock dynamically.
+
+In a rename operation, the source and destination are each specified by a
+combination of the parent directory inode and name within that directory. Rename
+has an additional functionality of overwriting the destination if the source and
+destination are files, or if both are directories and the destination is empty.
+It is this latter check that makes deadlock avoidance difficult: it is necessary
+to lock the source and destination directories first to lookup the source and
+destination names, but those might be files that are earlier in the inode lock
+order. We address this in the code by returning an error from the Dafny
+transaction before the lock order would be violated. The error comes with the
+set of inodes that should have been acquired.  The rename is then re-run with
+this set of inodes as a lock hint; these are first acquired in the correct
+order, then compared against the current source and destination in case they
+have been renamed concurrently.
+
+%% \subsubsection{Large files}
+%% \label{sec:dafny:indirect}
+%%
+%% The indirect and block layers together implement an abstraction of
+%% files as a sequence of blocks, using some blocks in the transaction
+%% system as indirect blocks that contain pointers to other blocks.  Most
+%% of the code implementing indirect blocks is implemented recursively
+%% using an approach borrowed from DFSCQ~\cite{akonradi-meng}.
+%% In practice we configure the system with several direct and (single)
+%% indirect blocks in an inode to make small files more efficient, plus a
+%% triple-indirect block that allows files to grow to 512GB.
 
 %% Using only a single level of
 %% indirection would be convenient for verification, but it would limit the size of
@@ -137,17 +137,17 @@ triple-indirect block that allows files to grow to 512GB.
 %% recursive indirect block implementation were directly inspired by the
 %% DFSCQ indirect-block~\cite{akonradi-meng}.
 
-Indirect blocks pose a challenge for verification due to the classic problem of
-\emph{aliasing}. The proof must show that modifying a data block or indirect
-block has no effect on other files. In the DFSCQ proof, the invariant
-captures the non-aliasing between files using separation logic, which makes
-disjointness easy to express. In Dafny we have no such logical
-technique, so we instead use a standard SMT-friendly trick for the invariant: in
-addition to the physical mapping that tracks how to dereference a block address,
-the indirect layer proof tracks a ghost \emph{reverse} mapping that tracks where
-each in-use block number is stored. The invariant states that the forward and reverse
-mappings are inverses of each other, which implies that modifying an address
-only affects its owner and nothing else.
+%% Indirect blocks pose a challenge for verification due to the classic problem of
+%% \emph{aliasing}. The proof must show that modifying a data block or indirect
+%% block has no effect on other files. In the DFSCQ proof, the invariant
+%% captures the non-aliasing between files using separation logic, which makes
+%% disjointness easy to express. In Dafny we have no such logical
+%% technique, so we instead use a standard SMT-friendly trick for the invariant: in
+%% addition to the physical mapping that tracks how to dereference a block address,
+%% the indirect layer proof tracks a ghost \emph{reverse} mapping that tracks where
+%% each in-use block number is stored. The invariant states that the forward and reverse
+%% mappings are inverses of each other, which implies that modifying an address
+%% only affects its owner and nothing else.
 
 %% To encode the reverse mapping, we need a data type to represent the location of
 %% a block within an inode. With indirect blocks, the metadata blocks themselves
@@ -171,29 +171,29 @@ only affects its owner and nothing else.
 \label{sec:dafny:freeing}
 
 Freeing space becomes surprisingly tricky with large files. The problem is that
-it can take some time to track down all the block numbers that need to be freed,
-and this can result in a large transaction if the file system is big enough.
-\sys handles freeing by removing a file from its inode and marking it free in
-one transaction, and separately reclaiming all the space it took by deallocating
-all of its blocks.
+a large-enough file may reference too many blocks to be
+freed in a single transaction.
+\sys handles freeing by removing a file from its directory and marking it free in
+one transaction, and in separate transactions reclaiming the space it took by deallocating
+its blocks.
 
-The implementation thus implements removal as a combination of two transactions,
-one which implements the logical operation but leaks space, and an operation
+Removal is implemented as a combination of two transactions,
+one which performs the logical operation but leaks space, and an operation
 \cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
 we prove has no effect on the file-system state. Because this operation is a
 logical no-op, it is safe to call it at any time. In practice the implementation
 is careful to call it after any operation that leaves unused blocks, in
 particular \cc{SETATTR}, which can shrink a file by reducing its size, and
 \cc{REMOVE}, which deletes a file. Furthermore since \cc{ZeroFreeSpace} doesn't
-affect the user-visible data, it is free to return early to avoid overflowing a
-transaction, which is limited to 511 blocks due to the design of GoJournal.
+affect the user-visible data, it may return early to avoid overflowing a
+transaction, which GoJournal limits to 511 blocks.
 
 There is one case where freeing blocks is important for correctness and not just to reclaim space. Growing a file is supposed to logically fill the new space with
 zeros. If the file had old data in that space, it would not be zero but some
 previously written and deleted data, which both violates the specification and
 is a potential security risk. The way we handle this with background freeing is
-with validation: the \cc{SETATTR} operation when it grows a file checks if the
-free space is already zero first, and fails with a special error code. The
+with validation: when the \cc{SETATTR} operation grows a file checks, it checks if the
+free space is already zero first, and if not fails with a special error code. The
 unverified code interprets this as a signal to immediately call
 \cc{ZeroFreeSpace} and try the operation again. The same support also handles
 holes created by writing past the end of a file, which are similarly supposed to
@@ -204,6 +204,52 @@ verification. The specification for much of the freeing code is loose, allowing
 any data to be written to the free space. We only needed a strong specification
 for the code that checks if the zeroing is done; the rest of the code needs to
 be correct for this check to ever succeed, but we aren't required to prove it.
+
+\subsection{Achieving good performance}
+
+An important aspect of the Dafny proof was to write code in a way that produces
+high-performance Go code.
+% problem because Dafny's built-in immutable collections (sequences and maps) are
+% extremely inefficient in Go due to an impedance mismatch between Dafny and Go
+% semantics.
+Compared to Dafny's C\# backend, the generated Go code for Dafny's built-in
+immutable collections has much
+additional pointer indirection and defensive copying. Using these data
+structures for byte sequences would simplify proofs, but has unacceptably poor
+performance in Go.
+
+To avoid this performance problem we use an axiomatized interface to
+Go byte slices (\cc{[]byte} in Go) whenever raw data is required, including file
+data and paths, and then modify these slices in-place. It was possible to
+axiomatize this API without any changes to Dafny; we use a standard Dafny
+feature of \cc{:extern} classes to specify a Dafny class \cc{Bytes} in terms of
+ghost state of type \cc{seq<byte>} but then implement it as in Go as a thin
+wrapper around the native \cc{[]byte} type. This API is trusted, so we
+test it. To catch off-by-one errors in the specification, we wrote
+tests like \verb![]byte{1,2,3}[2]! and ran them in Go and
+(equivalent) Dafny.
+%(this test should return 3 because both languages are
+% zero-indexed).
+
+% We implement the file system fairly efficiently, taking advantage of Dafny's
+% support for imperative code.
+The on-disk data structures---inodes, indirect
+blocks, and directories---are represented in memory in their serialized form and
+modified by updating this representation directly, avoiding copies to move
+between representations. These were first written with slower purely
+functional code, which was then migrated to imperative code that
+used the functional code as a specification.
+
+
+Dafny's default integer type \cc{int} is unbounded and compiled to big-integer
+operations. We used Dafny's
+\cc{nativeType} support to instead define a type of 64-bit integers (that
+is, natural numbers less than $2^{64}$) and compile this to Go's \cc{uint64}.
+This requires overflow reasoning, but
+automation makes this palatable in the proof and the performance gain is
+significant.
+
+
 
 % \subsection{Random notes on development process}
 %

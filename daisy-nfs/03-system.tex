@@ -22,15 +22,13 @@ implements each method; and 3) a transaction system that applies the
 updates of each method to the disk atomically.  The dispatch loop is
 unverified; we assume that the server correctly decodes messages,
 calls the right method for an operation, and encodes the response. The
-middle layer implementing the file-system operations is implemented
+middle layer implementing the file-system operations is written
 and verified in Dafny, which has a backend for Go.  The
 third layer is directly written in Go and verified using Coq and
 Perennial.  By implementing the file system on top of the transaction
 system, we can implement each NFS method in Dafny as sequential code
 calling into a concurrent transaction system library. The NFS
 operations supported by \sys are listed in \autoref{fig:nfs}.
-
-\subsection{Dafny file system}
 
 %% We focus on the
 %% design of the transaction system here, but the file system also has several
@@ -39,23 +37,13 @@ operations supported by \sys are listed in \autoref{fig:nfs}.
 
 %% The file-system implementation calls the transaction system to store all
 %% file-system data, ensuring that it is written atomically and durably.
-
-% \begin{figure}
-%   \begin{center}
-%   \includegraphics[width=\columnwidth]{drawn-diagrams/disk-layout.png}
-%   \end{center}
-%   \caption{The layout of the file system on top of the transaction system's
-%     disk. The number of inode blocks and data bitmap blocks is a compile-time
-%     constant, but easy to change without affecting the proofs.}
-%   \label{fig:layout}
-% \end{figure}
-
+%%
 \begin{figure}
-  %\includegraphics[width=\columnwidth]{drawn-diagrams/disk-layout.png}
   \input{daisy-nfs/fig/fslayout.tex}
+  \vspace{-1.75em}
   \caption{The layout of the file system on top of the transaction system's
-    disk. The number of inode blocks and data bitmap blocks is a compile-time
-    constant, but easy to change without affecting the proofs.}
+    disk. The number of inode blocks and data bitmap blocks are compile-time
+    constants, but easy to change without affecting the proofs.}
   \label{fig:layout}
 \end{figure}
 
@@ -70,8 +58,8 @@ writes to the disk.
 
 The high-level organization of the file system separates three concerns, each
 building upon the previous: (1) implementing large (about 512GB), fixed-size
-files with zeros in place of unallocated data; (2) implementing files with
-byte-level granularity by tracking a size field; and (3) implementing
+files with zeros in place of unallocated data; (2) implementing byte-granularity
+reads and writes on top of blocks; and (3) implementing
 directories by encoding them as files with a special type together with
 operations to manipulate those files. \autoref{sec:design} explains the
 internals of the file-system design in more detail, alongside the structure of
@@ -82,13 +70,26 @@ the Dafny proof.
 %% is built up by calling methods through several abstraction layers before
 %% eventually producing a sequence of transactional reads and writes.
 
-% The proof requires that each 4KB block be accessed with a consistent size. We
-% represent that in the specification with a fixed ``schema'' specifying the
-% size of every block address, which is fixed by the caller while calling the
-% initialization function. The schema is never passed to the code and only used
-% to enforce the consistent-size restriction in the precondition of \cc{Read}
-% and \cc{Write}. These restrictions are reflected by representing the
-% transaction system not as an array of bytes but as a mapping from
-% ``addresses'' specifying a block number and offset to ``objects'' which can be
-% either a boolean or a list of bytes. The schema is a static mapping from block
-% number to size such that all the objects are of that size.
+The proof requires that each 4KB block be accessed with a consistent size. We
+represent that in the specification with a fixed ``schema'' specifying the
+size of every block address, which is fixed by the caller while calling the
+initialization function. The schema is never passed to the code and only used
+to enforce the consistent-size restriction in the precondition of \cc{Read}
+and \cc{Write}. These restrictions are reflected by representing the
+transaction system not as an array of bytes but as a mapping from
+``addresses'' specifying a block number and offset to ``objects'' which can be
+either a boolean or a list of bytes. The schema is a static mapping from block
+number to size such that all the objects are of that size.
+
+In practice the file system uses three kinds of objects: full blocks are used
+for data (both for directories and data files), bit objects comprise the inode
+and block allocators, and 128-byte objects are used to represent inodes. The
+file-system statically allocates regions for the inodes, allocator bitmaps,
+and data blocks, so that object sizes never change.
+
+Acquiring multiple locks during a transaction creates the possibility
+for deadlocks, for example if two threads acquire a pair of locks in the opposite
+order. The two-phase locking implementation does not implement a
+specific lock acquisition order, leaving it to the file system to
+avoid deadlock --- the most interesting case is \cc{RENAME}, which is discussed
+in more detail in \autoref{sec:dafny:rename}.

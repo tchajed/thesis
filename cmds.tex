@@ -4,6 +4,10 @@
 \newcommand{\scc}[1]{\mbox{\textsc{\detokenize{#1}}}}
 \newcommand{\loc}[1]{\num[group-separator={,},group-minimum-digits=4]{#1}}
 
+% \newidentmacro{foobar} creates \foobar that expands to foobar, with the right
+% formatting to be an identifier.
+\newcommand{\newidentmacro}[1]{\csdef{#1}{\mathtt{#1}}}
+
 %% Code
 
 \newcommand{\load}[1]{\operatorname{Load}(#1)}
@@ -120,7 +124,7 @@
 % the type of operations O
 \newcommand{\OP}{\mathcal{O}}
 \newcommand{\crash}{\operatorname{crash}}
-\newcommand{\gooselayer}[1]{\mathtt{Go}\targ{\mathrm{#1}}}
+\newcommand{\gooselayer}[1]{\ensuremath{\mathtt{Go}\targ{\mathrm{#1}}}}
 \newcommand{\compile}{C}
 \newcommand{\impl}{I}
 \newcommand{\init}{\operatorname{init}}
@@ -134,6 +138,7 @@
 \newcommand{\linked}[1]{\ensuremath{\mathrm{link}(#1, \txncode)}}
 \newcommand{\linkedcode}{\linked{\sdfy}}
 
-% \newidentmacro{foobar} creates \foobar that expands to foobar, with the right
-% formatting to be an identifier.
-\newcommand{\newidentmacro}[1]{\csdef{#1}{\mathtt{#1}}}
+\newcommand{\seqrefinement}{\operatorname{seq\_refinement}}
+
+\newcommand{\atomically}[1]{\ensuremath{\mathtt{atomically}\,\{\, #1 \,\}}}
+\newcommand{\atomiccomp}{\mathrm{atomically}\circ}

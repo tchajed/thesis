@@ -5,87 +5,88 @@ them to safely store user data. Formal verification offers a promise of showing
 that an implementation always meets its specification, including a crash safety
 property that says the file system recovers correctly from a sudden crash and
 reboot. However, efficient implementations are internally complicated,
-especially because they support concurrency and aim to minimize disk writes.
-This poses a challenge for formal verification: how can a proof cover
+especially because they support concurrency and aim to minimize disk
+writes.
+Complexity makes the code more error-prone and motivates the desire for
+formal verification, but also poses a challenge: how can a proof cover
 concurrency, crash safety, and functional behavior while remaining tractable for
 a program the size of a file system?
 
-Crash safety poses a challenge even without verification, so many file systems
-use a technique called \emph{journaling} (sometimes called write-ahead logging)
-to atomically write multiple objects to disk. An efficient journaling system
-goes a long way towards correctness, but it does not protect the programmer from
-all concurrency and crash safety reasoning. For example, consider allocating a
-block using a combination of an in-memory allocator an on-disk state (to recover
-the allocator state on reboot). Suppose one operation is freeing a block from a
-file while a concurrent operation is allocating and using it. If the system
-crashes, it is possible that the allocation and its writes succeed but the
-freeing is aborted, resulting in the same block being part of two files.
+% Crash safety poses a challenge even without verification, so many file systems
+% use a technique called \emph{journaling} (sometimes called write-ahead logging)
+% to atomically write multiple objects to disk. An efficient journaling system
+% goes a long way towards correctness, but it does not protect the programmer from
+% all concurrency and crash safety reasoning. For example, consider allocating a
+% block using a combination of an in-memory allocator and on-disk state (to recover
+% the allocator state on reboot). Suppose one operation is freeing a block from a
+% file while a concurrent operation is allocating and using it. If the system
+% crashes, it is possible that the allocation and its writes succeed but the
+% freeing is aborted, resulting in the same block being part of two files.
+% \joe{I find this second paragraph a little jarring inbetween the first and third paragraphs}
 
-The main contribution of this paper is a file-system design that \emph{isolates
-crash safety and concurrency reasoning} to a transaction-system
-implementation. We take inspiration from databases, which provide SQL
-transactions to applications to avoid such tricky concurrency and crash
-reasoning when using the database, except in this case the transactions help the
-file-system implementation safely access the disk. Unlike existing designs, we
-wrap all the file-system data structures and logic inside a transaction. The
-benefit of this design is that it is especially verification friendly since it
-supports \emph{sequential proofs} for the body of each transaction. Sequential
-proofs keep the proof burden manageable even with an efficient implementation
-which supports many features, such as large files and in-place updates of
-serialized metadata.
+The main contribution of this paper is a new approach to verifying a file system that
+\emph{isolates crash safety and concurrency reasoning} to a
+transaction-system implementation. This use of a transaction system wraps the
+file-system data structures and logic inside a transaction, and permits
+\emph{sequential reasoning} for the body of each
+transaction. Sequential reasoning keeps the proof burden manageable even
+with an efficient implementation that supports many features, such as
+large files and in-place updates of serialized metadata.
 
-There are two challenges in realizing this design. First, how can the entire
-file system be implemented using transactions? Ordinarily file systems have some
-shared mutable state that is independent of the journal --- the allocator is one
-such piece of state that gives rise to the running bug example. We address this
-issue by not relying on atomicity of the allocator and instead validating its
-results with the journal (experiments demonstrate this has only a small
-performance impact). Some operations, like freeing, can require a large number
-of disk writes that might not fit in a transaction. We implement freeing using
-multiple transactions; a first transaction logically deletes a file, and then
-asynchronously the implementation can run transactions that recover space from
-the file but have no other visible effect.
+There are three challenges in realizing this approach. The most important lies
+at the interface between the transaction system and the file system:
+intuitively, transactions make things simpler, but how do we exploit this for a
+proof engineer verifying the code running in a transaction? Our goal is to use
+the guarantees of the transaction system to reason about the body of each
+transaction using a sequential reasoning framework, namely Dafny~\cite{leino:dafny}, avoiding any
+further crash-safety or concurrency reasoning in the proofs. This paper proves a
+specification which formalizes the conditions under which this is possible. This
+specification and its proof are not specific to the file system written on top
+and could be applied to another storage system implemented using transactions.
 
 The second challenge is how to implement and prove the transaction system
 itself. The performance and concurrency of the overall system can only be as
 good as the transaction system, so efficiency and fine-grained locking are
-important. To that end we start with GoJournal~\cite{chajed:gojournal}, a
-verified journaling system that gets good performance and supports concurrent
-access to objects smaller than the disk's block size (assumed to be 4KB).
-GoJournal leaves concurrency control to the caller, which our transaction system
-implements using a standard two-phase locking implementation.
+important. To that end our transaction system, called GoTxn, is implemented by
+extending GoJournal~\cite{chajed:gojournal}, a verified journaling system, with
+two-phase locking. GoJournal's specification guarantees crash safety but
+requires the caller to implement concurrency control (enforced with separation logic) to achieve atomicity.
+In proving GoTxn we give a new proof of two-phase
+locking's correctness based on local reasoning rather than
+the typical textbook approach that reasons about the global conflict graph from
+a set of transactions.
 
-There are two difficulties in proving the transaction system correct using the
-GoJournal specificationh. First, this implementation cannot make all
-transactions appear sequential; consider a simple example of a transaction that
-increments a global variable unknown to the two-phase locking code. Instead, we
-formalize a contract specifying rules for which transactions are legal and
-assume the caller issues legal transactions in the correctness proof. Second,
-most textbook proofs of two-phase locking work by showing that a global conflict
-graph between transactions is cycle-free, which implies that the transactions
-are serializable. Our proof needs to be tied to the implementation and in
-particular the GoJournal specification based on separation logic, so we give a
-new proof of two-phase locking's correctness using lock invariants and local
-rather than global reasoning.
+The third and final challenge is how to implement the file system using only
+transactions. File systems typically use journaling combined with concurrency
+control and other shared mutable state, but for sequential reasoning each
+operation must be implemented as a single transaction. Allocation is generally
+not atomic as part of a transaction, which we address using \emph{validation}, a
+general verification technique.
+Some operations, like freeing, can require a large
+number of disk writes that might not fit in a transaction. We implement freeing
+using multiple transactions; a first transaction logically deletes a file, and
+then asynchronously the implementation can run transactions that recover space
+from the file but have no other visible effect.
 
-The verified artifact from this work is \sys, which implements a Network File
-System (NFS) server on top of a bare disk and comes with a proof that clients
-observe that each operation follows the NFS specification as laid out in RFC
-1813. Operations appear atomic despite concurrency and crashes. Clients can use
-the Linux or macOS NFS client to mount \sys like any other file system and
-interact with it using the usual POSIX API.
-As an end-to-end check that our formalization of NFS is
-accurate and the implementation is reasonably complete, we tested with both Linux
-and macOS clients running a variety of programs and under interactive usage.
+The verified artifact from this work is \sys, which implements a
+Network File System (NFS) server in Go on top of a bare disk and comes
+with a proof that clients observe that each operation follows the NFS
+specification as laid out in RFC 1813~\cite{RFC:1813}. Operations appear atomic
+despite concurrency and crashes. Clients can use the Linux or macOS
+NFS client to mount \sys like any other file system and interact with
+it using the usual POSIX API.\@  As an end-to-end check that our
+formalization of NFS is accurate and the implementation is reasonably
+complete, we tested with both Linux and macOS clients running a
+variety of programs.
 
-A significant benefit of this file-system design is that it permits using the
+A benefit of this file-system design is that it permits using the
 sharpest tool for each part of the proof: while we use
-Perennial~\cite{chajed:gojournal}, a program logic for crash safety and concurrency, for the
+Perennial~\cite{chajed:gojournal}, a program logic for crash safety
+and concurrency embedded in Coq, for the
 transaction system's proof, we use Dafny~\cite{leino:dafny}, a verification-aware
 programming language with powerful automation, for the file-system operations.
 Dafny is a purely sequential language, but we are able to use it despite this
-limitation since the transaction system's proof guarantees transactions behave
-sequentially. The value of
+limitation due to the transaction system's proof. The value of
 sequential proofs can be seen in the proof-to-code ratio for the transaction
 system, which is $18\times$, versus the Dafny proofs which required about
 $2\times$ as many lines of proof as code. Further evidence can be seen in the
@@ -120,24 +121,26 @@ cost of relaxed guarantees on crash.
 
 The contributions of this paper are:
 \begin{itemize}
-  \item A file-system design that uses transactions in a principled way to
-  isolate crash safety and concurrency to the transaction system and use
-  sequential proofs for file-system logic.
-  \item A contract formalizing which transactions the transaction system can
-  make atomic, and a proof of its correctness under this contract.
-  \item DaisyNFS, a verified file system and transaction system that implement
-  these ideas. A performance evaluation shows that DaisyNFS gets performance
-  comparable to Linux ext4 exported over NFS.
+  \item A formalization for a specification that captures how the transaction
+  system provides sequential reasoning (\autoref{sec:proof}) for any system
+  implemented using a transaction per operation.
+  \item A proof that the GoTxn implementation meets this specification
+(\autoref{sec:txn-proof}), written against the GoJournal specification.
+  \item DaisyNFS, a verified file system that is designed to use transactions
+  and work with the GoTxn correctness proof. The Dafny proofs for the
+  file-system code enjoy low overhead compared to the concurrent proofs for GoTxn. A performance
+  evaluation shows that DaisyNFS gets performance comparable to Linux ext4
+  exported over NFS.
 \end{itemize}
 
 Our approach and DaisyNFS have some limitations. We do not support NFS unstable
 writes, which improve performance by not committing writes to stable storage
-until explicitly requested. The proof approach relies on showing that
-transactions appear to execute sequentially; this prevents us from modifying state
-outside the transaction system (and reasoning about the interaction) where that
-would get better performance. The transaction system does not have a proof of
-liveness, and we do not prove that transactions avoid deadlock. Our NFS
-implementation does not cover the entire API, such as symbolic and hard links,
-the ``weak-cache consistency'' metadata to support client-side caching, or
-paginated \cc{READDIR}; we believe all of these could be implemented and
-specified with the same approach, but have not done so in our prototype.
+until explicitly requested. The proof approach relies on transactions appearing
+to run sequentially, which prevents modifying state
+outside the transaction system.
+There are cases where that would get better performance in exchange for a more
+difficult proof. The transaction system does not have a proof of liveness, and
+we do not prove that transactions avoid deadlock. Our NFS implementation does
+not cover some features, such as symbolic links, hard links, and paginated
+\cc{READDIR}; we believe all of these could be implemented and specified with
+the same approach but have not done so in our prototype.

@@ -1,0 +1,79 @@
+\resizebox{0.4\textwidth}{!}{%
+\begin{tikzpicture}[scale=1, >=latex, every node/.append style={}]
+
+  \tikzstyle{txnstate}=[circle,draw,minimum size=2mm,fill=blue!10]
+  \tikzstyle{nfsstate}=[circle,draw,minimum size=2mm,fill=yellow!10]
+  \tikzstyle{diskstate}=[circle,draw,minimum size=2mm,fill=green!10]
+  \tikzstyle{switch}=[->, dashed, dash pattern=on 1.5pt off 2pt]
+  \tikzstyle{stepr}=[thick,->]
+  \tikzstyle{layer}=[font=\large]
+
+  \newlength{\stepw}
+  \setlength{\stepw}{1.25cm}
+  \newlength{\dstepw}
+  \setlength{\dstepw}{\stepw*2}
+
+  \newlength{\nfstop}
+  \newlength{\nfsbot}
+  \newlength{\nfsmid}
+  \setlength{\nfstop}{1.5cm}
+  \setlength{\nfsbot}{.5cm}
+  \setlength{\nfsmid}{(\nfstop+\nfsbot)/2}
+
+  \newlength{\txntop}
+  \newlength{\txnbot}
+  \newlength{\txnmid}
+  \setlength{\txntop}{-.5cm}
+  \setlength{\txnbot}{-1.5cm}
+  \setlength{\txnmid}{(\txntop+\txnbot)/2}
+
+  \newlength{\disktop}
+  \newlength{\diskbot}
+  \newlength{\diskmid}
+  \setlength{\disktop}{-2.5cm}
+  \setlength{\diskbot}{-3.5cm}
+  \setlength{\diskmid}{(\disktop+\diskbot)/2}
+
+  \draw node (N0a) at (0,\nfstop) [nfsstate] {};
+  \draw node (N1a) at (\dstepw,\nfstop) [nfsstate] {};
+  \draw node (N1b) at (\dstepw,\nfsbot) [nfsstate] {};
+  \draw node (N2b) at (\dstepw*2,\nfsbot) [nfsstate] {};
+
+  \draw [stepr] (N0a.east) -- (N1a.west) node[midway,above=.2] {\code{LOOKUP}};
+  \draw [stepr] (N1b.east) -- (N2b.west) node[midway,above=.2] {\code{CREATE}};
+  \draw [switch] (N1a.south) -- (N1b.north);
+
+  \draw node (T0a) at (0,\txntop) [txnstate] {};
+  \draw node (T1a) at (\stepw,\txntop) [txnstate] {};
+  \draw node (T2a) at (\stepw*2,\txntop) [txnstate] {};
+  \draw node (T2b) at (\stepw*2,\txnbot) [txnstate] {};
+  \draw node (T3b) at (\stepw*3,\txnbot) [txnstate] {};
+  \draw node (T4b) at (\stepw*4,\txnbot) [txnstate] {};
+
+  \draw [stepr] (T0a.east) -- (T1a.west) node[midway,above=.2] {};
+  \draw [stepr] (T1a.east) -- (T2a.west) node[midway,above=.2] {\code{Commit}};
+  \draw [switch] (T2a.south) -- (T2b.north);
+  \draw [stepr] (T2b.east) -- (T3b.west) node[midway,above=.2] {};
+  \draw [stepr] (T3b.east) -- (T4b.west) node[midway,above=.2] {\code{Abort}};
+
+  \draw node (D0a) at (0,\disktop) [diskstate] {};
+  \draw node (D1a) at (\stepw,\disktop) [diskstate] {};
+  \draw node (D1b) at (\stepw,\diskbot) [diskstate] {};
+  \draw node (D2b) at (\stepw*2,\diskbot) [diskstate] {};
+  \draw node (D3b) at (\stepw*3,\diskbot) [diskstate] {};
+  \draw node (D3a) at (\stepw*3,\disktop) [diskstate] {};
+  \draw node (D4a) at (\stepw*4,\disktop) [diskstate] {};
+
+  \draw [stepr] (D0a.east) -- (D1a.west) node[midway,above=.2] {\code{Read}};
+  \draw [switch] (D1a.south) -- (D1b.north);
+  \draw [stepr] (D1b.east) -- (D2b.west) node[midway,above=.2] {\code{Write}};
+  \draw [stepr] (D2b.east) -- (D3b.west) node[midway,above=.2] {};
+  \draw [switch] (D3b.north) -- (D3a.south);
+  \draw [stepr] (D3a.east) -- (D4a.west) node[midway,above=.2] {};
+
+  \draw [align=center] node (NFS) at (\stepw*5.5,\nfsmid) [layer] {$\snfs$ \\ \gooselayer{NFS}};
+  \draw [align=center] node (Txn) at (\stepw*5.5,\txnmid) [layer] {$\sdfy$ \\ \gooselayer{Txn}};
+  \draw [align=center] node (Disk) at (\stepw*5.5, \diskmid) [layer] {$\linkedcode$ \\ \gooselayer{Disk}};
+
+\end{tikzpicture}
+}

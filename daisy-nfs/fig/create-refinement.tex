@@ -1,0 +1,33 @@
+\begin{tikzpicture}[>=latex, every node/.append style={}]
+
+  \tikzstyle{exspecstate}=[circle,draw, dashed,minimum size=2mm,fill=gray!20]
+  \tikzstyle{specstate}=[circle,draw,minimum size=2mm,fill=gray!20]
+  \tikzstyle{nfsstate}=[circle,draw,minimum size=2mm]
+  \tikzstyle{sim}=[-]
+  \tikzstyle{exsim}=[-, dashed]
+  \tikzstyle{stepr}=[thick,->]
+  \tikzstyle{exstepr}=[thick,->, dashed]
+
+  \setlength{\stepw}{.75cm}
+  \setlength{\dstepw}{\stepw*2}
+  \setlength{\nfstop}{0cm}
+  \newlength{\spectop}{1cm}
+  \setlength{\spectop}{1cm}
+
+  \draw node (N0) at (0,\nfstop) [nfsstate] {};
+  \draw node (N1) at (\stepw,\nfstop) [nfsstate] {};
+  \draw node (N2) at (\stepw*2,\nfstop) [nfsstate] {};
+  \draw node (N3) at (\stepw*3,\nfstop) [nfsstate] {};
+
+  \draw [stepr] (N0.east) -- (N1.west) node[midway] {};
+  \draw [stepr] (N1.east) -- (N2.west) node[midway,below=.3] {\code{CREATE}};
+  \draw [stepr] (N2.east) -- (N3.west) node[midway] {};
+
+  \draw node (S0) at (0,\spectop) [specstate] {};
+  \draw node (S1) at (\stepw*3,\spectop) [exspecstate] {};
+  \draw [exstepr] (S0.east) -- (S1.west) node[midway, above=.2] {\code{nfs3create_spec}};
+
+  \draw [sim] (S0.south) -- (N0.north) node[midway,left=.1] {$R$};
+  \draw [exsim] (S1.south) -- (N3.north) node[midway,right=.1] {$R$};
+
+\end{tikzpicture}

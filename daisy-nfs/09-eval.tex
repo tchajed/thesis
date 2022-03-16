@@ -18,10 +18,10 @@ The NFS server lets us compare fairly since both go through the Linux NFS client
 and use the same underlying protocol. Using \cc{data=journal} forces all data to
 go through the journal and disables log-bypass writes, which ensures that
 ext4 and \sys both guarantee NFS RPCs are committed durably when they return. In
-the default \cc{data=ordered} mode Linux achieves better performance but can
+\cc{data=ordered} mode Linux achieves better performance but can
 lose recently written data if the system crashes.
 
-All of these benchmarks were run using Linux~5.11.0 and Go~1.17.1 on an Amazon
+All of these benchmarks were run using Linux~5.11.0 and Go~1.17.3 on an Amazon
 EC2 i3.metal instance, which has 72 cores, 512~GB of RAM, and a local 1.9~TB
 NVMe SSD.\@ To reduce variability we limit the experiment to a single 36-core
 socket, disable turbo boost, and disable processor sleep states; the coefficient
@@ -37,23 +37,21 @@ clarity.
 \begin{figure}
   \includegraphics{daisy-nfs/fig/bench.pdf}
   \caption{Performance of Linux NFS and DaisyNFS for \cc{smallfile},
-    \cc{largefile}, and \cc{app} workloads. DaisyNFS achieves comparable
-    performance to ext4 in \cc{data=journal} mode.}
+    \cc{largefile}, and \cc{app} workloads, on an NVMe disk.
+    DaisyNFS achieves comparable performance to ext4 in \cc{data=journal} mode.}
   \label{fig:eval:bench}
 \end{figure}
 
 The results are shown in \autoref{fig:eval:bench}. DaisyNFS gets about the same
 throughput as Linux on the smallfile benchmark, which is intended to
 be metadata-heavy. The smallfile benchmark repeatedly creates a file,
-writes 100 bytes to it and syncs the file, then deletes it. For both file
-systems, the throughput of the smallfile benchmark increases with the
-number of benchmark threads.
+writes 100 bytes to it and syncs the file, then deletes it.
 
-DaisyNFS gets 96\% the throughput of Linux on the largefile benchmark, which is
+DaisyNFS gets slightly better throughput compared to Linux on the largefile benchmark, which is
 intended to measure bulk data writes. Note that in this benchmark ext4 would be
 significantly faster in \cc{data=ordered} mode due to no longer writing all data
-through the journal; with that option it can achieve closer to 500~MB/s even over
-NFS.\@ The largefile benchmark creates a 100~MB file by appending repeatedly, then
+through the journal; with that option it gets 315~MB/s even over
+NFS.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
 syncs it. The Linux NFS client buffers the entire append process until the final
 sync, at which point it issues the writes in many chunks in parallel. This
 benchmark is challenging to support efficiently because the writes at the NFS
@@ -61,9 +59,7 @@ server do not come in order, so some are past the end of the file. The semantics
 of such a write are to fill the gap with zeros, but both \sys and Linux get good
 performance despite this because they implicitly encode those zeros without even
 allocating a block. \sys gets comparable performance on this benchmark because
-GoJournal is good at handling concurrent synchronous writes, whereas Linux
-generally gets good performance by taking advantage of the weaker guarantees of
-\cc{data=ordered} mode.
+GoJournal is good at handling concurrent synchronous writes.
 
 DaisyNFS achieves good performance on the app workload, which consists of running
 \cc{git clone} on the xv6 repo followed by \cc{make}. xv6 is an operating
@@ -74,16 +70,15 @@ which are reported as a throughput number so higher is better.
 \subsection{Scalability}
 \label{sec:eval:scale}
 
-DaisynFS executes NFS operations concurrently to achieve better performance with
+DaisyNFS executes NFS operations concurrently to achieve better performance with
 multiple cores. The transaction system is built on GoJournal, which already
 demonstrated scalability. Here we report a similar experiment to demonstrate
-that DaisynFS can take advantage of GoJournal's scalability, after accounting for
+that DaisyNFS can take advantage of GoJournal's scalability, after accounting for
 the transaction system's two-phase locking and any overhead added by the
 transactions themselves. The benchmark used is the smallfile benchmark from
 \autoref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
 on an SSD, other threads have a chance to prepare transactions while the
-journal is committing to disk. The SSD used is an KXG60PNV1T02 NVMe-attached
-1~TB SSD.
+journal is committing to disk.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/scale.pdf}
@@ -101,48 +96,83 @@ clients, comparable to the scalability of the Linux NFS server.
 DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
 installation of writes into disk blocks at commit time.
 
+\subsection{Testing the trusted code and spec}
 
-\subsection{TCB discussion}
+For the NFS server to satisfy \autoref{thm:correctness}, we trust that (1) the
+Dafny code is a ``safe'' use of the transaction system, (2) sequential
+refinement is correctly encoded into Dafny, (3) the libraries for Go primitives
+are correctly specified in Dafny, and (4) the unverified Go code calling the
+Dafny methods and implementing the NFS wire protocol is correct. Finally, the
+user must follow the assumed execution model and run initialization from an
+empty disk, run recovery after each boot, and the disk should preserve written
+data and not corrupt it.
 
-It is worth noting that while \sys is a verified NFS server, we demonstrate its
-functionality and performance using the Linux file-system client. For example,
-the largefile benchmark issues appends to the Linux client, but the server sees
-parallel writes, which do not have the same crash-safety guarantees; the
-behavior of the client is out of scope for our verification. Similarly, we trust
-the state-machine model of the NFS protocol in Dafny.
+Beyond satisfying this formal theorem statement, we want two more things from
+the implementation and specification: first that the specification as formalized
+actually reflects the RFC, and second we would like DaisyNFS to be compatible
+with existing clients, including implementing enough of the RFC's functionality.
+These fall outside the scope of verification so we cover them with testing.
 
-For the NFS server to meet its specification, we trust that the Dafny code is a
-``safe'' use of the transaction-system API as formally specified in Coq. Part of
-this safety is achieved with a manual audit, and part enforced by preconditions,
-so we trust that the preconditions in Dafny actually enforce the requirements of
-the Coq proof.
-% Finally, we trust our execution model: the user needs to run
-% initialization from an empty disk, run recovery after each boot, and the disk
-% should preserve all data written.
+To evaluate the file system we mounted it using the Linux NFS client and ran the
+fsstress and fsx-linux tests, two suites used for testing the Linux kernel. In
+order to look for bugs in crash safety and recovery, we also ran
+CrashMonkey~\cite{mohan:crashmonkey}, which found no bugs
+after running all supported 2-operation tests.
 
-\subsection{Testing the specification}
+While elsewhere in this paper we interact with DaisyNFS via the Linux client, a
+collaborator (but not an author) tested it more directly using an NFS-specific
+testing tool.\footnote{This framework is part of an
+unrelated research project so we unfortunately lack space to give details on
+the methodology itself.} This testing produces a wider range of requests than
+are possible via the Linux client. This process helped us find and fix several bugs in
+the unverified parts of DaisyNFS and in the specification itself. These are
+reported in \autoref{fig:daisynfs-bugs}.
 
-While verification proves the implementation meets the specification, we also
-want confidence that the specification delivers a useful system that is
-compatible with existing clients. To evaluate the file system we mounted it
-using the Linux NFS client and ran the fsstress and fsx-linux tests, two suites
-used for testing the Linux kernel. In order to look for bugs in crash safety and
-recovery, we also ran CrashMonkey~\cite{mohan:crashmonkey}, which found no bugs
-in 2-operation tests after running for 24 hours.
+The two specification bugs are particularly interesting. The bounded inode bug
+was due to an \cc{ino} argument of type \cc{Ino}; this type is a Dafny
+\emph{subset type}, thus adding an implicit precondition that \cc{ino <
+NUM_INODES}, which is violated by the (unverified) Go code. The fix is to instead
+use a \cc{uint64} and check the bound in verified code. The RENAME bug was due
+to having an incomplete specification (and implementation) that did not capture
+that RENAME should only overwrite when the source and destination are
+compatible.
 
-As a sanity check on the transaction system, we fuzzed the interface presented
-to Dafny using a test harness capable of performing arbitrary reads, writes and
-commits while following the transaction system's preconditions. The test checks
-that the transaction system does not crash and returns the correct data on read.
-The fuzzing did generate complex inputs with multiple chained operations but did
-not find any bugs, but we note that our fuzzing is limited to
-single-threaded and crash-free behavior.
+\begin{figure}
+  \small
+  \begin{tabular}{@{}p{6cm}p{2.2cm}@{}}
+    \toprule
+    \textbf{Bug} & \textbf{Why?} \\
+    \midrule
+    XDR decoder for strings can allocate $2^{32}$ bytes & Unverified \\
+    File handle parser panics if wrong length & Unverified \\
+    WRITE panics if not enough input bytes & Unverified \\
+    Directory REMOVE panics in dynamic type cast & Unverified \\
+    Panic on unexpected enum value & Unverified \\
+    The names \cc{.} and \cc{..} are allowed & Not in RFC 1813 \\
+    RENAME can create circular directories & Not in RFC 1813 \\
+    CREATE/MKDIR allow empty name & Specification \\
+    Proof assumes caller provides bounded inode & Specification \\
+    RENAME allows overwrite where spec does not & Specification \\
+    \bottomrule
+  \end{tabular}
+  \caption{Bugs found by testing at the NFS protocol level.}
+  \label{fig:daisynfs-bugs}
+\end{figure}
+
+%As a sanity check on the transaction system, we fuzzed the interface presented
+%to Dafny using a test harness capable of performing arbitrary reads, writes and
+%commits while following the transaction system's preconditions. The test checks
+%that the transaction system does not crash and returns the correct data on read.
+%The fuzzing did generate complex inputs with multiple chained operations but did
+%not find any bugs, but we note that our fuzzing is limited to
+%single-threaded and crash-free behavior. \joe{I think we could cut this para now, or perhaps make it more focused by saying it's about testing the trusted boundary between Dafny and GoTxn. But I'm not quite sure it actually does test that?}
 
 \subsection{Incremental improvements}
 \label{sec:eval:incremental}
 
 \begin{figure}
-  \begin{center}
+\small
+\begin{center}
 \begin{tabular}{lrr}
   \toprule
   \textbf{Feature} & \textbf{Time} & \textbf{Lines} \\
