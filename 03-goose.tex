@@ -21,39 +21,7 @@ execution and wiping out all of the state except for the disk, which does not
 relate to the specifics of Go.
 
 \input{goose/01-goals.tex}
-
-\section{Related work}%
-\label{s:goose:rel-work}
-
-There are many approaches and systems people have used to verify
-implementations.
-
-We wanted control over the translation process to simplify the resulting
-model that we needed to write proofs for. Using an existing translator
-that essentially translates syntax would still leave the task of giving
-a semantics to the output code and proving the right specifications in
-Perennial to reason about various parts of the semantics.
-
-Most closely related work is Robbert Krebbers's thesis, on a semantics
-for C that includes both operational semantics and an ``axiomatic
-semantics'' which is a separation logic for interactive proofs (it also
-has an interpreter to test and debug, which produces all of the
-behaviors of a program).
-
-VST also models C for the purpose of interactive proofs. Its struct model is
-similar to the Goose struct model.
-
-Extraction in the other direction is sometimes used, particularly for ease of
-verification; see Verdi, FSCQ, Fiat, and \fstar (in particular KaRaMeL; Vale
-uses a deep embedding that is pretty printed instead). Rather than starting with
-efficient code (and requiring the developer to write it), it is possible to
-instead make the extraction process generate more efficient code (cite Clement's
-fiat-to-facade work).
-
-RustBelt models the core of Rust, but does not have automatic translation.
-
-HeapLang is designed as a modeling language for concurrent programs (without
-automatic translation), which is why it was a good starting point for GooseLang.
+\input{goose/02-related.tex}
 
 \section{High-level overview}
 
