@@ -506,7 +506,7 @@ consumed so far:
   \infer{
     \forall m_{0}, k, v.\,
     k \notin m_{0} \land m[k] = v \to \\\\
-    \hoare{P(m_0)}{body(k, v)}{P( insert(m_{0}, k, v) )}
+    \hoare{P(m_0)}{body \app k \app v)}{P( m_{0}\mapupd{k}{v} )}
 }
 {
   \hoare{\mapRep(\ell, m) \sep P(\emptyset)}%
@@ -520,10 +520,13 @@ express the invariant in slightly different ways --- for example, it is often
 useful to express the invariant in terms of both the map iterated over so far
 and the remaining subset of the map.
 
-Map iteration in Go happens in a non-deterministic order (in fact the runtime
-randomizes the iteration order to avoid accidentally relying on any particular
-behavior). Thus strictly speaking $\cc{MapIter}$ should shuffle the elements of
-the map before iterating over it, in order to model the non-determinism of the
+Map iteration in Go happens in a non-deterministic order\footnote{In fact the
+runtime randomizes the starting position of the iteration, to avoid callers
+accidentally relying on any particular behavior. See
+\href{https://github.com/golang/go/blob/c379c3d58d5482f4c8fe97466a99ce70e630ad44/src/runtime/map.go\#L844-L850}%
+{\cc{mapiterinit} from src/runtime/map.go}.}
+Thus strictly speaking $\cc{MapIter}$ should shuffle the elements of the map
+before iterating over it, in order to model the non-determinism of the
 implementation. We do not (currently) do this, simply because the shuffle would
 be hard to implement in GooseLang. However, the specification for map iteration
 does not expose an iteration order and would apply unchanged to this more
