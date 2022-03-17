@@ -1,7 +1,7 @@
-\section{Reasoning techniques in Perennial}
+\section{Specifying crash-safe libraries in Perennial}
 \label{sec:perennial:techniques}
 
-On top of the Perennial logic, we developed some techniques to organize proofs
+On top of the Perennial logic, we developed a specification pattern to organize proofs
 of libraries and compose them. Of particular interest is a pattern for
 \emph{logically-atomic crash specifications}, which capture that a set of
 methods in a library appear atomic with respect to both other threads and on
@@ -10,6 +10,8 @@ section walks through the specification and proof intuition for the circular
 buffer, a library used in GoTxn that has interesting crash safety and
 concurrency behavior. This library operates directly on top of the disk, so no
 background on GoTxn is needed to understand it.
+
+\subsection{The circular buffer library}
 
 The circular buffer (``circ'' for short) is essentially an on-disk queue of
 updates, which are pairs of an address and a disk block. It is used to implement
@@ -63,8 +65,13 @@ caller only reads from the circular buffer if the system crashes, at which point
 recovery restores the previous state. During normal operation the caller keeps a
 separate in-memory cache of the entries in the circular buffer.
 
-The specifications use the following separation logic resources issued by the
-circular buffer:
+\subsection{Circular buffer custom resources}
+
+Perennial, like Iris, has support for user-defined separation-logic resources.
+These are defined using lower-level mechanisms, but here we simply present the
+resources and the intuition for how they are used without going into details on
+how they are implemented. The circular buffer defines and issues the
+following custom separation-logic resources:
 
 \newidentmacro{length}
 \newcommand{\circstate}{\cc{circ_state}}
@@ -98,6 +105,8 @@ circular buffer:
   persistent; once \cc{start} reaches some value that is always a valid lower
   bound.
 \end{itemize}
+
+\subsection{Non-crash specifications for Append and TrimTill}
 
 Formally the way each operation is specified is using a style called
 HOCAP~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
@@ -178,6 +187,8 @@ Notice that neither of these specifications have a crash condition. The reason
 this is not required is because both methods already maintain an invariant in
 the \cc{is_circular} predicate, but formalizing this is a bit more
 complicated.
+
+\subsection{Crash and recovery reasoning}
 
 The strategy behind proving crash safety is to prove a theorem about running a
 whole system, restarting after every crash. For example, for DaisyNFS this
@@ -303,14 +314,16 @@ out these resources to the caller.
 
 The third component of the theorem is a $\cinvw$ (``crash invariant'').
 $\cinv{R}$ behaves very similarly to an invariant assertion $\knowInv{}{R}$, except
-that like a crash fancy update it can only be used after a crash. The main use
-of this crash invariant is to ``freeze'' the old state of the circular buffer to
-relate its custom resources before a crash to the state after a crash, via the
-$\cc{circ_exchanger}(\gamma, \gamma')$ predicate. The circular buffer has no
-interesting exchanging but this feature is important for reasoning about
-journaling.
+that like a crash fancy update it can only be used after a crash. This crash
+invariant ``freezes'' the old state of the circular buffer (notice that
+$\circstate(\gamma, \sigma)$ is now unchanging, since future operations will
+interact with the instance named $\gamma'$). In the process we also maintain
+some ghost state relating the old and new instances in the form of the
+$\cc{circ_exchanger}(\gamma, \gamma')$ predicate. The circular buffer in
+particular does not have an interesting exchanger predicate, but an interesting
+use shows up in the GoJournal proof.
 
-Each layer supplies a crash obligation alt theorem. All of the layers' crash
+In general, each layer supplies a crash obligation alt theorem. All of the layers' crash
 obligation alt theorems are called after running all the recovery code just
 before starting the system. Calling these view shifts allocates all the layers'
 invariants while simultaneously getting ``credit'' for this allocation in the
@@ -324,10 +337,59 @@ single-threaded.) Once the system starts running the invariant allows multiple
 threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
-\tej{things to figure out from the circular buffer/WAL proofs:}
-\begin{enumerate}
-  \item how does a lower bound on the write-ahead log sequence of disks before a
-crash get turned into knowledge after the crash in the Commit specification?
-\end{enumerate}
+The final aspect of our logically-atomic specification pattern is the role of
+the exchanger. The purpose of this predicate is to give the caller a way to, on
+crash, relate resources issued by the library before a crash to those after a
+crash. In the circular buffer, the $\startIs(\cc{start})$ and
+$\diskendIs(\cc{end})$ resources are thrown away on crash and re-created during
+recovery; there are only two of them, so it easy enough to reconstruct them
+globally. In contrast, some resources are used locally by a thread and we would
+like a way to retain ownership across a crash, into that thread's crash
+condition. This is exactly what happens with GoJournal's lifting-based
+specification, explained in greater detail in \autoref{s:design}. Exchanging
+gives threads a way to ``trade'' ownership prior to a crash, associated with the
+old $\gamma$ instance, for ownership after a crash, associated with $\gamma'$;
+this ownership can also be exclusive, because the process destroys the old
+ownership and thus can only be performed once.
+
+To make this a bit more concrete, let us look at a part of the GoJournal lifting
+specification. GoJournal issues three related resources: the two more important
+ones are $a \mapsto_{d} o$ and $a \mapsto_{op} o$. Both represent exclusive
+access to address $a$. $a \mapsto_{d} o$ is a durable statement about the
+logical disk, while $a \mapsto_{op}$ gives the value at address $a$ from the
+perspective of an in-progress operation $op$. The lifting-based specification
+gets its name from a logical ``lift'' operation that trades $a \mapsto_{d} o$
+for $a \mapsto_{op} o \sep a \mapsto_{d/2} o$; this gives the third type of
+GoJournal resource, $a \mapsto_{d/2} o$ \tej{$d/2$ this is terrible notation,
+want to convey ``disk without ownership''}, which is almost identical to
+$a \mapsto_{d} o$ except that it cannot be used to lift again.. We can give
+Commit a (highly-simplified) specification like the following:
+
+\begin{align*}
+  \hoareCV{a \mapsto_{d/2} o \sep a \mapsto_{op} o'} %
+  {\mathit{op}.\cc{Commit}()}%
+  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} \mathrm{~then~} a \mapsto_{d} o' \mathrm{~else~} a \mapsto_{d} o}%
+  {a \mapsto_{d} o \lor a \mapsto_{d} o'}
+\end{align*}
+
+This specification is simplified to only give the case of committing an
+operation that modifies a single address, when in reality its main purpose is to
+operate on multiple addresses; this is enough to understand the proof
+issues involved. If the system doesn't crash, it is relatively straightforward
+to reverse the lifting process and restore full ownership of the disk values.
+$a \mapsto_{d} o'$ reflects that the commit actually succeeded in changing the
+disk value, while $a \mapsto_{d} o$ results from aborting and throwing away
+buffered writes in $op$.
+
+On crash it is more difficult to show $a \mapsto_{d} o \lor a \mapsto_{d} o'$.
+The challenge is how to propagate whether or not the writes were made durable
+from the lower-level abstractions up to this proof; indeed the durability of
+this high-level operation depends on whether or not the lowest level of the
+system, the circular buffer, successfully wrote a single header block! \tej{need
+to understand this a little bit more}
+% look at \cc{exchange_mapsto_commit} for the interesting case (ephemeral values
+% that might now be durable) and \cc{exchange_durable_mapsto} for the
+% straightforward case (durable values that are now proven to still be durable,
+% exchanger shows old lower bounds are still valid)
 
 \resume
