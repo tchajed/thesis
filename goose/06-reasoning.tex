@@ -485,10 +485,22 @@ for k, v := range m {
 The model for this entire construct is given by $\cc{MapIter}(m, body)$, where
 $m$ is a reference to the map and $body$ is an expression for the body of the
 loop. Goose translates generic loop bodies, so the Go code does not literally
-need to consist of a call to a separate function. Iteration gets a
-\emph{higher-order} specification that assumes a specification for the body,
-showing it preserves a loop invariant $P$ over the part of the map consumed so
-far:
+need to consist of a call to a separate function. The possibility of
+\emph{iterator invalidation} adds one subtlety to Go's map iteration --- it
+would be incorrect for the body of the loop to modify the map (it might be sound
+to write to the map without modifying the domain, but we do not attempt to model
+this). The model of maps puts the entire contents of a map in one heap location,
+so naively we would not enforce this property. The solution is to mark the map's
+reference as being read for the entire duration of iteration, using the
+$\goosekw{StartRead}$ and $\goosekw{FinishRead}$ GooseLang primitives at the
+beginning and end of $\cc{MapIter}$. If the map value in the heap is
+$\goosekw{Reading} \app n \app v$, these operations increment and decrement
+(respectively) the reader count $n$, so that any writes within the body have
+undefined behavior.
+
+Iteration gets a \emph{higher-order} specification that assumes a specification
+for the body, showing it preserves a loop invariant $P$ over the part of the map
+consumed so far:
 
 \[
   \infer{
