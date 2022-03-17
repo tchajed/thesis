@@ -239,7 +239,9 @@ Something to emphasize above: all of the struct code is generic for
 struct type $t$, which in the code is concretely the ``schema''
 described above, a list of fields and types (the code calls this a
 ``descriptor'' and uses $d$ as the metavariable, to avoid confusion
-with a generic type $t$).
+with a generic type $t$). \tej{using $t$ for struct types rather than
+  descriptors $d$ is very confusing, maybe we should actually use $d$ or $s$ for
+struct descriptors}
 
 \subsection{Slices}
 
@@ -322,6 +324,8 @@ separation logic specifications.
 \newcommand{\sliceRep}{\mathtt{sliceRep}}
 \newcommand{\sliceCap}{\mathtt{sliceCap}}
 
+\newcommand{\lappend}{\mdoubleplus}
+
 The GooseLang model of slices is based on two abstract predicates:
 $\sliceRep(s, l)$ and $\sliceCap(s)$. To model the slice values
 themselves we use $s : Slice$ where $Slice$ is a Gallina record; a
@@ -357,7 +361,7 @@ read and write to a slice.
 \[
 \hoareV{\sliceRep(s, l) * \sliceCap(s)}%
 {\mathtt{append(s, x)}}%
-{\Ret{s'} \sliceRep(s', l ++ [x]) * \sliceCap(s')}
+{\Ret{s'} \sliceRep(s', l \lappend [x]) * \sliceCap(s')}
 \]
 
 \newidentmacro{sliceFull}
@@ -366,7 +370,7 @@ This specification is fairly simple. In fact, we often use a shorthand
 $\sliceFull(s, l) = \sliceRep(s, l) * \sliceCap(s)$ when the proof will
 always retain ownership of slice capacity, in which case the spec looks
 even simpler. However, the proof is non-trivial, since in one case it
-moves ownership from $\sliceCap(s)$ to $\sliceRep(s', l ++ [x])$
+moves ownership from $\sliceCap(s)$ to $\sliceRep(s', l \lappend [x])$
 (where $ptr(s') = ptr(s)$), while in the other it constructs a
 completely new allocation for $s'$.
 
@@ -388,6 +392,9 @@ $\sliceRep(\sliceDrop(s, i), drop(l, i))$. These are incomparable and
 unexpressed in the code: the decision is based on whether we intend to
 append to the subslice but stop using the old slice, or whether we want
 to continue using the remainder of \cc{s}.
+
+\tej{why not just use \cc{s[:i]} for $\sliceTake(s, i)$ and $l[:i]$ for
+$take(l, i)$? overloading will make everything much easier to read}
 
 Concretely, GooseLang verifies the following entailment for reasoning
 about subslicing in terms of the slice model:
