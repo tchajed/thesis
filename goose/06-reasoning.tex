@@ -17,13 +17,27 @@ instructions), we side step the issue and make any races undefined,
 which works for our intended use cases since we always synchronize
 concurrent access with locks.
 
-To disallow concurrent reads and writes we first need to detect them.
-The GooseLang semantics does this by augmenting the heap with extra
-information giving the number of current readers. Rather than making
-reads a single atomic step, we split them into two primitives. The first
-increments the number of readers and the second decrements the count and
-returns the current value. The semantics of a write are only defined if
-there are no readers and undefined otherwise.
+To disallow concurrent reads and writes we first detect them. The key is to make
+$x \gets v$, the primitive store operation, \emph{non-atomic} by splitting it
+into two operations. The GooseLang semantics tracks the behavior of these
+operations by augmenting the heap with extra information; each address in the
+semantics has a $\textdom{NonAtom}$ which can be
+$\goosekw{Reading} \app n \app v$ if there are $n$ readers and the value is $v$,
+or $\goosekw{Writing} \app v$ if a thread is currently writing. We actually only
+use non-atomic stores for normal pointers, but we have support for non-atomic
+reads as well for iterating over maps.
+
+Ordinarily values in the heap are of the form $\goosekw{Reading} \app 0 \app v$,
+to indicate no readers or writers. Writes are split into
+$\goosekw{PrepareWrite}(\ell)$, which sets the value of $\ell$ to
+$\goosekw{Writing} \app v_{0}$, and $\goosekw{FinishStore}(\ell, v)$ which sets
+it to $\goosekw{Reading} \app 0 \app v$. A concurrent write will be undefined
+since $\goosekw{PrepareWrite}(\ell)$ requires no concurrent writers, and
+similarly for a concurrent read which is undefined if the address is being
+written. Non-atomic reads are similar with $\goosekw{StartRead}$ and
+$\goosekw{FinishRead}$; these increment and decrement the number of readers,
+respectively, so that multiple readers can run concurrently but any concurrent
+writer has undefined behavior.
 
 Next, we need reasoning principles to abstract away this complexity from
 program verification. Separation logic turns out to provide the right
