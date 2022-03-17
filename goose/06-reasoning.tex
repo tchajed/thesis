@@ -519,3 +519,13 @@ On top of this generic specification we prove some alternate specifications that
 express the invariant in slightly different ways --- for example, it is often
 useful to express the invariant in terms of both the map iterated over so far
 and the remaining subset of the map.
+
+Map iteration in Go happens in a non-deterministic order (in fact the runtime
+randomizes the iteration order to avoid accidentally relying on any particular
+behavior). Thus strictly speaking $\cc{MapIter}$ should shuffle the elements of
+the map before iterating over it, in order to model the non-determinism of the
+implementation. We do not (currently) do this, simply because the shuffle would
+be hard to implement in GooseLang. However, the specification for map iteration
+does not expose an iteration order and would apply unchanged to this more
+precise model. All proofs go through this specification, so our proofs should
+remain unchanged if $\cc{MapIter}$ started modeling non-determinitic ordering.
