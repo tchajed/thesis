@@ -1,4 +1,5 @@
-\section{GooseLang syntax and semantics}
+\section{GooseLang syntax and semantics}%
+\label{sec:goose:semantics}
 
 \newcommand{\goosekw}[1]{\mathsf{\textcolor{blue}{#1}}}
 % spacing for application
@@ -15,7 +16,34 @@
 
 \newcommand{\recfx}{\goosekw{rec} \, f(x) = e}
 
+\newcommand{\reduces}{\rightsquigarrow}
+\newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
+
+GooseLang is an effectful, untyped lambda calculus, with mutable references and
+concurrency. Defining the language involves defining a \emph{syntax} in the form
+of expressions, and a \emph{semantics} for how those expressions execute in the
+form of a transition system. The transitions also require some state, for
+example to track the value stored at each allocated pointer. This language has
+low-level primitives for modeling an imperative program, with nothing terribly
+Go-specific; we will give a high-level overview in this section and details in
+\autoref{sec:goose:reasoning}.
+
+The basic unit of the language is the expression $e$, which supports recursive
+functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. Then, we give
+these expressions a semantics in terms of the reduction relation
+$(\sigma, e) \reduces (\sigma', e')$ which says that $e$ reduces to (or executes
+to) $e'$ in the state $\sigma$, and the resulting state is $\sigma'$. This
+reduction relation is eventually lifted to not just a single expression but a
+whole \emph{threadpool}, a collection of concurrently-executing expressions. You
+can think of each expression as representing the computation of a single thread,
+and each reduction step as being running the thread for one transition. The
+granularity of these transitions corresponds to what is considered atomic
+between threads. For a reader unfamiliar with operational semantics for the
+lambda calculus, X is a good reference \tej{figure out what to recommend for
+  lambda calculus}.
+
 \begin{figure}[h!]
+  \textbf{Syntax}
   \begin{mathpar}
   \begin{array}{llcl}
     &x,f &\in &\textdom{Var} \\
@@ -51,12 +79,28 @@
     &&\ALT & \external \\
   \end{array}
   \end{mathpar}
+
+  \textbf{Derived forms}
+  \begin{mathpar}
+  \begin{array}{rcl}
+    \goosekw{\lambda} x.\, e &:= & \goosekw{rec} \: \_(x) = e \\
+    \goosekw{let} \: x = e_1 \app \goosekw{in} \app e_2 %
+                             &:= &%
+                                   (\goosekw{\lambda} x.\, e_2) \app e_1 \\
+    e_1; e_2 &:= &%
+                   \goosekw{let} \: \_ = e_1 \app \goosekw{in} \app e_2 \\
+    % \goosekw{do}\,\goosekw{while} \app e &:= &%
+    %                         (\goosekw{rec} \: loop(\_) = \gooseif{e \app ()}{loop
+    %                         \app ()}{()}) \app () \\
+  \end{array}
+  \end{mathpar}
   \caption{GooseLang syntax}
   \label{goose:syntax}
 \end{figure}
 
-\newcommand{\reduces}{\rightsquigarrow}
-\newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
+Before going into the semantics for these expressions, we can build intuition by
+looking at some very simple Go programs and their translations into GooseLang.
+\tej{explain language and translation with good examples}
 
 \begin{figure}[hp]
   \textbf{Pure reduction}%
