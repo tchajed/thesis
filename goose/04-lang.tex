@@ -1,7 +1,8 @@
 \section{GooseLang syntax and semantics}%
 \label{sec:goose:semantics}
 
-\newcommand{\goosekw}[1]{\mathsf{\textcolor{blue}{#1}}}
+\newcommand{\goosedef}[1]{\mathsf{#1}}
+\newcommand{\goosekw}[1]{\goosedef{\textcolor{blue}{#1}}}
 % spacing for application
 \newcommand{\app}{\:}
 % any pure binary op
@@ -15,9 +16,13 @@
   \goosekw{then} \app #2 \app \goosekw{else} \app #3}
 
 \newcommand{\recfx}{\goosekw{rec} \, f(x) = e}
+\newcommand{\gooselambda}[1]{\goosekw{\lambda}#1.\,}
 
 \newcommand{\reduces}{\rightsquigarrow}
 \newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
+
+\newcommand{\seq}{;\,}
+\newcommand{\defeq}{\triangleq}
 
 GooseLang is an effectful, untyped lambda calculus, with mutable references and
 concurrency. Defining the language involves defining a \emph{syntax} in the form
@@ -42,7 +47,7 @@ between threads. For a reader unfamiliar with operational semantics for the
 lambda calculus, X is a good reference \tej{figure out what to recommend for
   lambda calculus}.
 
-\begin{figure}[h!]
+\begin{figure}[ht!]
   \textbf{Syntax}
   \begin{mathpar}
   \begin{array}{llcl}
@@ -80,16 +85,22 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
   \end{array}
   \end{mathpar}
 
-  \textbf{Derived forms}
+  \textbf{Derived forms and notation}
   \begin{mathpar}
   \begin{array}{rcl}
-    \goosekw{\lambda} x.\, e &:= & \goosekw{rec} \: \_(x) = e \\
+    \gooselambda{x} e &\defeq & \goosekw{rec} \: \_(x) = e \\
+    \gooselambda{x, y} e &\defeq & \gooselambda{x} \gooselambda{y} e \\
     \goosekw{let} \: x = e_1 \app \goosekw{in} \app e_2 %
-                             &:= &%
+                             &\defeq &%
                                    (\goosekw{\lambda} x.\, e_2) \app e_1 \\
-    e_1; e_2 &:= &%
+    e_1\seq e_2 &\defeq &%
                    \goosekw{let} \: \_ = e_1 \app \goosekw{in} \app e_2 \\
-    % \goosekw{do}\,\goosekw{while} \app e &:= &%
+    \goosekw{ref} \app e &\defeq &\goosekw{AllocN}(1, e) \\
+    !x &\defeq & \goosekw{Load}(x) \\
+    \goosedef{Store} &\defeq & \gooselambda{x, e} \goosekw{PrepareWrite}(x);
+                               \goosekw{FinishStore}(x, e) \\
+    x \gets e &\defeq & \goosedef{Store} \app x \app e \\
+    % \goosekw{do}\,\goosekw{while} \app e &\defeq &%
     %                         (\goosekw{rec} \: loop(\_) = \gooseif{e \app ()}{loop
     %                         \app ()}{()}) \app () \\
   \end{array}
@@ -100,7 +111,104 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
 
 Before going into the semantics for these expressions, we can build intuition by
 looking at some very simple Go programs and their translations into GooseLang.
-\tej{explain language and translation with good examples}
+First, we can write some \emph{pure} functions that don't use pointers:
+
+\begin{minipage}{0.4\textwidth}
+\begin{minted}{go}
+func Midpoint(x uint64,
+              y uint64) uint64 {
+  return (x + y) / 2
+}
+
+func Max(x uint32,
+         y uint32) uint32 {
+  if x > y { return x }
+  return y
+}
+\end{minted}
+\end{minipage}%
+%
+\begin{minipage}{0.5\textwidth}
+\begin{align*}
+  &\goosedef{Midpoint} \defeq \gooselambda{x, y} (x + y) /2 \\
+  \\
+  &\goosedef{Max} \defeq \gooselambda{x, y} \\
+  &\quad \gooseif{x > y}{x}{y} \\
+\end{align*}
+\end{minipage}
+
+\begin{minipage}{0.4\textwidth}
+\begin{minted}{go}
+func Arith(a uint64,
+           b uint64) uint64 {
+  sum := a + b
+  if sum == 7 { return a }
+  mid := Midpoint(a, b)
+  return mid
+}
+\end{minted}
+\end{minipage}%
+%
+\begin{minipage}{0.5\textwidth}
+\begin{align*}
+  &\goosedef{Arith} \defeq \gooselambda{a, b} \\
+  &\quad\goosekw{let} \app sum = a + b \app\goosekw{in}\app \\
+  &\quad\goosekw{if} \app sum = 7 \app\goosekw{then}\app a \app\goosekw{else} \\
+  &\quad\quad \goosekw{let} \app mid = \goosedef{Midpoint}\app a \app b \app\goosekw{in}\\
+  &\quad\quad mid \\
+\end{align*}
+\end{minipage}
+
+Notice that the translation maps each Go function to a GooseLang definition. For
+readability the GooseLang definitions are written mathematically, but what the
+Goose tool actually emits is a Coq file where each definition is a Gallina term
+of type \cc{expr} (the type of GooseLang expressions). This is what allows
+definitions to refer to each other, such as how $\goosedef{Arith}$ calls the
+previously defined $\goosedef{Midpoint}$.
+
+The next interesting feature of GooseLang is support for pointers. In this
+aspect the language is a bit unusual; we get to the reasons why in
+\autoref{sec:goose:pointers}. For now, it is sufficient to think of $x \gets e$
+as the usual pointer store operation, and $!x$ as the usual load. Here are a couple
+examples to illustrate:
+
+\begin{minipage}{0.4\textwidth}
+\begin{minted}{go}
+func Swap(x *uint64, y *uint64) {
+  tmp := *x
+  *x = *y
+  *y = tmp
+}
+
+func NewPtr() *uint64 {
+  return new(uint64)
+}
+\end{minted}
+\end{minipage}%
+%
+\begin{minipage}{0.5\textwidth}
+\begin{align*}
+  &\goosedef{Swap} \defeq \gooselambda{x, y} \\
+  % these {} are needed so LaTeX spaces the ! correctly, rather than putting it
+  % next to the = or \gets
+  &\quad\goosekw{let} \app tmp = {} !x \app\goosekw{in}\app \\
+  &\quad x \gets {} !y \\
+  &\quad y \gets tmp\\
+  \\
+  &\goosedef{NewPtr} \defeq \gooselambda{\_} \\
+  &\quad \goosekw{ref} \app 0
+\end{align*}
+\end{minipage}
+
+The $\goosedef{NewPtr}$ definition might need some explanation. First, even
+though the Go code takes no arguments, the GooseLang expression takes an unused
+argument; this is so that $\goosedef{NewPtr}$ is syntactically a function, a
+requirement of the way GooseLang is encoded in Coq.\footnote{For expert readers,
+GooseLang functions are actually \emph{values} and not expressions.} Second,
+this definition allocates a pointer with $\goosekw{ref}$, using
+$\goosekw{AllocN}$ which more generally allocates $n$ contiguous pointers. The
+initial value of 0 is the ``zero value'' of the \cc{uint64} type, a promise made
+by Go.
 
 \begin{figure}[hp]
   \textbf{Pure reduction}%
@@ -249,3 +357,5 @@ looking at some very simple Go programs and their translations into GooseLang.
 that here since it's part of the foundations of reasoning about GooseLang}
 
 \resume
+
+\clearpage
