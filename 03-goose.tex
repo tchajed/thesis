@@ -201,20 +201,23 @@ is already given as a Gallina function.
 
 The challenge in the interpreter comes from \emph{context} reductions,
 which specify how to find a sub-expression within \cc{e} to reduce
-if the head is not immediately a value. The code follows a standard
+if the head is not immediately a value. The semantics follows a standard
 presentation of context reduction using \emph{evaluation contexts}. The
-idea is to define a type of evaluation contexts \cc{E} that
+idea is to define a type of evaluation contexts $E \in \mathcal{E}$ that
 represent an expression with a hole; $E[e]$ represents filling that hole with
 the expression $e$. The possible evaluation
-contexts give all the context reductions in one compact rule: if $e$
-can step to $e'$, then $E[e]$ can step to $E[e']$. Thus the
-semantics has a rule \ruleref{context-reduce} that works when any such $E$ exists, while the
+contexts give all the context reductions in one compact rule, \ruleref{context-reduce}: if $e$
+can step to $e'$, then $E[e]$ can step to $E[e']$. This rule applies whenever
+such an $E$ exists, while the
 interpreter recurses through an expression (in the right order) and
 evaluates a sub-expression, then fills it into the context. We prove
 this correct, showing that the interpreter and semantics agree on an
-evaluation order. (Specifically, the proof shows that the interpreter
-produces one of the valid evaluation orders; the semantics is intended
-to have a deterministic order, but this is not proven.)
+evaluation order. Specifically, the interpreter proof shows the interpreter
+produces a valid evaluation order, and a separate proof shows that evaluation
+contexts are unique.\footnote{See the lemma
+\href{https://github.com/mit-pdos/perennial/blob/6f5ed5e7c2d3e8d657a0022c51e1d1e32a81e671/src/goose_lang/lang.v\#L1443-L1447}%
+{\cc{head_redex_unique} in src/goose\_lang/lang.v}.} There is other non-determinism in the semantics that the
+interpreter does not fully explore, though.
 
 The test suite is structured as a number of test functions, each producing a
 boolean that should be true. To check that the test itself is written correctly,
