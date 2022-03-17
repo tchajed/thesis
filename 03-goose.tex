@@ -236,6 +236,18 @@ bugs that are now part of our regression tests.
 
 \section{Conclusion}
 
-\tej{need a conclusion for Goose chapter}
+Goose is an approach for verifying Go code. We define GooseLang as a model of Go
+and automatically translate a subset of Go to this language. GooseLang comes
+with a number of reasoning principles for handling features of Go. The benefit
+of this approach is the flexbility to write high-performance code in a
+productive language, while also getting convenient reasoning while verifying
+that code. Several aspects of the design contribute to making the approach
+sound, ranging from the subset of Go supported, to the design of GooseLang, and
+the use of standard Go tools for analyzing the source code.
 
-\resume
+Our main use case for Goose for this thesis was to verify GoTxn, but we believe
+the tool and approach are more generally applicable, even without concurrency or
+crash-safety reasoning. These ideas could also be productively applied to
+languages other than Go --- I am personally excited about the prospect of having
+a version for Rust.\footnote{I think the translator for Rust to Coq should be
+called Roost.}
