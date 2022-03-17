@@ -265,11 +265,15 @@ by Go.
   \begin{array}{rcll}
     ((h, w), e) &\reduces & ((h, w), e') &\mathrm{if} \: e \purereduction e' \\
     ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
-                          &((h\mapupd{\ell}{v}, w), \goosekw{true})%
-                                         &\mathrm{if} \: h(\ell) = v_1 \\
+                          &((h\mapupd{\ell}{v_2}, w), (v, \goosekw{true}))%
+                                         &\mathrm{if} \: h(\ell) =
+                                           \goosekw{Reading} \app 0 \app v \land
+    v = v_1 \\
     ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
-                          &((h, w), \goosekw{false})%
-                                         &\mathrm{if} \: h(\ell) = v_2 \\
+                          &((h, w), (v, \goosekw{false}))%
+                                         &\mathrm{if} \: h(\ell) =
+                                           \goosekw{Reading} \app 0 \app v \land
+                                           v \neq v_1 \\
     ((h, w), \goosekw{AllocN}(n, v)) &\reduces %
                           &((h[\ell + i \mapsto v \mid 0 \leq i < n], w), \ell) %
                                          &\mathrm{if} \: \forall 0 \leq i < n,

@@ -54,8 +54,8 @@ steps.
 
 \subsection{Locks}
 
-\newidentmacro{Acquire}
-\newidentmacro{CAS}
+\newcommand{\Acquire}{\goosedef{Acquire}}
+\newcommand{\CAS}{\goosedef{CAS}}
 
 As is typical in Goose, locks are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
@@ -68,28 +68,40 @@ use the same operation to model Go's low-level atomic operations, like
 have not implemented this yet since we don't have code that uses these
 low-level synchronization primitives.
 
-The GooseLang lock model is a simple spin lock, represented as a boolean
-that is true if the lock is held. The acquire operation $\Acquire(l)$
-repeatedly executes $\CAS(l, false, true)$ to atomically test that the
-lock is false and set it to true if so, while release stores false to
-the lock. The implementation as a spin lock is merely an operational
-model that captures what the lock does: acquire blocks until the lock is
-free and sets it to locked, while release frees the lock. The real locks
-we use, Go's builtin \cc{*sync.Mutex}, are more efficient than spin
-locks, because the runtime understands how to schedule threads that are
-waiting on locks. This scheduling and performance difference is not
-visible from the model, which allows any thread to be scheduled after
-any atomic operation.
+The model of locks is simple enough to give the code in its entirety. The lock
+is represented as a pointer to a boolean that is true if the lock is held. As a
+helper we define $\CAS$ (compare-and-swap), a variant of compare-and-exchange
+that only returns a boolean on success and not also the previous value.
 
-The reasoning principles for locks are more sophisticated than the spin
-lock implementation. As is typical in concurrent separation logic, we
-associate a \emph{lock invariant} to the lock, which is a predicate that
-holds when the lock is free. Because this is a separation logic, we can
-also interpret the lock invariant as ownership over some data (for
-example, some region of memory); the lock mediates access to this
-ownership, handing it out when the lock is acquired and requiring it
-back when the lock is released. We prove this specification sound
-against the GooseLang spin-lock implementation.
+\begin{align*}
+  \CAS &\defeq \gooselambda{x, v1, v2} \pi_{2}\app \goosekw{CmpXchg}(x, v1, v2) \\
+  \goosedef{NewLock} & \defeq \gooselambda{\_} \goosekw{ref} \app \goosekw{false} \\
+  \Acquire &\defeq \gooselambda{l} \\
+       &\goosekw{let}\app f = (\goosekw{rec}\: tryAcquire(\_) = \\
+       &\qquad \gooseif{\CAS \app l \app \goosekw{true} \app \goosekw{false}}%
+         {()}{tryAcquire \app ()}) \app\goosekw{in} \\
+       &f \app () \\
+  \goosedef{Release} &\defeq \gooselambda{l} l \gets \goosekw{false} \\
+\end{align*}
+
+Acquiring a lock is modeled as repeatedly using
+$\CAS \app l \app \goosekw{false} \app \goosekw{true}$ to
+atomically test that the lock is false and set it to true if so, while release
+stores false to the lock. This implementation as a spin lock is merely an
+operational model that captures what the lock does: acquire blocks until the
+lock is free and sets it to locked, while release frees the lock. This code is
+used to model Go's builtin \cc{*sync.Mutex}, which is implemented more
+efficiently than spin locks with cooperation from the runtime and operating
+system.
+
+The reasoning principles for locks are more sophisticated than the spin-lock
+implementation. As is typical in concurrent separation logic, we associate a
+\emph{lock invariant} to the lock, which is a predicate that holds when the lock
+is free. Because this is a separation logic, we can also interpret the lock
+invariant as ownership over some data (for example, some region of memory); the
+lock mediates access to this ownership, handing it out when the lock is acquired
+and requiring it back when the lock is released. We prove this specification
+sound against the GooseLang spin-lock implementation.
 
 \subsection{Structs}
 
