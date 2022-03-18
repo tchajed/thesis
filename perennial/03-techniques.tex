@@ -387,13 +387,34 @@ from the lower-level abstractions up to this proof; indeed the durability of
 this high-level operation depends on whether or not the lowest level of the
 system, the circular buffer, successfully wrote a single header block!
 
-The write-ahead logging layer conveys durability by issuing a resource that
-gives the history of multiwrites, then providing the caller an exchange lemma
-that uses the WAL exchanger predicate to trade this assertion before a crash for
-a similar assertion after a crash, albeit with some recent writes lost.
-Crucially the effect of a crash is constrained by a durable lower bound in the
-WAL's state. Because this is a lower bound even across a crash, the caller can
-exchange persistent knowledge of the lower bound across a crash.
+The write-ahead logging layer conveys durability by issuing two resources: one
+gives the history of multiwrites, and another gives a lower bound on how many
+multiwrites are durable. Its exchanging resource allows the caller to trade an
+assertion about the history before a crash for a similar assertion after a
+crash, albeit with some recent writes lost. Crucially the effect of a crash is
+constrained by the durable lower bound, which can also be exchanged across a
+crash. On top of this exchanging, the journaling proof implements a fine-grained
+exchange of ownership over individual addresses.
+
+The actual implementation of exchanging uses a neat separation logic trick. To
+distinguish between $a \mapsto_{d} o$ in two different generations, we'll
+annotate the resource with a $\gamma$. The exchanger for the journaling proof is
+defined in terms of facts like:
+\[
+  \cc{exchange_addr}(a) \defeq (a \mapsto^{\gamma}_{d} o) \lor (a \mapsto^{\gamma'}_{d} o)
+\]
+When proving the crash obligation alt theorem, we initially prove
+$\cc{exchange_addr}(a)$ using the right-hand side; this is easy since $\gamma'$
+is fresh, so we've just allocated all of its associated ghost state and it
+hasn't been used by any threads so far. We can then prove exchange lemmas like
+$a \mapsto^{\gamma}_{d} o \sep \cc{exchange_addr}(a) \proves a \mapsto^{\gamma'}_{d} o \sep \cc{exchange_addr}(a)$.
+The reason this proof works is that $a \mapsto_{d} o$ is \emph{exclusive}, thus
+from the premise we can rule out that $\cc{exchange_addr}(a)$ is proven with the
+left disjunct and learn that the right-hand side holds. We take out this
+right disjunct ($a \mapsto^{\gamma'}_{d} o$) and give up
+$a \mapsto^{\gamma'}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
+the left disjunct. This all ensures that exchanging is only performed once,
+which is necessary since all the resources involved are exclusive.
 
 % look at \cc{exchange_mapsto_commit} for the interesting case (ephemeral values
 % that might now be durable) and \cc{exchange_durable_mapsto} for the
