@@ -359,10 +359,10 @@ access to address $a$. $a \mapsto_{d} o$ is a durable statement about the
 logical disk, while $a \mapsto_{op}$ gives the value at address $a$ from the
 perspective of an in-progress operation $op$. The lifting-based specification
 gets its name from a logical ``lift'' operation that trades $a \mapsto_{d} o$
-for $a \mapsto_{op} o \sep a \mapsto_{d/2} o$; this gives the third type of
+for $a \mapsto_{op} o \sep a \mapsto_{d/2} o$. This brings us to the third type of
 GoJournal resource, $a \mapsto_{d/2} o$ \tej{$d/2$ this is terrible notation,
 want to convey ``disk without ownership''}, which is almost identical to
-$a \mapsto_{d} o$ except that it cannot be used to lift again.. We can give
+$a \mapsto_{d} o$ except that it cannot be used to lift again. We can give
 Commit a (highly-simplified) specification like the following:
 
 \begin{align*}
@@ -373,20 +373,28 @@ Commit a (highly-simplified) specification like the following:
 \end{align*}
 
 This specification is simplified to only give the case of committing an
-operation that modifies a single address, when in reality its main purpose is to
-operate on multiple addresses; this is enough to understand the proof
-issues involved. If the system doesn't crash, it is relatively straightforward
-to reverse the lifting process and restore full ownership of the disk values.
-$a \mapsto_{d} o'$ reflects that the commit actually succeeded in changing the
-disk value, while $a \mapsto_{d} o$ results from aborting and throwing away
-buffered writes in $op$.
+operation that modifies a single address, when in reality Commit's main purpose
+is to atomically commit multiple addresses; a single address is enough to
+understand the proof issues involved. If the system doesn't crash, it is
+relatively straightforward to reverse the lifting process and restore full
+ownership of the disk values. $a \mapsto_{d} o'$ reflects that the commit
+actually succeeded in changing the disk value, while $a \mapsto_{d} o$ results
+from aborting and throwing away buffered writes in $op$.
 
 On crash it is more difficult to show $a \mapsto_{d} o \lor a \mapsto_{d} o'$.
 The challenge is how to propagate whether or not the writes were made durable
 from the lower-level abstractions up to this proof; indeed the durability of
 this high-level operation depends on whether or not the lowest level of the
-system, the circular buffer, successfully wrote a single header block! \tej{need
-to understand this a little bit more}
+system, the circular buffer, successfully wrote a single header block!
+
+The write-ahead logging layer conveys durability by issuing a resource that
+gives the history of multiwrites, then providing the caller an exchange lemma
+that uses the WAL exchanger predicate to trade this assertion before a crash for
+a similar assertion after a crash, albeit with some recent writes lost.
+Crucially the effect of a crash is constrained by a durable lower bound in the
+WAL's state. Because this is a lower bound even across a crash, the caller can
+exchange persistent knowledge of the lower bound across a crash.
+
 % look at \cc{exchange_mapsto_commit} for the interesting case (ephemeral values
 % that might now be durable) and \cc{exchange_durable_mapsto} for the
 % straightforward case (durable values that are now proven to still be durable,
