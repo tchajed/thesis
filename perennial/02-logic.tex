@@ -343,5 +343,20 @@ defines the weakest precondition $\wpre{e}{Q}$ as an assertion in the base logic
 about the execution of $e$. All of the proof rules in the program logic are
 defined as theorems in the base logic, using the definition of $\wpw$.
 
-\tej{mention that real implementation has more complexity around laters,
-namespaces, masks in order to be sound}
+Perennial re-uses the Iris base logic with no changes, and builds a custom
+program logic on top with $\wpc{e}{Q}{Q_{c}}$ and $\wpre{e}{Q}$. The non-crash
+part of these definitions are similar to Iris, but the crash aspects required
+significant implementation work. This thesis aims only to explain how the logic
+is used, at a high level of abstraction; the code is currently the only
+source of truth for how the logic is actually implemented in the base logic (the
+\emph{model} of Perennial's \wpcw).
+
+One aspect of the implementation that should be noted is that the rules as
+presented in this thesis have been simplified for exposition and are not sound
+as written. The real theorem statements require Iris features like laters,
+namespaces, and masks to be sound. Laters address issues with circularity that
+arises from Iris's flexible ghost state. Namespaces and masks are used to
+prevent re-entrancy where an invariant is opened twice by the same thread. The
+on-paper presentation still aims to capture the essence, but the code is again
+the source of truth for the Perennial logic (which has an associated soundness
+proof in Coq, so it is more trustworthy than a paper presentation anyway).
