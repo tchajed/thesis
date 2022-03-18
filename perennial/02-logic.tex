@@ -360,3 +360,66 @@ prevent re-entrancy where an invariant is opened twice by the same thread. The
 on-paper presentation still aims to capture the essence, but the code is again
 the source of truth for the Perennial logic (which has an associated soundness
 proof in Coq, so it is more trustworthy than a paper presentation anyway).
+
+Iris comes with a proof mode called MoSeL~\cite{krebbers:ipm,krebbers:mosel} for
+interactive proofs. The proof mode supports proving separation logic theorems
+and proving programs correct interactively. The style of proof highly resembles
+the Coq proof mode, but extended for reasoning in separation logic. The proof
+mode is highly extensible, and we used these features to integrate support for
+MoSeL with Perennial.
+
+There are two interesting aspects in the Perennial MoSeL support we developed
+while using it. The first is \emph{named predicates}, a general feature for
+interactive separation logic proofs that arose out of our experience writing and
+changing large invariants. The second is tactics specific to the crash reasoning
+in Perennial: \emph{proof caching} reduces the burden of crash-safety reasoning
+where the crash condition must often be re-proven at intermediate steps of the
+proof, and \emph{crash framing} simplifies the mechanics of framing away
+resources that are needed for the crash condition but not being used otherwise.
+
+\subsection{Named predicates in separation logic}
+
+\tej{need to write about named predicates a bit}
+
+\subsection{Perennial-specific interactive proofs}
+
+\paragraph{Caching:} Crash-safety reasoning involves repeatedly showing
+that the crash condition holds at each intermediate point.
+Writing local specifications (by ``framing away'' anything not needed)
+helps reduce this burden, but does not fully eliminate it.
+We implemented a tactic for caching and reusing proofs of the crash condition.
+A proof
+engineer proves the crash condition as it stands at some point, using
+as few assumptions as possible for locality, and the caching infrastructure saves
+the proof.\footnote{For readers familiar with Iris, the proof is a persistent
+implication that can be reused as many times as desired.}
+% This implication is
+% proven persistently (that is, without
+% spatial resources), so it is re-usable as many times as desired.
+Whenever the
+crash condition appears later in the proof with the same assumptions available,
+the caching infrastructure proves the goal automatically.
+% This approach is
+% convenient, easy to implement, and more general than what could be implemented
+% within the program logic itself.
+
+\paragraph{Framing:} Recall that we mentioned the \ruleref{wpc-frame} rule for
+proving a $\wpcw$ using a $\wpw$ when no durable resources are required for a
+sub-part of the proof. This is commonly used, so we introduce a \cc{wpc_frame}
+tactic to apply the theorem. The tactic takes a list of hypotheses and applies
+\ruleref{wpc-frame}, leaving the user to prove that the listed assumptions
+together imply the crash condition, with the remaining hypotheses available to
+prove a $\wpw$ for the original postcondition. In addition, the hypotheses used
+for the crash condition are restored after proving the $\wpw$. This support
+integrates with the caching support, automatically using a cached proof to prove
+the crash condition if possible.
+
+% \paragraph{Modalities:} We extend existing tactics for working with modalities to support $\cfupd$.
+% For example, the user can apply the \ruleref{cfupd-frame} rule
+% to eliminate $\cfupd P$ while proving a $\wpcw$, with the same tactic they would use to
+% eliminate $\pvs Q$  while proving a $\wpw$.
+% Of
+% course these are just helpers for applying the relevant theorems, but they
+% contribute greatly to making it feel like the user is proving in a specialized
+% tool for \sys even though the framework is implemented foundationally within
+% Coq.
