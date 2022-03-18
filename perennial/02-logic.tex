@@ -379,7 +379,40 @@ resources that are needed for the crash condition but not being used otherwise.
 
 \subsection{Named predicates in separation logic}
 
-\tej{need to write about named predicates a bit}
+In proving GoTxn, every layer defines an invariant that is preserved throughout
+the entire execution. Coming up with these invariants is a challenging part of
+the proof, and requires frequent cycles of finding an invariant doesn't work,
+editing it, and then revising the proofs. The proof will typically need to
+\emph{destruct} the invariant, which breaks it into separate hypotheses for each
+conjunct; for example if we have an invariant \cc{P * Q * R}, we might
+need to write \cc{iDestruct "H" as "(HA & HB & HC)"} to turn it into three
+hypotheses. The problem is that updating proofs when the invariant changes is
+tedious and error-prone. If we add \cc{* S} to the end, then ``HC'' will now be
+\cc{R * S}; the situation is worse if a conjunct is added to the middle of the
+invariant.
+
+\emph{Named predicates} help solve this problem. With this feature, the
+invariant is written \\
+\indent \cc{Definition inv := "HA" :: P * "HB" :: Q * "HC" :: R},\\
+combining the logical statement with the appropriate names. The notation
+\cc{"HC" :: R} means the exact same thing as \cc{R}, logically, but we extend
+the proof mode with the ability to destruct a hypothesis and automically name
+its conjuncts. This has two advantages: first, we don't repeat the names for the
+conjuncts throughout the proof, and second, extensions to the invariant are
+minimally invasive to the proof (even if conjuncts are reordered) since each
+name always refers to the same thing it did before.
+
+Named conjuncts made a huge difference to proof burden --- many individual
+definitions have 5--6 conjuncts, and across the entire GoTxn proof we name some
+900 total conjuncts. Implementing them was actually quite simple, taking only
+about 400 lines of code in Coq on top of the Iris Proof Mode. The implementation
+is separate from Perennial, depending only on Iris.\footnote{You can find the
+code at \url{https://github.com/tchajed/iris-named-props}. Hopefully by the time
+you read this the feature has been upstreamed in Iris and the library is
+obsolete, though!}
+
+% cat src/program_proof/{buf,wal,txn,obj,jrnl}/**.v | grep -c '∷
+% 907
 
 \subsection{Perennial-specific interactive proofs}
 
