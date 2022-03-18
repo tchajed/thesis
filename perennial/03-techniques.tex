@@ -276,8 +276,7 @@ There are several components to this theorem. First, the circular buffer has the
 caller provide a way to split the HOCAP predicate $P(\sigma)$ into two parts,
 $P_{\mathrm{rec}}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ --- intuitively the
 former is transferred to recovery as part of its crash condition, whereas the
-latter is ``immutable'' and held inside an invariant. \tej{examples of a P rec
-  and a P crash? this is trivial in the circular buffer} Second, the theorem
+latter is ``immutable'' and held inside an invariant. Second, the theorem
 consumes $\circstate(\gamma, \sigma) \sep P(\sigma)$ and allocates three things:
 (1) $\cc{is_circular}(\gamma)$ (notice that the premise of this theorem is the
 contents of this invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
@@ -325,7 +324,8 @@ use shows up in the GoJournal proof.
 
 In general, each layer supplies a crash obligation alt theorem. All of the layers' crash
 obligation alt theorems are called after running all the recovery code just
-before starting the system. Calling these view shifts allocates all the layers'
+before starting the system (that is, this would be just after line 4 in the
+\cc{RunSystem()} code above). Calling these view shifts allocates all the layers'
 invariants while simultaneously getting ``credit'' for this allocation in the
 form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
 Prior to calling crash obligation alt, the recovery procedure has access to the
@@ -338,19 +338,20 @@ threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
 The final aspect of our logically-atomic specification pattern is the role of
-the exchanger. The purpose of this predicate is to give the caller a way to, on
-crash, relate resources issued by the library before a crash to those after a
-crash. In the circular buffer, the $\startIs(\cc{start})$ and
-$\diskendIs(\cc{end})$ resources are thrown away on crash and re-created during
-recovery; there are only two of them, so it easy enough to reconstruct them
-globally. In contrast, some resources are used locally by a thread and we would
-like a way to retain ownership across a crash, into that thread's crash
-condition. This is exactly what happens with GoJournal's lifting-based
-specification, explained in greater detail in \autoref{s:design}. Exchanging
-gives threads a way to ``trade'' ownership prior to a crash, associated with the
-old $\gamma$ instance, for ownership after a crash, associated with $\gamma'$;
-this ownership can also be exclusive, because the process destroys the old
-ownership and thus can only be performed once.
+the exchanger, one of the conclusions of the crash obligation alt theorem. The
+purpose of this predicate is to give the caller a way to, on crash, relate
+resources issued by the library before a crash to those after a crash. In the
+circular buffer, the $\startIs(\cc{start})$ and $\diskendIs(\cc{end})$ resources
+are thrown away on crash and re-created during recovery; there are only two of
+them, so it easy enough to reconstruct them globally. In contrast, some
+resources are used locally by a thread and we would like a way to retain
+ownership across a crash, into that thread's crash condition. This is exactly
+what happens with GoJournal's lifting-based specification, explained in greater
+detail in \autoref{s:design}. Exchanging gives threads a way to ``trade''
+ownership prior to a crash, associated with the old $\gamma$ instance, for
+ownership after a crash, associated with $\gamma'$; this ownership can also be
+exclusive, because the process destroys the old ownership and thus can only be
+performed once.
 
 To make this a bit more concrete, let us look at a part of the GoJournal lifting
 specification. GoJournal issues three related resources: the two more important
@@ -421,4 +422,29 @@ which is necessary since all the resources involved are exclusive.
 % straightforward case (durable values that are now proven to still be durable,
 % exchanger shows old lower bounds are still valid)
 
-\resume
+\subsection{Summary}
+
+The overall logically-atomic crash specification pattern has four components for
+every layer of the system:
+
+\begin{itemize}
+  \item An opaque predicate for the abstract state of the system (e.g.,
+        $\circstate(\gamma, \sigma)$).
+  \item Proofs for each operation that use a client-specified predicate,
+        modified by requiring a view shift that updates the predicate in
+        accordance with the operation's effect on abstract state.
+  \item A recovery theorem, with a crash condition, that re-builds the in-memory
+        state of the system.
+  \item A crash obligation alt theorem, to be called after the whole system has
+        recovered, which sets up the system's invariant, the next generation,
+        and gives an exchanger resource to relate the old state to the new one.
+\end{itemize}
+
+When layers are composed, the upper layer will generally subsume the recovery
+and crash obligation alt theorems in its own proof.
+
+This pattern can be combined with user-defined ghost resources in order to give
+more powerful specifications (rather than requiring every operation to be
+unconditionally atomic). User-defined ghost resources can interact with crashes
+and recovery; for example, they can be returned from the recovery theorem and
+used across a crash using exchanging lemmas specific to the library.
