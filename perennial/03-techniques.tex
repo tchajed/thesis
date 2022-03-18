@@ -106,7 +106,7 @@ following custom separation-logic resources:
   bound.
 \end{itemize}
 
-\subsection{Non-crash specifications for Append and TrimTill}
+\subsection{Specifications for Append and TrimTill}
 
 Formally the way each operation is specified is using a style called
 HOCAP~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
@@ -133,7 +133,7 @@ the specification for Append:
 &\quad \diskendIs(\cc{end}) \sep \cc{start_at_least}(\cc{start}) \sep (\cc{end} - \cc{start} + \length(\cc{upds}) \leq 511) \sep {} \\
 &\} \\
 &\qquad\cc{c.Append(end, upds)} \\
-&\{ \diskendIs(\cc{end} + \length(\cc{upds})) \sep Q \} \\
+&\{ \diskendIs(\cc{end} + \length(\cc{upds})) \sep Q \}
 \end{align*}
 
 There are several aspects to the specification, mostly in the precondition. The
@@ -168,7 +168,7 @@ The specification for \cc{TrimTill} is similar to Append:
 &\quad \startIs(\cc{start}) \sep \cc{end_at_least}(\cc{end}) \sep (\cc{start} \leq \cc{newStart} \leq \cc{end}) \sep {} \\
 &\} \\
 &\qquad\cc{c.TrimTill(newStart)} \\
-&\{ \startIs(\cc{newStart}) \sep Q \} \\
+&\{ \startIs(\cc{newStart}) \sep Q \}
 \end{align*}
 
 The effect of a \cc{TrimTill}, abbreviated $\sigma[:\cc{newStart}]$, is to set
@@ -230,7 +230,7 @@ buffer's recovery procedure itself, and (3) a theorem that helps the caller
 maintain the circular buffer's crash predicate.
 
 The specification for recovery is:
-
+%
 \begin{align*}
   &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
   &\qquad\cc{recoverCircular()} \\
@@ -238,9 +238,9 @@ The specification for recovery is:
   &\quad \circstate(\gamma, \sigma) \sep {}  \\
   &\quad \startIs(\cc{diskStart}) \sep \diskendIs(\cc{diskStart} + \cc{len}(\cc{upds})) \sep {} \\
   &\quad \cc{circ_appender}(\gamma, \ell) \} \\
-  &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
+  &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \}
 \end{align*}
-
+%
 The first thing to notice about the recovery specification is that it preserves
 $\circstate(\gamma, \sigma)$, which gives the current state of the circular
 buffer, both on crash and if recovery completes. It is also the case that
@@ -250,14 +250,14 @@ are the crash predicate for the circular buffer. We say the crash predicate is
 abstract because the user of this theorem does not need to know how it is
 defined.
 
-The circular buffer's proof also supplies this \cc{crash_obligation_alt}
-theorem: \tej{come up with a name for crash obligation alt}
-
 \newcommand{\cfupdw}{\mathrm{cfupd}}
 \newcommand{\cfupd}[1]{\cfupdw\left(#1\right)}
 \newcommand{\cinvw}{\mathrm{cinv}}
 \newcommand{\cinv}[1]{\mathrm{cinv}\left(#1\right)}
 
+The circular buffer's proof also supplies the following \emph{post-recovery
+init} theorem, which sets up the circular buffer for use after recovery:
+%
 \begin{align*}
   &\forall \sigma, P(\sigma) \vs %
   P_{\mathrm{rec}}(\sigma) \sep %
@@ -269,7 +269,7 @@ theorem: \tej{come up with a name for crash obligation alt}
     P_{\mathrm{rec}}(\sigma) } \sep {} \\
   &\quad \cinv{ \exists \sigma.\, \circstate(\gamma, \sigma) \sep %
     \cc{circ_exchanger}(\gamma, \gamma') \sep %
-    P_{\mathrm{crash}}(\sigma) } \\
+    P_{\mathrm{crash}}(\sigma) }
 \end{align*}
 
 There are several components to this theorem. First, the circular buffer has the
@@ -280,7 +280,7 @@ latter is ``immutable'' and held inside an invariant. Second, the theorem
 consumes $\circstate(\gamma, \sigma) \sep P(\sigma)$ and allocates three things:
 (1) $\cc{is_circular}(\gamma)$ (notice that the premise of this theorem is the
 contents of this invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
-latter two are low-level features of Perennial that we'll now introduce yet.
+latter two are low-level features of Perennial that we'll now introduce.
 
 The assertion $\cfupd{R}$ (``crash fancy update'') is similar to a view-shift
 $\TRUE \vs R$ in that it is a single-use update that produces the resources $R$.
@@ -322,13 +322,13 @@ $\cc{circ_exchanger}(\gamma, \gamma')$ predicate. The circular buffer in
 particular does not have an interesting exchanger predicate, but an interesting
 use shows up in the GoJournal proof.
 
-In general, each layer supplies a crash obligation alt theorem. All of the layers' crash
+In general, each layer supplies a post-recovery init theorem. All of the layers' crash
 obligation alt theorems are called after running all the recovery code just
 before starting the system (that is, this would be just after line 4 in the
 \cc{RunSystem()} code above). Calling these view shifts allocates all the layers'
 invariants while simultaneously getting ``credit'' for this allocation in the
 form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
-Prior to calling crash obligation alt, the recovery procedure has access to the
+Prior to calling this initialization, the recovery procedure has access to the
 inner contents of all the invariants, reflecting that it has exclusive access,
 but in turn this proof is required to maintain a complicated crash condition.
 (One interesting side effect is that recovery code can safely call library
@@ -338,7 +338,7 @@ threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
 The final aspect of our logically-atomic specification pattern is the role of
-the exchanger, one of the conclusions of the crash obligation alt theorem. The
+the exchanger, one of the conclusions of the post-recovery init theorem. The
 purpose of this predicate is to give the caller a way to, on crash, relate
 resources issued by the library before a crash to those after a crash. In the
 circular buffer, the $\startIs(\cc{start})$ and $\diskendIs(\cc{end})$ resources
@@ -365,7 +365,7 @@ GoJournal resource, $a \mapsto_{d/2} o$ \tej{$d/2$ this is terrible notation,
 want to convey ``disk without ownership''}, which is almost identical to
 $a \mapsto_{d} o$ except that it cannot be used to lift again. We can give
 Commit a (highly-simplified) specification like the following:
-
+%
 \begin{align*}
   \hoareCV{a \mapsto_{d/2} o \sep a \mapsto_{op} o'} %
   {\mathit{op}.\cc{Commit}()}%
@@ -404,7 +404,7 @@ defined in terms of facts like:
 \[
   \cc{exchange_addr}(a) \defeq (a \mapsto^{\gamma}_{d} o) \lor (a \mapsto^{\gamma'}_{d} o)
 \]
-When proving the crash obligation alt theorem, we initially prove
+When proving the post-recovery init theorem, we initially prove
 $\cc{exchange_addr}(a)$ using the right-hand side; this is easy since $\gamma'$
 is fresh, so we've just allocated all of its associated ghost state and it
 hasn't been used by any threads so far. We can then prove exchange lemmas like
@@ -433,15 +433,17 @@ every layer of the system:
   \item Proofs for each operation that use a client-specified predicate,
         modified by requiring a view shift that updates the predicate in
         accordance with the operation's effect on abstract state.
-  \item A recovery theorem, with a crash condition, that re-builds the in-memory
-        state of the system.
-  \item A crash obligation alt theorem, to be called after the whole system has
-        recovered, which sets up the system's invariant, the next generation,
-        and gives an exchanger resource to relate the old state to the new one.
+  \item An opaque crash predicate for the system.
+  \item A recovery theorem, with a crash condition, that preserves the crash
+  predicate for the system and re-builds any in-memory state needed.
+  \item A post-recovery init theorem, to be called after the whole system has
+        recovered, which sets up the layer's invariant for normal execution,
+        creates ghost state for the next generation, and produces an exchanger
+        resource to relate the old state to the new one.
 \end{itemize}
 
 When layers are composed, the upper layer will generally subsume the recovery
-and crash obligation alt theorems in its own proof.
+and post-recovery init theorems in its own proof.
 
 This pattern can be combined with user-defined ghost resources in order to give
 more powerful specifications (rather than requiring every operation to be

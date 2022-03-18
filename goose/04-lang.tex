@@ -133,7 +133,7 @@ func Max(x uint32,
   &\goosedef{Midpoint} \defeq \gooselambda{x, y} (x + y) /2 \\
   \\
   &\goosedef{Max} \defeq \gooselambda{x, y} \\
-  &\quad \gooseif{x > y}{x}{y} \\
+  &\quad \gooseif{x > y}{x}{y}
 \end{align*}
 \end{minipage}
 
@@ -155,7 +155,7 @@ func Arith(a uint64,
   &\quad\goosekw{let} \app sum = a + b \app\goosekw{in}\app \\
   &\quad\goosekw{if} \app sum = 7 \app\goosekw{then}\app a \app\goosekw{else} \\
   &\quad\quad \goosekw{let} \app mid = \goosedef{Midpoint}\app a \app b \app\goosekw{in}\\
-  &\quad\quad mid \\
+  &\quad\quad mid
 \end{align*}
 \end{minipage}
 
@@ -195,7 +195,7 @@ func NewPtr() *uint64 {
   &\quad x \gets {} !y \\
   &\quad y \gets tmp\\
   \\
-  &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0 \\
+  &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0
 \end{align*}
 \end{minipage}
 
