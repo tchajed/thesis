@@ -109,7 +109,7 @@ following custom separation-logic resources:
 \subsection{Specifications for Append and TrimTill}
 
 Formally the way each operation is specified is using a style called
-HOCAP~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
+higher-order concurrent abstract predicates (HOCAP)~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
 library maintains an invariant $P(\sigma)$, where $\sigma$ is the current
 abstract state; a key idea in the HOCAP specification is that this predicate $P$
 is chosen by the client. For each operation, the client passes in a
@@ -125,12 +125,12 @@ to call the callback at exactly the linearization point of the operation.
 
 We can see both the HOCAP pattern and the circular buffer resources in action in
 the specification for Append:
-
+%
 \begin{align*}
   &\{ \cc{is_circular}(\gamma) \sep {} \\
-&\quad (\forall \sigma, P(\sigma) \vs P(\sigma + \cc{upds}) * Q) \\
+&\quad (\forall \sigma, P(\sigma) \vs P(\sigma \lappend \cc{upds}) * Q) \sep {} \\
 &\quad \cc{circ_appender}(\gamma, \cc{c}) \sep {} \\
-&\quad \diskendIs(\cc{end}) \sep \cc{start_at_least}(\cc{start}) \sep (\cc{end} - \cc{start} + \length(\cc{upds}) \leq 511) \sep {} \\
+&\quad \diskendIs(\cc{end}) \sep \cc{start_at_least}(\cc{start}) \sep (\cc{end} - \cc{start} + \length(\cc{upds}) \leq 511) \\
 &\} \\
 &\qquad\cc{c.Append(end, upds)} \\
 &\{ \diskendIs(\cc{end} + \length(\cc{upds})) \sep Q \}
@@ -140,11 +140,11 @@ There are several aspects to the specification, mostly in the precondition. The
 first line is the most straightforward: we need the circular buffer's invariant
 to hold, for a particular ghost name $\gamma$. The second line is part of the
 general HOCAP pattern. The view-shift updates $P(\sigma)$ to the appropriate new
-state, noted as $\sigma + \cc{upds}$ as shorthand for $\sigma$ with \cc{upds}
+state, noted as $\sigma \lappend \cc{upds}$ as shorthand for $\sigma$ with \cc{upds}
 appended to the updates field (and the same \cc{start}). The proof of this
 specification executes the view shift at the linearization point of the \cc{Append}
 operation, changing the state inside the $\cc{is_circular}$ invariant. The view
-shift produces a user-supplied assertion $Q$ which is returned in the
+shift produces a client-supplied assertion $Q$ which is returned in the
 postcondition.
 
 The rest of the specification is specific to how the circular buffer manages
@@ -164,8 +164,8 @@ The specification for \cc{TrimTill} is similar to Append:
 
 \begin{align*}
   &\{ \cc{is_circular}(\gamma) \sep {} \\
-&\quad (\forall \sigma, P(\sigma) \vs P(\sigma[:\cc{newStart}]) * Q) \\
-&\quad \startIs(\cc{start}) \sep \cc{end_at_least}(\cc{end}) \sep (\cc{start} \leq \cc{newStart} \leq \cc{end}) \sep {} \\
+&\quad (\forall \sigma, P(\sigma) \vs P(\sigma[:\cc{newStart}]) * Q) \sep {} \\
+&\quad \startIs(\cc{start}) \sep \cc{end_at_least}(\cc{end}) \sep (\cc{start} \leq \cc{newStart} \leq \cc{end}) \\
 &\} \\
 &\qquad\cc{c.TrimTill(newStart)} \\
 &\{ \startIs(\cc{newStart}) \sep Q \}
