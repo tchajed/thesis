@@ -39,7 +39,7 @@ these expressions a semantics in terms of the reduction relation
 $(\sigma, e) \reduces (\sigma', e')$ which says that $e$ reduces to (or executes
 to) $e'$ in the state $\sigma$, and the resulting state is $\sigma'$. This
 reduction relation is eventually lifted to not just a single expression but a
-whole \emph{threadpool}, a collection of concurrently-executing expressions. You
+whole \emph{threadpool}, a list of concurrently executing expressions. You
 can think of each expression as representing the computation of a single thread,
 and each reduction step as being running the thread for one transition. The
 granularity of these transitions corresponds to what is considered atomic
@@ -195,8 +195,7 @@ func NewPtr() *uint64 {
   &\quad x \gets {} !y \\
   &\quad y \gets tmp\\
   \\
-  &\goosedef{NewPtr} \defeq \gooselambda{\_} \\
-  &\quad \goosekw{ref} \app 0
+  &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0 \\
 \end{align*}
 \end{minipage}
 
