@@ -392,15 +392,18 @@ tedious and error-prone. If we add \cc{* S} to the end, then ``HC'' will now be
 invariant.
 
 \emph{Named predicates} help solve this problem. With this feature, the
-invariant is written \\
-\indent \cc{Definition inv := "HA" :: P * "HB" :: Q * "HC" :: R},\\
-combining the logical statement with the appropriate names. The notation
-\cc{"HC" :: R} means the exact same thing as \cc{R}, logically, but we extend
-the proof mode with the ability to destruct a hypothesis and automically name
-its conjuncts. This has two advantages: first, we don't repeat the names for the
-conjuncts throughout the proof, and second, extensions to the invariant are
-minimally invasive to the proof (even if conjuncts are reordered) since each
-name always refers to the same thing it did before.
+invariant is written combining the logical statement with names for each conjunct:
+\begin{verbatim}
+Definition inv := "HA" :: P *
+                  "HB" :: Q *
+                  "HC" :: R.
+\end{verbatim}
+The notation \cc{"HA" :: P} means the exact same thing as \cc{P}, logically, but
+we extend the proof mode with the ability to destruct a hypothesis and
+automatically name its conjuncts. This has two advantages: first, we don't repeat
+the names for the conjuncts throughout the proof, and second, extensions to the
+invariant are minimally invasive to the proof (even if conjuncts are reordered)
+since each name always refers to the same thing it did before.
 
 Named conjuncts made a huge difference to proof burden --- many individual
 definitions have 5--6 conjuncts, and across the entire GoTxn proof we name some
