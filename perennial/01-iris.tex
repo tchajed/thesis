@@ -37,9 +37,9 @@ Instead of working with Hoare triples, it is convenient to instead define
 specifications in a different style of \emph{weakest preconditions} (WPs). We will use
 $\wpre{e}{Q}$ to denote the weakest precondition of $e$ with postcondition $Q$;
 if $e$ is run in a state satisfying $\wpre{e}{Q}$ and terminates, the final
-state will satisfy $Q$. Note that
-$P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$, which can help give
-some intuition around weakest preconditions. An excellent
+state will satisfy $Q$. Note that the $\wprew$ is a \emph{predicate over
+states}, not an assertion like a Hoare triple. To build intuition, the statement
+$P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
 explanation of weakest preconditions vs Hoare triples can be found in
 ``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
 
@@ -119,8 +119,8 @@ two steps. First, for every normal execution (without ghost variables), the
 proof constructs a ``parallel'' execution that tracks the ghost state alongside
 physical state. The rest of the proof is carried out on the parallel execution,
 but the proofs apply to the normal execution because by design they have the
-same behavior. We have reason to believe verifying the program with ghost
-variables is easier to verify because the ghost variables can track important
+same behavior. We find that verifying the program with ghost
+variables is easier because the ghost variables can track important
 information about the history of the program, such as in the example above of
 the pre-loop values of the local variables.
 
@@ -181,9 +181,9 @@ changing whatever ghost state is needed to turn $\upd P$ into $P$. As long as
 the user is proving a weakest precondition, we can always apply this rule to
 ``eliminate'' an update modality.
 
-Fractional ghost state can be updated after creation with \autoref{frac-update}.
+Fractional ghost state can be updated after creation with \ruleref{frac-update}.
 The update requires full ownership. Fractional ghost variables can instead be
-split into smaller pieces with \autoref{frac-split}; these pieces can no longer
+split into smaller pieces with \ruleref{frac-split}; these pieces can no longer
 be updated (since this would invalidate the rest of the assertions), but two
 assertions for the same ghost variable must be for equal values since the
 underlying variable has only one value.
@@ -212,7 +212,5 @@ $\knowInv{}{I} \proves \knowInv{}{I} \sep \knowInv{}{I}$ --- reflecting that
 knowledge of an invariant, once it is established, is an assertion that all
 threads agree on which cannot be invalidated.
 
-\tej{Might not need persistently modality, shouldn't need later modality}
-
-\tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
-introducing Iris}
+% \tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
+% introducing Iris}

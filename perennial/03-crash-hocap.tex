@@ -28,10 +28,15 @@ is not the circular buffer's concern.
 \begin{figure}[ht]
 \begin{minted}{go}
 // Go API
-func InitCircular() *circAppender
-func (c *circAppender) Append(end uint64, upds []Update)
+type Update {
+  Addr  uint64
+  Block []byte
+}
+
+func InitCircular() *Appender
+func (c *Appender) Append(end uint64, upds []Update)
 func TrimTill(start uint64)
-func RecoverCircular() (c *circAppender,
+func RecoverCircular() (c *Appender,
         start uint64, upds []Update)
 \end{minted}
 \begin{minted}{coq}
@@ -40,7 +45,7 @@ Definition update := u64 * Block;
 Record circ_state := {
   upds: list update;
   start: u64;
-}
+}.
 
 (* requires length s.(upds) + length new_upds <= 511 *)
 Definition append (s:circ_state) (new_upds: list update) :=
@@ -50,7 +55,7 @@ Definition append (s:circ_state) (new_upds: list update) :=
 Definition trim_till (s:circ_state) (new_start: u64) :=
   let num_removed := new_start - s.(start) in
   s <[ start := new_start ]>
-    <[ upds := drop num_removed s.(upds) ]>
+    <[ upds := drop num_removed s.(upds) ]>.
 \end{minted}
   \caption{The API for the circular buffer. Also included are the Coq
     definitions of the abstract transition system of the circular buffer.}
@@ -82,7 +87,7 @@ The write-ahead log uses the circular buffer from two threads, one dedicated to
 \emph{logging} which appends to the circular buffer to make writes durable and another
 dedicated to \emph{installation} which trims writes from the circular buffer
 after installing them. Appending and trimming can be performed concurrently, but
-appending requires the \cc{*circAppender} struct which is not thread-safe. The
+appending requires the \cc{*Appender} struct which is not thread-safe. The
 caller only reads from the circular buffer if the system crashes, at which point
 recovery restores the previous state. During normal operation the caller keeps a
 separate in-memory cache of the entries in the circular buffer.
@@ -231,7 +236,7 @@ fits into the larger plan is that the whole system's recovery starts by
 recovering the circular buffer's state, then uses that state to recover the next
 layer, and so on until the whole system is ready to run. Schematically this
 looks like the following:
-
+%
 \begin{minted}[linenos]{go}
 func RunSystem() {
   c, start, upds := RecoverCircular()
