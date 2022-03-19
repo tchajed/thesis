@@ -62,11 +62,9 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
                             \ALT \ell \ALT s \\
     &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
              \recfx \\
-    \textdom{Exp}& e &::= & x \ALT v \ALT e \app e %
-                            \ALT \goosekw{Fork}(e)
-                            \ALT \goosekw{Panic}(s)
-                            \ALT \recfx \\
+    \textdom{Exp}& e &::= & x \ALT v \ALT e \app e \ALT \recfx \\
     &&\ALT & \gooseif{e}{e}{e} \\
+    &&\ALT & \goosekw{Fork}(e) \\
     &&\ALT & (e, e) \ALT \pi_1 \app e \ALT \pi_2 \app e \\
     &&\ALT & \goosekw{inj}_1 \app e \ALT \goosekw{inj}_2 \app e
     \ALT %
@@ -81,7 +79,8 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
              \ALT \goosekw{FinishStore}(e, e) %
              \ALT \goosekw{StartRead}(e) %
              \ALT \goosekw{FinishRead}(e) \\
-    &&\ALT & \external \\
+    &&\ALT & \goosekw{Panic}(s) \\
+    &&\ALT & \external
   \end{array}
   \end{mathpar}
 
@@ -106,12 +105,31 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
   \end{array}
   \end{mathpar}
   \caption{GooseLang syntax}
-  \label{goose:syntax}
+  \label{fig:goose:syntax}
 \end{figure}
 
-Before going into the semantics for these expressions, we can build intuition by
-looking at some very simple Go programs and their translations into GooseLang.
-First, we can write some \emph{pure} functions that don't use pointers:
+The syntax for GooseLang programs is given in \autoref{fig:goose:syntax}. The
+important top-level definition is $e \in \textdom{Exp}$, giving expressions in
+GooseLang. Before getting to the expressions, it's worth noting that the values
+in GooseLang are designed for Go's primitive data, in particular with
+first-class support for bytes and 32-bit and 64-bit unsigned integers. We did
+not need signed integers and so did not model them, but adding them would simply
+require extending the type of literals and adding many more pure operations to
+implement various integer conversions.
+
+The basic lambda calculus primitives are given on the first line: variables $x$,
+values $v$, function application $e \app e$, and (recursive) functions $\recfx$.
+The first few derived forms encode more basic primitives like a non-recursive
+lambda, let bindings, and sequencing, all on top of recursive functions. The
+language has two types of composite data: products (used pervasively to model
+structs), and sums (used only to model maps). There is also $\goosekw{if}$ as the
+main control-flow primitive, and $\goosekw{Fork}$ to create concurrent threads.
+Finally, there are many primitives for the heap, which are discussed in more
+detail later.
+
+We can build intuition for both the syntax and semantics of GooseLang by looking
+at some very simple Go programs and their translations into GooseLang. First,
+let's look at some \emph{pure} functions that don't use pointers:
 
 \newenvironment{translatego}{
   % get proper top alignment
@@ -124,7 +142,7 @@ First, we can write some \emph{pure} functions that don't use pointers:
 
 \newenvironment{translategooselang}{
   \begin{minipage}[t]{0.5\textwidth}
-  \strut\vspace*{-\baselineskip}
+  \strut\vspace*{-8pt}
 }{
   \end{minipage}
 }
@@ -204,12 +222,8 @@ func Swap(x *uint64,
   *x = *y
   *y = tmp
 }
-
-func NewPtr() *uint64 {
-  return new(uint64)
-}
 \end{minted}
-\end{translatego}%
+\end{translatego}
 %
 \begin{translategooselang}
 \begin{flalign*}
@@ -219,7 +233,19 @@ func NewPtr() *uint64 {
   &\quad\goosekw{let} \app tmp = {} !x \app\goosekw{in}\app \\
   &\quad x \gets {} !y \\
   &\quad y \gets tmp\\
-  \\
+\end{flalign*}
+\end{translategooselang}
+
+\begin{translatego}
+\begin{minted}{go}
+func NewPtr() *uint64 {
+  return new(uint64)
+}
+\end{minted}
+\end{translatego}
+%
+\begin{translategooselang}
+\begin{flalign*}
   &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0
 \end{flalign*}
 \end{translategooselang}
@@ -233,6 +259,20 @@ this definition allocates a pointer with $\goosekw{ref}$, using
 $\goosekw{AllocN}$ which more generally allocates $n$ contiguous pointers. The
 initial value of 0 is the ``zero value'' of the \cc{uint64} type, a promise made
 by Go.
+
+The Goose syntax includes an $\external$ alternative. The language, both syntax
+and semantics, are parameterized over an external interface of operations, for
+interacting with the outside world. For example, in GoTxn the code uses an
+interface of external disk operations, presented separately in
+\autoref{fig:goose:disk-ffi}. The parameterization is primarily useful for
+refinement proofs that relate Goose with one set of external operations to
+another (for example, we use this to specify GoTxn). Other than that use case,
+the reader can imagine that the external rules are simply part of the definition
+of expressions and the semantics.
+
+Goose also has a formal, small-step operational semantics; this style of
+specification and indeed most of the semantics is quite standard for languages of
+this type. The full details are presented in \autoref{fig:goose:semantics}.
 
 \begin{figure}[hp]
   \textbf{Pure reduction}%
@@ -256,16 +296,13 @@ by Go.
   \end{array}
   \end{mathpar}
 
-  \textbf{Semantics preliminary definitions}
+  \textbf{Per-thread head reduction}%
+  \hfill %
+  \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
+  \hspace{20pt}
+  %
   \begin{mathpar}
   \begin{array}{llcl}
-    \textdom{ECtx}& E &::= & \square \ALT E \app v \ALT e \app E  %
-                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
-                  &&\ALT & \gooseif{E}{e}{e} \\
-                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
-                           \goosekw{inj}_i \app E \\
-                  &&\ALT & \goosekw{AllocN}(E, e) \ALT \goosekw{AllocN}(v, E)
-                           \ALT \dots \\
     \textdom{NonAtom}& z &::= & \goosekw{Reading} \app n \app v \ALT
                                 \goosekw{Writing} \app v \\
     \textdom{Heap}& h &\in& \textdom{Loc} \overset{\mathrm{fin}}{\to}
@@ -275,15 +312,7 @@ by Go.
     \textdom{TPool}& \mathcal{E} &\in &\textdom{List}\app\textdom{Exp} \\
     %\textdom{Config}& \rho &::= (\sigma, \mathcal{E}) \\
   \end{array}
-  \end{mathpar}
 
-
-  \textbf{Per-thread one-step reduction}%
-  \hfill %
-  \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
-  \hspace{20pt}
-
-  \begin{mathpar}
   \begin{array}{rcll}
     ((h, w), e) &\reduces & ((h, w), e') &\mathrm{if} \: e \purereduction e' \\
     ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
@@ -328,6 +357,16 @@ by Go.
   \hspace{20pt}
 
   \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{ECtx}& E &::= & \square \ALT e \app E \ALT E \app v  %
+                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
+                  &&\ALT & \gooseif{E}{e}{e} \\
+                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
+                           \goosekw{inj}_i \app E \\
+                  &&\ALT & \goosekw{AllocN}(E, e) \ALT \goosekw{AllocN}(v, E)
+                           \ALT \dots
+  \end{array}
+
     \inferH{context-reduce}%
     {((h, w), e) \reduces ((h,', w'), e') \\ \text{$E$ is an evaluation context}}%
     {((h, w), \mathcal{E}\mapupd{i}{E[e]}) \reduces%
@@ -341,8 +380,57 @@ by Go.
   \end{mathpar}
 
   \caption{GooseLang semantics}%
-  \label{goose:semantics}
+  \label{fig:goose:semantics}
 \end{figure}
+
+\paragraph{Structure of the semantics}
+The semantics is a lot to take in, especially if you've never seen such a
+presentation. The semantics is defined in three relations: the first, the
+\emph{pure reduction relation} $e \purereduction e'$, is the easiest to understand
+because it describes ``pure'' expressions that do not depend on any external
+state. The semantics of such expression is simply to ``reduce'' to simpler
+expressions, eventually reaching values. The semantics of function application
+is pure. We use $\subst{e}{x}{v}$ as notation for \emph{substituting} the expression
+$v$ for the variable $x$ in $e$. To implement recursion, the function definition
+is itself substituted for its name.
+
+Next, we define the semantics of the heap operations. This relation is over
+$((h, w), e)$. $h$ is the heap and $e$ is the expression being executed; $w$ is
+the type of an external ``world'' that is used to define the semantics of
+external operations. Even the type of this world state is a parameter at this
+level, and is defined as part of defining a set of external operations and their
+semantics. The specific case of the disk is presented in
+\autoref{fig:goose:disk-ffi}.
+
+Finally, we define the full semantics over $((h, w), \mathcal{E})$. Instead of a
+single expression, we now have a \emph{threadpool}, a list of expressions, all
+running concurrently. This semantics is presented in a standard style using
+evaluation contexts. The previous relation involving a single expression
+is called a \emph{head reduction relation} because it only gives the semantics
+of expressions where the relevant operation is at the top level or ``head'' of
+the expression, and when applied to values (notice for example that the rule for
+$\goosekw{AllocN}(n, v)$ is only defined when applied to a number and a value,
+not other expressions). Context reductions are how those arguments get executed
+when we run something like $\goosekw{AllocN}(10, \goosekw{true || false})$.
+
+Context reductions are defined by a type of evaluation contexts
+$\textdom{ECtx}$. Rather than going through the details of how these are used
+(the rule \ruleref{context-reduce}), here I'll just explain intuitively what
+evaluation contexts are. Every context $E$ is an expression with a ``hole'' in
+it, indicating where the next reduction should take place. The entire expression
+might be a hole $\square$. As an example, the pair of contexts $E \binop e$ and
+$v \binop E$ determine how all binary operators work (for example, $\binop$
+might be $+$). These say that if we have an expression $e_{1} \binop e_{2}$, we can
+always run the argument $e_{1}$ (due to the first context), but it must execute
+to a value before we evaluate the second argument (the second context). Once
+both are values, the pure reduction for binary operators will apply. The result
+is a left-to-right evaluation order for binary operators.
+
+GooseLang does have one extant bug related to evaluation contexts. The contexts
+$e \app E$ and $E \app v$ define a right-to-left evaluation order for functions,
+which is the opposite of Go. We haven't yet fixed this, either by adjusting the
+GooseLang semantics or changing the translation to emit code that explicitly
+evaluates all the arguments in the correct order before calling the function.
 
 \begin{figure}[ht]
   \textbf{Disk operations}
@@ -376,12 +464,8 @@ by Go.
     {((h, w), \goosekw{DiskSize}) \reduces %
     ((h, w), 1 + \textlog{max} \app \dom(w))}
   \end{mathpar}
-  \caption{Syntax and semantics for an external disk}
+  \caption{Syntax and semantics for an external disk.}
+  \label{fig:goose:disk-ffi}
 \end{figure}
-
-\tej{also need to describe Hoare triples and separation logic, might as well do
-that here since it's part of the foundations of reasoning about GooseLang}
-
-\resume
 
 \clearpage

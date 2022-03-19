@@ -1,6 +1,8 @@
 \section{Modeling and reasoning about Go}%
 \label{sec:goose:reasoning}
 
+\tej{give some preliminaries on separation logic, untyped points-to assertion}
+
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
 
@@ -328,12 +330,12 @@ separation logic specifications.
 
 The GooseLang model of slices is based on two abstract predicates:
 $\sliceRep(s, l)$ and $\sliceCap(s)$. To model the slice values
-themselves we use $s : Slice$ where $Slice$ is a Gallina record; a
-function $SliceVal(s) : Val$ converts the Gallina representation to
+themselves we use $s : \textlog{Slice}$ where $\textlog{Slice}$ is a Gallina record; a
+function $\textlog{SliceVal}(s) : Val$ converts the Gallina representation to
 the GooseLang tuple that the slice model uses. We will only present the
-\emph{untyped} version of this specification where $l : list val$, but
-GooseLang also has a typed version where $l : list T$ where there is
-some (Gallina) function $\mathtt{to\_val} : T -> Val$. The typed version is
+\emph{untyped} version of this specification where $l : \textlog{list}(\textdom{Val})$, but
+GooseLang also has a typed version where $l : \textlog{list}(T)$ where there is
+some (Gallina) function $\mathtt{to\_val} : T \to \textdom{Val}$. The typed version is
 practically convenient in proofs but is only a small extension to the
 untyped version.
 
