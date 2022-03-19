@@ -22,7 +22,39 @@ and \cc{TrimTill(pos)} deletes updates up to \cc{pos}. Queue positions grow
 indefinitely, but the buffer can hold at most 511 updates at a time and it
 is the caller's responsibility to avoid overflowing with \cc{Append}. The only
 read operation is recovery, which restores the durable updates and current queue
-position; in practice the contents are cached, but this is the caller's concern.
+position; the write-ahead log caches updates during normal execution, but this
+is not the circular buffer's concern.
+
+\begin{figure}[ht]
+\begin{minted}{go}
+// Go API
+func InitCircular() *circAppender
+func (c *circAppender) Append(end uint64, upds []Update)
+func TrimTill(start uint64)
+func RecoverCircular() (c *circAppender,
+        start uint64, upds []Update)
+\end{minted}
+\begin{minted}{coq}
+(* Coq specification *)
+Definition update := u64 * Block;
+Record circ_state := {
+  upds: list update;
+  start: u64;
+}
+
+(* requires length s.(upds) + length new_upds <= 511 *)
+Definition append (s:circ_state) (new_upds: list update) :=
+  s <[ upds := s.(upds) ++ new_upds ]>.
+
+(* requires s.(start) <= new_start *)
+Definition trim_till (s:circ_state) (new_start: u64) :=
+  let num_removed := new_start - s.(start) in
+  s <[ start := new_start ]>
+    <[ upds := drop num_removed s.(upds) ]>
+\end{minted}
+  \caption{The API for the circular buffer. Also included are the Coq
+    definitions of the abstract transition system of the circular buffer.}
+\end{figure}
 
 There are three challenges in giving the circ library a specification. First, we
 want to show that \cc{Append} appears to be atomic to the caller, even though it
@@ -45,16 +77,6 @@ mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
 is a position of this form; the effect of \cc{TrimTill(pos)} is to delete
 \cc{pos - start} updates from the beginning of the list of updates and set the
 new start position to \cc{pos}.
-
-The circular buffer has the following API:
-
-\begin{minted}{go}
-func InitCircular() *circAppender
-func (c *circAppender) Append(end uint64, upds []Update)
-func TrimTill(start uint64)
-func RecoverCircular() (c *circAppender,
-        start uint64, upds []Update)
-\end{minted}
 
 The write-ahead log uses the circular buffer from two threads, one dedicated to
 \emph{logging} which appends to the circular buffer to make writes durable and another
@@ -161,7 +183,7 @@ the circular buffer implementation does not even have a way to safely
 dynamically check if there is enough space.
 
 The specification for \cc{TrimTill} is similar to Append:
-
+%
 \begin{align*}
   &\{ \cc{is_circular}(\gamma) \sep {} \\
 &\quad (\forall \sigma, P(\sigma) \vs P(\sigma[:\cc{newStart}]) * Q) \sep {} \\
@@ -185,10 +207,12 @@ maintains precise knowledge (ownership) of the start of the circular buffer.
 
 Notice that neither of these specifications have a crash condition. The reason
 this is not required is because both methods already maintain an invariant in
-the \cc{is_circular} predicate, but formalizing this is a bit more
-complicated.
+the \cc{is_circular} predicate. The next
+section,~\ref{sec:perennial:recovery-spec}, details how crashes and recovery are
+specified.
 
 \subsection{Crash and recovery reasoning}
+\label{sec:perennial:recovery-spec}
 
 The strategy behind proving crash safety is to prove a theorem about running a
 whole system, restarting after every crash. For example, for DaisyNFS this
@@ -210,7 +234,7 @@ looks like the following:
 
 \begin{minted}[linenos]{go}
 func RunSystem() {
-  c, start, upds := recoverCircular()
+  c, start, upds := RecoverCircular()
   // recover rest of system from c, start, upds
   fs := recoverFilesystem(...)
   for {
@@ -224,16 +248,17 @@ func RunSystem() {
 \end{minted}
 
 The circular buffer supplies three things to fit into the whole-system
-idempotent proof: (1) an abstract crash predicate for the state the circular
+recovery proof: (1) an abstract crash predicate for the state the circular
 buffer requires for recovery, (2) a crash specification for the circular
-buffer's recovery procedure itself, and (3) a theorem that helps the caller
-maintain the circular buffer's crash predicate.
+buffer's recovery procedure itself, and (3) a post-recovery init theorem that
+helps the caller maintain the circular buffer's crash predicate and also
+initializes the circular buffer's invariant.
 
-The specification for recovery is:
+The specification for the library's recovery procedure \cc{RecoverCircular()} is:
 %
 \begin{align*}
   &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
-  &\qquad\cc{recoverCircular()} \\
+  &\qquad\cc{RecoverCircular()} \\
   &\{ \Ret{(\ell, \cc{diskStart}, \cc{upds})} \sigma = (\cc{diskStart}, \cc{upds}) \sep {} \\
   &\quad \circstate(\gamma, \sigma) \sep {}  \\
   &\quad \startIs(\cc{diskStart}) \sep \diskendIs(\cc{diskStart} + \cc{len}(\cc{upds})) \sep {} \\
@@ -302,14 +327,24 @@ buffer's crash predicate, along with $P_{\mathrm{rec}}(\sigma)$, from the
 overall crash condition. Thus using \ruleref{cfupd-use} before running the
 system both sets up the circular buffer for use (by establishing
 $\cc{is_circular}(\gamma)$) and guarantees the circular buffer's part of the
-crash condition from now on. Notice that the ghost name for the circular buffer
-changes on crash to a new $\gamma'$; the reason for this is that other threads
-(the logger and installer) have access to some of the circular buffer resources
-associated with $\gamma$. Rather than requiring those threads to ``return''
-those resources on crash and impose a crash condition on that code, we simply
-create a new instance of the circular buffer and stop using the old one. As a
-result on crash we can produce $\cc{circ_resources}(\gamma', \sigma)$ and hand
-out these resources to the caller.
+crash condition from now on. We saw a simpler but abstract version of this
+reasoning in the \ruleref{wpc-inv-alloc} rule in \autoref{sec:perennial:wpc};
+this theorem is a concrete use case (split into creating the cfupd and later
+using it, rather than in one step as in \ruleref{wpc-inv-alloc}). What Perennial
+makes possible is to take advantage of the invariant for crash reasoning ---
+what must be carefully handled is that while the invariant is shared by all
+threads, only one thread can get ``credit'' for this invariant holding at crash
+time.
+
+Notice in the circular buffer's post-recovery init theorem that the ghost name
+for the circular buffer changes on crash to a new $\gamma'$; the reason for this
+is that other threads (the logger and installer) have access to some of the
+circular buffer resources associated with $\gamma$. Rather than requiring those
+threads to ``return'' those resources on crash and impose a crash condition on
+that code, we simply create a new instance of the circular buffer and stop using
+the old one. As a result on crash we can produce
+$\cc{circ_resources}(\gamma', \sigma)$ and hand out these resources to the
+caller.
 
 The third component of the theorem is a $\cinvw$ (``crash invariant'').
 $\cinv{R}$ behaves very similarly to an invariant assertion $\knowInv{}{R}$, except
@@ -360,16 +395,21 @@ access to address $a$. $a \mapsto_{d} o$ is a durable statement about the
 logical disk, while $a \mapsto_{op}$ gives the value at address $a$ from the
 perspective of an in-progress operation $op$. The lifting-based specification
 gets its name from a logical ``lift'' operation that trades $a \mapsto_{d} o$
-for $a \mapsto_{op} o \sep a \mapsto_{d/2} o$. This brings us to the third type of
-GoJournal resource, $a \mapsto_{d/2} o$ \tej{$d/2$ this is terrible notation,
-want to convey ``disk without ownership''}, which is almost identical to
-$a \mapsto_{d} o$ except that it cannot be used to lift again. We can give
-Commit a (highly-simplified) specification like the following:
+for $a \mapsto_{op} o \sep a \mapsto_d^{\mathrm{lftd}} o$. This brings us to the
+third type of GoJournal resource, $a \mapsto_{d}^{\mathrm{lftd}} o$, which is
+almost identical to $a \mapsto_{d} o$ except that it has been lifted and thus
+cannot be lifted again.\footnote{In the implementation,
+$a \mapsto_{d}^{\mathrm{lftd}}$ is in the primitive resource. There is a
+resource $\textlog{token}(a)$ that gives the right to lift $a$. Then
+$a \mapsto_{d} o$ is simply defined to be
+$a \mapsto_{d}^{\mathrm{lftd}} o \sep \textlog{token}(a)$.} We can give Commit a
+(highly-simplified) specification like the following:
 %
 \begin{align*}
-  \hoareCV{a \mapsto_{d/2} o \sep a \mapsto_{op} o'} %
+  \hoareCV{a \mapsto_{d}^{\mathrm{lftd}} o \sep a \mapsto_{op} o'} %
   {\mathit{op}.\cc{Commit}()}%
-  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} \mathrm{~then~} a \mapsto_{d} o' \mathrm{~else~} a \mapsto_{d} o}%
+  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
+  \mathrm{~then~} a \mapsto_{d} o' \mathrm{~else~} a \mapsto_{d} o}%
   {a \mapsto_{d} o \lor a \mapsto_{d} o'}
 \end{align*}
 
@@ -442,8 +482,10 @@ every layer of the system:
         resource to relate the old state to the new one.
 \end{itemize}
 
-When layers are composed, the upper layer will generally subsume the recovery
-and post-recovery init theorems in its own proof.
+When layers are composed, the upper layer will generally subsume the lower level
+in its own proofs --- for example, the write-ahead log's crash predicate
+includes the circular buffer's crash predicate as a sub-term, and subsumes the
+circular buffer's recovery and post-recovery init theorems.
 
 This pattern can be combined with user-defined ghost resources in order to give
 more powerful specifications (rather than requiring every operation to be

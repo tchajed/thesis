@@ -11,7 +11,6 @@
 %\usepackage{times,mathptmx}
 %\usepackage{crimson}
 \usepackage[bitstream-charter]{mathdesign}
-
 \usepackage{mathrsfs}
 
 % adapted from https://github.com/jonhoo/thesis/
@@ -52,6 +51,8 @@
 % (latex.out fixes compatibility with latexrun, see
 % https://github.com/aclements/latexrun/issues/13#issuecomment-322550767)
 \usepackage[newfloat,outputdir=latex.out]{minted}
+\setminted[go]{frame=lines}
+\setminted[coq]{frame=lines}
 
 % for formulas
 \usepackage{mathtools}
