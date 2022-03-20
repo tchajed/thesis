@@ -320,7 +320,7 @@ GooseLang model picks a non-deterministic capacity in several places
 The most basic operations on slices are indexing and storing. The
 GooseLang model of $s$ is a three-tuple, but for clarity we will refer
 to its elements as $\ptr(s)$, $\len(s)$, and $\cap(s)$. The
-translation of \cc{s[i]} is essentially a load from
+translation of \cc{s[i]} is essentially a (typed) load from
 $\ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
 Similarly \cc{s[i] = x} stores to the same location. We
 translate Go's \cc{len(s)} directly to $\len(s)$. Go also supports
@@ -362,14 +362,13 @@ separation logic specifications.
 \newcommand{\lappend}{\mdoubleplus}
 
 The GooseLang model of slices is based on two abstract predicates:
-$\sliceRep(s, l)$ and $\sliceCap(s)$. To model the slice values
-themselves we use $s : \textlog{Slice}$ where $\textlog{Slice}$ is a Gallina record; a
-function $\textlog{SliceVal}(s) : Val$ converts the Gallina representation to
-the GooseLang tuple that the slice model uses. We will only present the
+$\sliceRep(s, l)$ and $\sliceCap(s)$. In the code, the model of a slice value is
+a Gallina record $s$, which we convert explicitly to a GooseLang value, but for
+this thesis we will not make a distinction. We will only present the
 \emph{untyped} version of this specification where $l : \textlog{list}(\textdom{Val})$, but
-GooseLang also has a typed version where $l : \textlog{list}(T)$ where there is
-some (Gallina) function $\mathtt{to\_val} : T \to \textdom{Val}$. The typed version is
-practically convenient in proofs but is only a small extension to the
+GooseLang also has a typed version where $l : \textlog{list}(T)$ for a type $T$
+with a Gallina function $\mathtt{to\_val} : T \to \textdom{Val}$. The typed
+version is practically convenient in proofs but is only a small extension to the
 untyped version.
 
 The first predicate $\sliceRep(s, l)$ gives the abstract value of
@@ -381,12 +380,12 @@ loads and stores:
 \[
   \hoareV{\sliceRep(s, l) * i < |l|}%
 {\mathtt{s[i]}}%
-{\Ret{v} v = l !! i * \sliceRep(s, l)}
+{\Ret{v} v = l[i] * \sliceRep(s, l)}
 \]
 \[
   \hoareV{\sliceRep(s, l) * i < |l|}%
  {\mathtt{s[i] = v}}%
-{\Ret{v} v = l !! i * \sliceRep(s, l[i := v])}
+{\Ret{v} v = l[i] * \sliceRep(s, l\mapupd{i}{v})}
 \]
 
 Next, $\sliceCap(s)$ is an abstract predicate that represents
@@ -400,58 +399,78 @@ read and write to a slice.
 \]
 
 \newidentmacro{sliceFull}
+\newdefmacro{take}
+\newdefmacro{drop}
 
 This specification is fairly simple. In fact, we often use a shorthand
 $\sliceFull(s, l) = \sliceRep(s, l) * \sliceCap(s)$ when the proof will
 always retain ownership of slice capacity, in which case the spec looks
 even simpler. However, the proof is non-trivial, since in one case it
 moves ownership from $\sliceCap(s)$ to $\sliceRep(s', l \lappend [x])$
-(where $ptr(s') = ptr(s)$), while in the other it constructs a
+(where $\ptr(s') = \ptr(s)$), while in the other it constructs a
 completely new allocation for $s'$.
-
-\newidentmacro{sliceTake}
-\newidentmacro{sliceDrop}
 
 The most interesting rules are for subslicing and how they interact with
 capacity. Consider \cc{s[:i]} again. While Go has no formal
 notion of ownership, our specifications do. We can model the
-\emph{value} for \cc{s[:i]} easily enough; call it
-$\sliceTake(s, i)$ (it simply reduces the length and keeps the capacity
-of $s$, as specified by Go). Now we need to decide how ownership of
+\emph{value} for \cc{s[:i]} easily enough: it simply returns a new slice value
+with a smaller length and the same capacity. In fact, we will use $s[:i]$ as the
+notation since the two are so similar. There is one slight complication that
+\cc{s[:i]} causes a runtime error in Go if $i \geq \len(s)$. Thus we actually
+give indexing the following specification:
+\[
+  \hoare{i < \len(s)}{\cc{s[:i]}}{\Ret{s[:i]} \TRUE}
+\]
+This specification is slightly unusual in that it has a logical precondition but
+does not refer to the heap (or any other state).
+
+To reason about the effect of subslicing on the memory is,
+we need to decide how ownership of
 $\sliceRep(s, l) * \sliceCap(s)$ should relate to ownership of
-$\sliceRep(sliceTake(s, i), take(l, i))$. It turns out there are two
+$\sliceRep(s[:i], \take(l, i))$. It turns out there are two
 possibilities: we can either give up ownership of the remainder of $s$
-in exchange for $\cap(\sliceTake(s, i))$, or we can ignore the
+in exchange for $\cap(s[:i])$, or we can ignore the
 capacity of the subslice and keep
-$\sliceRep(\sliceDrop(s, i), drop(l, i))$. These are incomparable and
+$\sliceRep([i:], \drop(l, i))$. These are incomparable and
 unexpressed in the code: the decision is based on whether we intend to
 append to the subslice but stop using the old slice, or whether we want
 to continue using the remainder of \cc{s}.
 
-\tej{why not just use \cc{s[:i]} for $\sliceTake(s, i)$ and $l[:i]$ for
-$take(l, i)$? overloading will make everything much easier to read}
+Concretely, GooseLang has two theorems for reasoning about taking a prefix of a
+list. These theorems all require $i < \len(s)$.
 
-Concretely, GooseLang verifies the following entailment for reasoning
-about subslicing in terms of the slice model:
+The first is $\sliceFull(s, l) \vdash \sliceFull(s[:i], \take(l, i))$, capturing
+how we can have full ownership over $s[:i]$ (including its capacity) by dropping
+the rest of $s$.
 
-$\sliceFull(s, l) \vdash \sliceFull(\sliceTake(s, i), take(l, i))$
-
-This entailment precisely captures how retaining ownership of the
-capacity of $\sliceTake(s, i)$ requires giving up the remainder of
-$s$.
-
+The second is:
 \begin{align*}
   &\sliceRep(s, l) \dashv\vdash \\
-  &\quad \sliceRep(\sliceTake(s, i), take(l, i)) \sep {} \\
-  &\quad \sliceRep(\sliceDrop(s, i), drop(l, i))
+  &\quad \sliceRep(s[:i], \take(l, i)) \sep {} \\
+  &\quad \sliceRep(s[i:], \drop(l, i))
+\end{align*}
+In just the left-to-right direction, this says that if we don't care about
+ownership over capacity (and thus the right to append to any of these slices),
+then we can split $s$ into two parts at the $i$th index.
+
+There is one more fact that is sometimes useful, which is that
+$\sliceCap(s) \dashv\vdash \sliceCap(s[i:])$ (this is somewhat intuitive;
+capacity is past the end of the array, so dropping elements from the front has
+no impact). As a corollary, we can split full ownership of a slice into two
+asymmetric parts:
+\begin{align*}
+  &\sliceFull(s, l) \dashv\vdash \\
+  &\quad \sliceRep(s[:i], \take(l, i)) \sep {} \\
+  &\quad \sliceFull(s[i:], \drop(l, i))
 \end{align*}
 
-This alternative bidirectional entailment splits $s$ into two parts,
-but gives up ownership over $\sliceTake(s, i)$'s capacity in exchange
-for using those elements in \cc{s[:i]}. From this point it will
-not be possible to prove the safety of appending to \cc{s[:i]},
-since this would conflict with the separate ownership over
-\cc{s[i:]}.
+These two reasoning principles correspond to two ways to think about indexing:
+taking a prefix while using the original slice as capacity for the prefix (the
+first theorem), or splitting the slice into two parts (the second theorem and
+its corollary). It was interesting that we discovered these principles while
+proving theorems in GooseLang. Even being experienced Go developers, we had
+never thought about subslicing and appending in enough detail to appreciate this
+difference in ownership reasoning.
 
 \subsection{Maps}
 
@@ -517,7 +536,7 @@ for k, v := range m {
 }
 \end{verbatim}
 
-The model for this entire construct is given by $\cc{MapIter}(m, body)$, where
+The model for this entire construct is given by $\cc{MapIter}(m, \textlog{body})$, where
 $m$ is a reference to the map and $body$ is an expression for the body of the
 loop. Goose translates generic loop bodies, so the Go code does not literally
 need to consist of a call to a separate function. The possibility of
@@ -541,11 +560,11 @@ consumed so far:
   \infer{
     \forall m_{0}, k, v.\,
     k \notin m_{0} \land m[k] = v \to \\\\
-    \hoare{P(m_0)}{body \app k \app v)}{P( m_{0}\mapupd{k}{v} )}
+    \hoare{P(m_0)}{\textlog{body} \app k \app v)}{P( m_{0}\mapupd{k}{v} )}
 }
 {
   \hoare{\mapRep(\ell, m) \sep P(\emptyset)}%
-{\cc{MapIter}(\ell, body)}%
+{\cc{MapIter}(\ell, \textlog{body})}%
 {\mapRep(\ell, m) \sep P(m)}
 }
 \]
