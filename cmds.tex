@@ -9,6 +9,9 @@
 % \newidentmacro{foobar} creates \foobar that expands to foobar, with the right
 % formatting to be an identifier.
 \newcommand{\newidentmacro}[1]{\csdef{#1}{\mathtt{#1}}}
+% \newdefmacro{foobar} is like \newidentmacro but it uses textlog to format the
+% identifier
+\newcommand{\newdefmacro}[1]{\csdef{#1}{\textlog{#1}}}
 
 %% Code
 

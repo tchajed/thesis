@@ -73,14 +73,14 @@ writer has undefined behavior.
 Next, we need reasoning principles to abstract away this complexity from
 program verification. Separation logic turns out to provide the right
 language to reason about racy access. When a thread owns
-$l \mapsto v$, we know no other thread can have access to location
-$l$, so the specifications for reads and writes are unaffected by the
+$\ell \mapsto v$, we know no other thread can have access to location
+$\ell$, so the specifications for reads and writes are unaffected by the
 operations being non-atomic (although their proofs are a bit more
 complicated to deal with the new semantics). The only change is that the
 Read operation is no longer an atomic primitive but a function that
 takes two execution steps. In Iris this means that two threads cannot
 share memory with an invariant and must mediate access with a lock,
-which transfers ownership of the $l \mapsto v$ for multiple execution
+which transfers ownership of the $\ell \mapsto v$ for multiple execution
 steps.
 
 \subsection{Locks}
@@ -139,12 +139,45 @@ sound against the GooseLang spin-lock implementation.
 \newidentmacro{StoreTyped}
 \newidentmacro{loadField}
 \newidentmacro{storeField}
+\newdefmacro{structType}
 
 One of the most important features of Go to support is structs. Goose support
 for structs uses a form of \emph{shallow embedding} using a combination of
 Gallina (Coq's functional language) and GooseLang. We encode
 higher-level primitives like field access on top of GooseLang primitives like
 tuples and continguous memory.
+
+Struct types are represented using a combination of two Gallina types,
+$t \in \textdom{GooseType}$ gives the type of a struct, while
+$s \in \textdom{StructDecl}$ is an (anonymous) struct declaration that gives its
+field names and their types. The definitions of these two types are given in
+\autoref{fig:goose:types}. The exact types are not important in the semantics,
+but we do use the shape of the struct to determine how they are laid out in
+memory to support pointers to individual fields. Using types to represent these
+shapes makes the translation much simpler, since we have access to types from
+the Go type checker via the \cc{go/types} package. As an example of how
+approximate these types are, it is sufficient to have a \goosekw{ptrT} type for
+all pointers; we will use the Go types to determine its type and the types of
+its fields if it is a pointer to a struct.
+
+\begin{figure}[ht!]
+\begin{mathpar}
+  \begin{array}{lrcl}
+    \textdom{GooseType} & t &::=& \goosekw{uint64T} \ALT \goosekw{boolT} \ALT
+                                  \goosekw{unitT} \ALT
+                                  \dots \\
+                        &&\ALT & t \times t \ALT \goosekw{ptrT} \ALT \dots \\
+    \textdom{StructDecl} & s &\in& \textlog{list}(\textlog{string} \times
+                                   \textlog{GooseType}) \\
+    \multicolumn{2}{r}{\structType([])} &\defeq& \goosekw{unitT} \\
+    \multicolumn{2}{r}{\structType((f, t) :: s)} &\defeq& t \times \structType(s)
+  \end{array}
+\end{mathpar}
+\caption{GooseLang types and struct declarations. These are used in the
+  semantics only to give a ``shape'' to data for accessing struct fields, and
+  not to represent the Go type system.}%
+\label{fig:goose:types}
+\end{figure}
 
 First we need to handle struct values. We treat a struct value as just a tuple
 of its fields. The definition of the struct gives an ordering of the fields.
@@ -171,44 +204,24 @@ base elements are at most a machine word, but can be smaller. When
 allocating a new pointer, the semantics flattens composite values and
 stores the elements in a sequence of contiguous addresses.
 
-\begin{figure}[ht!]
-\begin{mathpar}
-  \begin{array}{lrcl}
-    \textdom{GooseType} & t &::=& \goosekw{uint64T} \ALT \goosekw{boolT} \ALT
-                                  \dots \\
-                        &&\ALT & t \times t \ALT t \to t \ALT \goosekw{ptrT} \\
-  \end{array}
-\end{mathpar}
-\caption{GooseLang types. These are used in the semantics only to give a
-  ``shape'' to data for accessing struct fields, and not to represent the Go
-  type system.}%
-\label{fig:goose:types}
-\end{figure}
-
 With a flattened representation we need non-trivial code to read a struct
 through a pointer, particularly when some of its fields are themselves flattened
-structs. We implemented this code by representing a struct declaration with not
-only the fields, but their types as well; the representation of these Goose
-types is given in \autoref{fig:goose:types}. The exact types are not important,
-but we do need the entire tree of how big each field is and the shape of each
-field in order to determine the location and extent of any given field. Using
-types to represent these shapes makes the translation much simpler, since we
-have access to the type of every sub-expression from the Go type checker. Any
-load of a value from memory is translated to a call to $\LoadTyped$. This is a
-Gallina definition of type $\textdom{GooseType} \to \textdom{Expr}$, where that
-expression is itself a GooseLang function that takes a pointer. Hence you can
-think of it is a macro for GooseLang that is represented in Gallina as a meta
-language. $\LoadTyped(t)$ uses $t$ passed in Gallina to determine how to load
-and assemble the fields of a struct of type $t$.
+structs. Any load of a value from memory is translated to a call to
+$\LoadTyped$. This is a Gallina definition of type
+$\textdom{GooseType} \to \textdom{Expr}$, where that expression is itself a
+GooseLang function that takes a pointer. Hence you can think of it is a macro
+for GooseLang that is represented in Gallina as a meta language. $\LoadTyped(t)$
+is directed by a type $t$ passed in Gallina to determine how to load and
+assemble the fields of a struct of type $t$.
 
 For the purpose of proofs we represent a pointer to an arbitrary type
-$t$ with a typed points-to fact of the form $l \mapsto_t v$. This
+$t$ with a typed points-to fact of the form $\ell \mapsto_t v$. This
 definition expands to a number of primitive points-to facts, one for
 each base element. The specification for loading says
 $\hoare{\ell \mapsto_t v}{\LoadTyped(t) \app \ell}{\Ret{v} \ell \mapsto_t v}$, which
-(much like the non-atomic primitive $\goosekw{Load}(\ell)$) hides the fact that something
+(much like the primitive load $!\ell$) hides the fact that something
 non-atomic is happening and looks like an ordinary dereference.
-Similarly, StoreTyped also takes a type, although the specification
+Similarly, $\StoreTyped$ also takes a type, although the specification
 requires the caller to prove that the value has the right shape (in
 reality it always will because the Go code we translate from is
 well-typed).
@@ -232,29 +245,29 @@ struct. The main difference between the physical implementation and the
 model is that we use a single, abstract memory location for each field,
 whereas the implementation encodes all data into bytes.
 
-Recall that $l \mapsto_t v$ is internally composed of untyped
+Recall that $\ell \mapsto_t v$ is internally composed of untyped
 points-to facts for all the base elements of $v$. In order to reason
 about $v$'s fields, we introduce a new struct field points-to fact,
-written $l \mapsto_{t.f} v$, which asserts ownership of just field
-$f$ of a struct of type $t$ rooted at $l$, and gives that field's
+written $\ell \mapsto_{s.f} v$, which asserts ownership of just field
+$f$ of a struct with descriptor $s$ rooted at $\ell$, and gives that field's
 value as $v$. A recursive function gives an ``exploded'' set of struct
 fields by iterating over $t$'s fields and $v$ simultaneously. Then,
-we give a proof that $l \mapsto_t v$ is equivalent to the separating
+we give a proof that $\ell \mapsto_{\structType(s)} v$ is equivalent to the separating
 conjunction of this exploded list. The result is a convenient lemma for
 reasoning about a struct using its fields: in the forward direction, the
 equivalence breaks a large typed points-to into individual fields (with
 the values computed from $v$), while in the other direction it allows
-to prove a $l \mapsto_t v$ by gathering up all the fields.
+to prove a $\ell \mapsto_{\structType(s)} v$ by gathering up all the fields.
 
 The struct field points-to is indispensable in proofs, because the
 pattern of \cc{x.f} in Go when $x$ is a pointer is in fact a field
 load (in C, this would be written \cc{x->f}). The model
-for loading a struct field is a function $\loadField(t, f) \app x$
+for loading a struct field is a function $\loadField(s, f) \app x$
 which is implemented in two steps, first computing the offset to field
-$f$ and then dereferencing the computed pointer (in both cases the struct type $t$
+$f$ and then dereferencing the computed pointer (in both cases the struct descriptor $s$
 describes how to interpret field $f$). Having a field points-to gives
 a natural specification for this type of load:
-$\hoare{\ell \mapsto_{t.f} v}{\loadField(t, f) \app \ell}{\Ret{v} \ell \mapsto_{t.f} v}$.
+$\hoare{\ell \mapsto_{s.f} v}{\loadField(t, f) \app \ell}{\Ret{v} \ell \mapsto_{s.f} v}$.
 
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
@@ -264,14 +277,6 @@ expected Hoare triples hold provides strong evidence that the model is
 also doing the right thing. For example, the exploding lemma shows that
 field offsets are disjoint, since the struct maps-to can be broken into
 field points-to facts for each field.
-
-Something to emphasize above: all of the struct code is generic for
-struct type $t$, which in the code is concretely the ``schema''
-described above, a list of fields and types (the code calls this a
-``descriptor'' and uses $d$ as the metavariable, to avoid confusion
-with a generic type $t$). \tej{using $t$ for struct types rather than
-  descriptors $d$ is very confusing, maybe we should actually use $d$ or $s$ for
-struct descriptors}
 
 \subsection{Slices}
 
