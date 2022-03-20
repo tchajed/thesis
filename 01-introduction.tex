@@ -355,19 +355,24 @@ DaisyNFS design and verify each transaction in Dafny.
 
 The thesis has five chapters that are intended to be fairly independent.
 
-\cref{sec:related} covers related work across Perennial, GoTxn, and DaisyNFS.
-The Goose related work is in a separate chapter since it requires a bit more
-context. \tej{I could change this, but I like the Goose chapter being truly
-self-contained}
+\Cref{sec:related} covers related work across Perennial, GoTxn, and DaisyNFS.
 
-\cref{sec:goose} is about Goose and talks about verifying Go code generally,
-with nothing specific to GoTxn or even storage systems.
+\Cref{sec:goose} is about Goose and talks about verifying Go code generally,
+with nothing specific to GoTxn or even storage systems. There is the first
+complete description of Goose (the CoqPL paper~\cite{chajed:goose-coqpl} is both
+short and out-of-date), so this chapter is written to be readable without any of
+the other chapters.
 
-\cref{sec:perennial} is (planned to be) a brief overview of Perennial, to
-give a sense for how the GoTxn proofs work. The GoTxn chapter, \cref{sec:txn}
-is still intended to be mostly self-contained, except that understanding
-Perennial will help understand some descriptions of the proof. The specification
-for GoTxn does not reference the Perennial logic at all.
+\Cref{sec:perennial} is an overview of Perennial. The examples in
+\cref{sec:perennial:crash-hocap} are taken from GoTxn, so they will also help
+explain how that proof works.
 
-\cref{sec:daisy-nfs} describes the way DaisyNFS connects Dafny to GoTxn, the
-file-system design, and the Dafny proof.
+\Cref{sec:txn} describes the GoTxn specification and proof. It incorporates the
+GoJournal paper~\cite{chajed:gojournal} and parts of the DaisyNFS
+paper~\cite{chajed:daisy-nfs}. This chapter does not require the understanding
+the Perennial chapter. An important part of GoTxn is its specification, which
+enables the connection to Dafny.
+
+\Cref{sec:daisy-nfs} describes the design and proof of DaisyNFS.\@ This chapter
+explains in more detail how the GoTxn proof is connected to Dafny. Here we also
+evaluate the file system's correctness guarantees and performance.

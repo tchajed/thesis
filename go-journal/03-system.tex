@@ -95,6 +95,8 @@ would overwrite the concurrent modification, losing data. The code addresses
 this with a global commit lock that prevents concurrent modifications while
 reading the blocks to be written.
 
+\tej{also talk about 2PL in txn layer}
+
 % The implementation of the write-ahead log and transaction management is
 % complicated primarily because of a highly concurrent implementation. Without
 % concurrency, the implementation and specification
@@ -107,8 +109,3 @@ reading the blocks to be written.
 %%% mode: latex
 %%% TeX-master: "paper.tex"
 %%% End:
-
-
-\section{Verification overview}
-\label{sec:overview}
-\input{go-journal/overview}

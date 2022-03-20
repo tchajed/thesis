@@ -10,19 +10,19 @@ type Addr struct {
 
 // starting and stopping a transaction
 func Begin() *Txn
-func Abort(tx *Txn)
-func Commit(tx *Txn)
+func (tx *Txn) Abort()
+func (tx *Txn) Commit()
 
 // operations within a transaction
-func Read(tx *Txn, a Addr, sz uint64) []byte
-func ReadBit(tx *Txn, a Addr) bool
-func Write(tx *Txn, a Addr, d []byte)
-func WriteBit(tx *Txn, a Addr, d bool)
+func (tx *Txn) Read(a Addr, sz uint64) []byte
+func (tx *Txn) ReadBit(a Addr) bool
+func (tx *Txn) Write(a Addr, d []byte)
+func (tx *Txn) WriteBit(a Addr, d bool)
 
 // allocator API
 func NewAllocator(max uint64) *Allocator
-func Alloc(a *Allocator) uint64
-func Free(a *Allocator, n uint64)
+func (a *Allocator) Alloc() uint64
+func (a *Allocator) Free(n uint64)
 \end{minted}
   \caption{The API for the transaction system and allocator. Reads and writes
     between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
