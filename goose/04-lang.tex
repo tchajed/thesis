@@ -31,7 +31,7 @@ form of a transition system. The transitions also require some state, for
 example to track the value stored at each allocated pointer. This language has
 low-level primitives for modeling an imperative program, with nothing terribly
 Go-specific; we will give a high-level overview in this section and details in
-\autoref{sec:goose:reasoning}.
+\cref{sec:goose:reasoning}.
 
 The basic unit of the language is the expression $e$, which supports recursive
 functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. Then, we give
@@ -108,7 +108,7 @@ lambda calculus, X is a good reference \tej{figure out what to recommend for
   \label{fig:goose:syntax}
 \end{figure}
 
-The syntax for GooseLang programs is given in \autoref{fig:goose:syntax}. The
+The syntax for GooseLang programs is given in \cref{fig:goose:syntax}. The
 important top-level definition is $e \in \textdom{Exp}$, giving expressions in
 GooseLang. Before getting to the expressions, it's worth noting that the values
 in GooseLang are designed for Go's primitive data, in particular with
@@ -210,7 +210,7 @@ previously defined $\goosedef{Midpoint}$.
 
 The next interesting feature of GooseLang is support for pointers. In this
 aspect the language is a bit unusual; we get to the reasons why in
-\autoref{sec:goose:pointers}. For now, it is sufficient to think of $x \gets e$
+\cref{sec:goose:pointers}. For now, it is sufficient to think of $x \gets e$
 as the usual pointer store operation, and $!x$ as the usual load. Here are a couple
 examples to illustrate:
 
@@ -264,7 +264,7 @@ The Goose syntax includes an $\external$ alternative. The language, both syntax
 and semantics, are parameterized over an external interface of operations, for
 interacting with the outside world. For example, in GoTxn the code uses an
 interface of external disk operations, presented separately in
-\autoref{fig:goose:disk-ffi}. The parameterization is primarily useful for
+\cref{fig:goose:disk-ffi}. The parameterization is primarily useful for
 refinement proofs that relate Goose with one set of external operations to
 another (for example, we use this to specify GoTxn). Other than that use case,
 the reader can imagine that the external rules are simply part of the definition
@@ -272,7 +272,7 @@ of expressions and the semantics.
 
 Goose also has a formal, small-step operational semantics; this style of
 specification and indeed most of the semantics is quite standard for languages of
-this type. The full details are presented in \autoref{fig:goose:semantics}.
+this type. The full details are presented in \cref{fig:goose:semantics}.
 
 \begin{figure}[hp]
   \textbf{Pure reduction}%
@@ -400,7 +400,7 @@ the type of an external ``world'' that is used to define the semantics of
 external operations. Even the type of this world state is a parameter at this
 level, and is defined as part of defining a set of external operations and their
 semantics. The specific case of the disk is presented in
-\autoref{fig:goose:disk-ffi}.
+\cref{fig:goose:disk-ffi}.
 
 Finally, we define the full semantics over $((h, w), \mathcal{E})$. Instead of a
 single expression, we now have a \emph{threadpool}, a list of expressions, all

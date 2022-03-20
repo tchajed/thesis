@@ -20,7 +20,7 @@ write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
 from layer X, where X is one of NFS, Txn, or Disk.
 Layer operations are always atomic transitions in a state machine. In the
 NFS layer, the NFS operations behave according to the NFS state machine
-described previously in \autoref{sec:soundness} and defined formally in Dafny.
+described previously in \cref{sec:soundness} and defined formally in Dafny.
 
 The Txn layer is specified in both Coq where it is part of GoTxn's correctness
 theorem and in Dafny where it appears as an assumption. The Disk transition
@@ -103,7 +103,7 @@ The correctness of the transaction system is summarized by the following theorem
   \label{thm:txn}
 \end{theorem}
 
-\autoref{thm:txn} is stated in Coq and has a fully mechanized proof in Perennial.
+\cref{thm:txn} is stated in Coq and has a fully mechanized proof in Perennial.
 What it says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
@@ -117,6 +117,6 @@ each object with a fixed size. Finally, safe programs can only \cc{Abort} or
 important when linking this proof with the Dafny proofs, since the transaction
 system's proof only applies to a safe caller.
 
-In the Coq development, \autoref{thm:txn} uses Goose~\cite{chajed:goose-coqpl}
+In the Coq development, \cref{thm:txn} uses Goose~\cite{chajed:goose-coqpl}
 to translate the transaction system's Go implementation into a model in Coq that
 Perennial supports.

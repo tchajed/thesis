@@ -32,10 +32,10 @@ implementation.
 \bf Layer & \bf Operations & \\
 \midrule
   NFS
-      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \autoref{sec:spec} \\
+      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:spec} \\
   Txn
       & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
-        \dots & \autoref{sec:system:txn} \\
+        \dots & \cref{sec:system:txn} \\
   Disk
       & \cc{Read(a)}, \cc{Write(a, b)} & \\
 \bottomrule
@@ -45,7 +45,7 @@ implementation.
 \end{figure}
 
 The proof is about the server loop at three layers of abstraction, as outlined
-in \autoref{fig:layers}. The Disk layer at the bottom is where the whole server
+in \cref{fig:layers}. The Disk layer at the bottom is where the whole server
 runs, while the NFS layer serves as the specification. In addition, there
 is an intermediate layer Txn for the transaction system which is the abstraction
 on which the Dafny code is written and verified.
@@ -61,7 +61,7 @@ write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
 from layer X, where X is one of NFS, Txn, or Disk.
 Layer operations are always atomic transitions in a state machine. In the
 NFS layer, the operations behave according to the NFS state machine
-described previously in \autoref{sec:spec} and defined formally in Dafny.
+described previously in \cref{sec:spec} and defined formally in Dafny.
 The Txn layer is specified both in Coq where it is part of the transaction
 system's correctness theorem and in Dafny where it appears as an assumption. The
 Disk transition system is formalized in Coq as part of the GoJournal proof,
@@ -80,7 +80,7 @@ the executable code is written
 $\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, indicating ``linking'' the
 Txn-layer server $\sdfy$ with the transaction system by taking each call to a
 Txn API and plugging in its implementation on top of a disk.
-\autoref{fig:refinement-execs} illustrates one execution of the DaisyNFS server,
+\cref{fig:refinement-execs} illustrates one execution of the DaisyNFS server,
 when clients issue a \cc{LOOKUP} and \cc{CREATE} in parallel; for correctness,
 the operations should be atomic and follow the NFS specification despite
 interleaving at the code level (the bottom execution).
@@ -105,9 +105,9 @@ handling aborts is omitted in this snippet).
     context switches.
     The proof shows the bottom execution is equivalent to an atomic execution of
     each thread at
-    the Txn layer~(in \autoref{thm:gotxn}),
+    the Txn layer~(in \cref{thm:gotxn}),
     and sequential reasoning shows each atomic sequence behaves according to the NFS
-    specification~(in \autoref{thm:dafny}).}
+    specification~(in \cref{thm:dafny}).}
   \label{fig:refinement-execs}
 \end{figure}
 
@@ -144,7 +144,7 @@ Now we have enough to state the final DaisyNFS correctness theorem:
 %
 In this correctness theorem, initialization requires running a Dafny method on
 an empty disk. Subsequently the system boots by first recovering the transaction
-system, then restoring the file system. \autoref{thm:correctness} will follow
+system, then restoring the file system. \Cref{thm:correctness} will follow
 from the correctness of the transaction system combined with the results from
 Dafny.
 
@@ -191,7 +191,7 @@ abstraction relation to be preserved by crashes, the proof engineer does \emph{n
 % is a standard condition for sequential crash-safety~\cite{chajed:argosy}
 % for sequential crash safety~\cite{chajed:argosy}.
 The
-diagram in \autoref{fig:refinement} depicts the main
+diagram in \cref{fig:refinement} depicts the main
 refinement condition (1) diagrammatically.
 % For example, it is fairly easy to use them to show
 % that for any sequential program $p : \gooselayer{S}$, the traces of the code
@@ -240,13 +240,13 @@ $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
 % using transactions and a proof of its correctness in terms of standard
 % \emph{sequential} reasoning, while the conclusion says that the combination of
 % the implementation with GoTxn results in a correct \emph{concurrent} refinement.
-In \autoref{sec:txn-proof} we discuss how this theorem
+In \cref{sec:txn-proof} we discuss how this theorem
 is proven using Perennial and Coq.
 
-In order to use this theorem to obtain \autoref{thm:correctness}, we need to
+In order to use this theorem to obtain \cref{thm:correctness}, we need to
 prove that DaisyNFS's implementation, $i_{NFS}$, satisfies the sequential refinement conditions. To do so, we define
 $\seqrefinement_{\mathrm{dfy}}(i)$, an encoding of sequential refinement
-using Dafny pre- and post-conditions (as illustrated in \autoref{fig:refinement}), and prove that DaisyNFS
+using Dafny pre- and post-conditions (as illustrated in \cref{fig:refinement}), and prove that DaisyNFS
 satisfies these conditions in Dafny. The crash refinement condition (3) is
 straightforward; crashes have no effect in both the Txn layer and the NFS layers
 because they do not have ephemeral state.
@@ -286,8 +286,8 @@ errors.}
   \label{fig:refinement}
 \end{figure}
 
-From here we can apply \autoref{thm:gotxn} to \autoref{thm:dafny} and
-obtain \autoref{thm:correctness}. \autoref{fig:refinement-execs} illustrates
+From here we can apply \cref{thm:gotxn} to \cref{thm:dafny} and
+obtain \cref{thm:correctness}. \Cref{fig:refinement-execs} illustrates
 just one execution that the theorem covers: the transaction system proof guarantees an
 atomic execution while the sequential refinement guarantees the transactions
 themselves are correct. There are two trusted assumptions needed for the
@@ -367,7 +367,7 @@ The correctness of the transaction system is summarized by the following theorem
   \label{thm:txn}
 \end{theorem}
 
-\autoref{thm:txn} is stated in Coq and has a fully mechanized proof in Perennial.
+\cref{thm:txn} is stated in Coq and has a fully mechanized proof in Perennial.
 What it says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
@@ -381,7 +381,7 @@ each object with a fixed size. Finally, safe programs can only \cc{Abort} or
 important when linking this proof with the Dafny proofs, since the transaction
 system's proof only applies to a safe caller.
 
-In the Coq development, \autoref{thm:txn} uses Goose~\cite{chajed:goose-coqpl}
+In the Coq development, \cref{thm:txn} uses Goose~\cite{chajed:goose-coqpl}
 to translate the transaction system's Go implementation into a model in Coq that
 Perennial supports.
 
@@ -425,7 +425,7 @@ operations are atomic; furthermore, the file system automatically maintains the
 abstraction relation for crashes during recovery since recovery itself uses a
 single transaction. Recovery must still do some work since the abstraction
 relation held prior to the crash using in-memory state that has been lost. We
-give the precise specification proven in Dafny in \autoref{appendix:proof}, and
+give the precise specification proven in Dafny in \cref{appendix:proof}, and
 also argue how it fits into the forward simulation proof.
 
 \subsection{Linking the transaction system and Dafny correctness theorems}
@@ -464,7 +464,7 @@ restrictive part of safety is that transactions are not allowed to read or write
 shared memory, other than through the Txn layer. The Dafny code does allocate
 heap objects and read them, but these are only used locally, and thus are
 unaffected by concurrency; we work through this argument more formally in
-\autoref{appendix:proof}. To confirm that there is no shared mutable state, we
+\cref{appendix:proof}. To confirm that there is no shared mutable state, we
 checked that the Dafny class implementing the file system has no mutable
 variables, other than the transaction system and its allocators.  Dafny does not
 support mutable global variables outside of any class, so checking the class is sufficient.
@@ -473,12 +473,12 @@ Notice that this linking proof makes minimal assumptions about the code in
 Dafny, other than the fact that it is verified. In particular, the same argument
 would equally apply to a different NFS implementation, or even a system with an
 entirely different specification, as long as the equivalent of
-\autoref{thm:dafny} was still proven in Dafny, and the Dafny code did not use
+\cref{thm:dafny} was still proven in Dafny, and the Dafny code did not use
 shared mutable state.
 
 % Formally, even if $\sdfy$ is not safe, it is sufficient if there
 % exists any other program $\widetilde{\server}_{\mathrm{dfy}}$ with equivalent behavior which is
-% safe; we can apply \autoref{thm:txn} to this alternate program and get the same
+% safe; we can apply \cref{thm:txn} to this alternate program and get the same
 % refinement result. Such a program would be a systematic transformation of the
 % Dafny code that replaced any allocation with a local variable forwarded to the
 % remainder of the code, and inlined any global constants. This transformation
@@ -491,7 +491,7 @@ The allocator cannot be implemented in Dafny because it is shared mutable state.
 Instead, we expose the allocator API as part of a transaction, albeit with a loose
 specification that says \cc{Alloc} may return
 any number and \cc{Free} may be called on any unused block.
-As we explain in \autoref{sec:txn-proof}, under this specification, \cc{Alloc} and \cc{Free} both behave
+As we explain in \cref{sec:txn-proof}, under this specification, \cc{Alloc} and \cc{Free} both behave
 atomically in a transaction. The
 true allocation state is stored on disk, in the bitmap blocks for
 example, and the Dafny code must validate that the address returned by \cc{Alloc} is actually

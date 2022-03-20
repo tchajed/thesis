@@ -1,7 +1,7 @@
 \section{Verifying \txn}
 \label{s:proof}
 
-\txn consists of multiple layers, as described in \autoref{s:system:impl}.  This
+\txn consists of multiple layers, as described in \cref{s:system:impl}.  This
 section provides some highlights of the complexity involved in \txn's
 implementation, along with the proof techniques required to formally
 reason about that complexity.
@@ -71,7 +71,7 @@ concurrent, synchronous multiwrites.
 \paragraph{Internal abstract state: logical log.}
 To prove the write-ahead log layer correct, \txn represents the
 state of the write-ahead log as a logical list of multiwrites, as
-shown in \autoref{fig:log}.  Multiwrites before \cc{memStart} have
+shown in \cref{fig:log}.  Multiwrites before \cc{memStart} have
 already been installed, and their log entries do not physically exist in memory or on disk.
 Multiwrites from \cc{memStart} to \cc{diskEnd} are already logged on
 disk.  Multiwrites from \cc{diskEnd} to \cc{nextDiskEnd} are currently being logged
@@ -105,7 +105,7 @@ Although the details of the logical log are important for proving the
 \scc{wal} layer, the caller (i.e., the \scc{obj} layer) does not need
 to know about installation, group commit, etc. To abstract away these
 details, the \scc{wal} provides a simplified state as its interface,
-as shown in \autoref{fig:wal-spec}.  The simplified state consists of
+as shown in \cref{fig:wal-spec}.  The simplified state consists of
 the same list of multiwrites, together with \cc{durable_lb}, which is
 a lower bound on what set of multiwrites will be preserved on crash.
 Using a lower bound instead of precisely exporting \cc{diskEnd} means
@@ -125,7 +125,7 @@ this concurrency.
 For performance, \txn has dedicated threads that perform logging and
 installation.  However, these threads do not hold any locks while reading
 or writing to disk.  To allow these threads to run concurrently, \txn
-uses two separate header blocks, as shown in \autoref{fig:physlog}.
+uses two separate header blocks, as shown in \cref{fig:physlog}.
 One header block (owned by the installer thread) stores the start of
 the on-disk log, and another header block (owned by the logger thread)
 stores the end of the on-disk log.  This lets the installer and logger
@@ -163,7 +163,7 @@ logger position, which the proof demonstrates using a lower bound on
 \label{s:proof:logatom}
 
 Throughout the \txn stack we specify internal layers using a transition-system
-specification, such as the examples illustrated in \autoref{fig:wal-spec} for
+specification, such as the examples illustrated in \cref{fig:wal-spec} for
 the \scc{wal} layer. Perennial formalizes what it means for the code in a layer to
 implement a transition using Hoare triples in a style we call
 \emph{logically atomic crash specifications}. While the precise encoding
@@ -183,7 +183,7 @@ while still executing the right update in the logger proof?
 Logically atomic specifications achieve this separation by having the precondition to \cc{Append}
 take a logical \emph{callback}~\cite{jacobs:logatom}, which the proof promises to ``execute'' at the commit point.
 This callback is a Hoare triple of the form $\hoare{P}{\SKIP}{Q}$, where $P$ and $Q$ are later selected
-by the logger proof to update the \cc{diskEnd} ghost state of the logical log, as shown in \autoref{fig:circ-callback}.
+by the logger proof to update the \cc{diskEnd} ghost state of the logical log, as shown in \cref{fig:circ-callback}.
 % The logger proof maintains a
 % ghost variable $\gamma \mapsto \cc{diskEnd}$, much like other points-to predicates,
 % but variable $\gamma$ exists only in the proof. It passes an update to this
@@ -191,7 +191,7 @@ by the logger proof to update the \cc{diskEnd} ghost state of the logical log, a
 % $\hoare{\gamma \mapsto \cc{diskEnd}}%
 % {\SKIP}%
 % {\gamma \mapsto (\cc{diskEnd} + \cc{len}(\cc{txns}))}$
-% as the callback, as illustrated in \autoref{fig:circ-callback}.
+% as the callback, as illustrated in \cref{fig:circ-callback}.
 %(we use the
 %shorthand $\gamma\ \cc{+=}\ \cc{len(txns)}$ for
 %space reasons).
@@ -224,7 +224,7 @@ callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)
 
 %  The proof separates verifying the
 % circular buffer that manipulates the on-disk header blocks and transactions (the
-% first 513 blocks in \autoref{fig:physlog}) from reasoning about the logger
+% first 513 blocks in \cref{fig:physlog}) from reasoning about the logger
 % thread.
 %
 %  Transition systems are useful as a specification because
@@ -247,7 +247,7 @@ callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)
 %
 % For a concrete example, we describe how logically atomic crash specifications
 % help factor out a library for managing the on-disk circular buffer (the first
-% 513 blocks on disk in \autoref{fig:physlog}) in the \scc{wal}. This internal
+% 513 blocks on disk in \cref{fig:physlog}) in the \scc{wal}. This internal
 % layer handles just two operations: \cc{Append} writes updates to the buffer
 % atomically to log a new batch of transactions and \cc{Advance} trims from the
 % front of the buffer to make room for new updates after installing old ones.
@@ -258,7 +258,7 @@ callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)
 % reconstructed based on the header blocks.
 %
 % The write-ahead log uses the circular buffer's atomic specification by relating
-% the buffer's queue to the logical write-ahead log seen in \autoref{fig:log}.
+% the buffer's queue to the logical write-ahead log seen in \cref{fig:log}.
 % Slightly simplified, the invariant says that the data in the queue is exactly
 % the updates between \cc{memStart} and \cc{diskEnd}. More precisely during the
 % lock-free code in the installer the queue might have advanced beyond
@@ -346,7 +346,7 @@ they can execute concurrently with one another and concurrently with
 
 Lock-free reads pose a verification challenge because the disk
 block can be modified during the read.  Consider the example shown
-in \autoref{fig:txn-concur}, where a single disk block stores many
+in \cref{fig:txn-concur}, where a single disk block stores many
 inodes. Inode 1 initially contains the value A, while inode 4 contains B. Thread 1 is committing a write of B' to inode 4 in that block, while
 thread 2 concurrently reads inode 1 from the same block.  To read
 inode 1, thread 2 will read the entire block, and then copy out the part
@@ -389,7 +389,7 @@ the caller is guaranteed to see the correct object $o$.
 
 % \subsection{Lock-free reads in \scc{wal}}
 %
-% \autoref{fig:walread} shows the implementation of \cc{Read} in the
+% \cref{fig:walread} shows the implementation of \cc{Read} in the
 % \scc{wal} layer.  This implementation does not hold any lock for the
 % duration of the read; instead, it uses a lock to check the in-memory state
 % (consisting of updates between \cc{memStart} and \cc{memEnd}), and, if
@@ -398,7 +398,7 @@ the caller is guaranteed to see the correct object $o$.
 % can run between the call to \cc{ReadMem()} and \cc{ReadInstalled()}.
 % In particular, a thread running \scc{obj}'s \cc{Commit()} could write
 % to the same block that another thread is reading, if the two threads
-% are accessing different files, as shown in \autoref{fig:txn-concur}.
+% are accessing different files, as shown in \cref{fig:txn-concur}.
 %
 % \begin{figure}[ht]
 % \input{go-journal/code/walreads}

@@ -11,7 +11,7 @@
 \label{fig:overview}
 \end{figure}
 
-\autoref{fig:overview} gives an overview of how \txn and systems
+\cref{fig:overview} gives an overview of how \txn and systems
 building on it are verified using Perennial.
 On the left of the figure is the executable code, which is written
 in Go. On top of \txn, we have implemented two NFS servers to evaluate \txn
@@ -43,9 +43,9 @@ concurrent separation logic, with pre-, post-, and crash conditions. These
 specifications capture the behavior of individual Go functions: if the function
 is run in a state satisfying its precondition, then the final state will satisfy
 the postcondition, and if the system crashes the state will satisfy the crash
-condition. The specification for the journaling API is described in detail in \autoref{s:design}. We
+condition. The specification for the journaling API is described in detail in \cref{s:design}. We
 demonstrate the usefulness of this specification by proving correctness of the \simplenfs
-server using logically atomic crash specifications (\autoref{s:proof:logatom}). %, a style of specification
+server using logically atomic crash specifications (\cref{s:proof:logatom}). %, a style of specification
 %encoded in Hoare triples.
 The top-level theorem for \simplenfs states that its RPCs
 atomically follow transitions of a state machine formalizing the NFSv3 protocol (based on RFC

@@ -4,7 +4,7 @@
 % make theorem re-statements get the same numbers
 \setcounter{theorem}{0}
 
-Previously in \autoref{sec:proof} we gave an informal overview of \sys's
+Previously in \cref{sec:proof} we gave an informal overview of \sys's
 correctness proof. This section develops the proof in more detail. There are two
 gaps we will fill in compared to the proof above: first, we will be more precise
 about what the requirements of the transaction system proof are and why DaisyNFS
@@ -94,9 +94,9 @@ system. At this level of abstraction, transactions are not represented with the
 usual \cc{Begin}, \cc{Commit}, and \cc{Abort} calls but with a
 specification-only Atomically operation.
 
-In the following two sections we expand on how to apply \autoref{thm:txn} to
+In the following two sections we expand on how to apply \cref{thm:txn} to
 $\sdfy$ and how the initialization and recovery code is incorporated to prove
-\autoref{thm:correctness}.
+\cref{thm:correctness}.
 
 \subsection{Safety}
 
@@ -138,7 +138,7 @@ a simple audit shows that the Dafny code is in a class that has no mutable
 variables other than the transaction system and ghost variables,
 so it is impossible for a transaction to have a non-local effect.
 
-Applying \autoref{thm:txn} to this revised Dafny program, we obtain that
+Applying \cref{thm:txn} to this revised Dafny program, we obtain that
 $\linked{\sdfyAlt} \refines \sdfyAlt$. Given that $\sdfyAlt \progeq \sdfy$, it is
 reasonable that the linked versions are also equivalent, completing the first
 part of the refinement proof:
@@ -199,9 +199,9 @@ file-system state (at minimum, the root inode should be an allocated directory).
 More precisely then, DaisyNFS's specification as stated above requires that the
 caller first run \cc{Init} on an all-zero disk, initially establishing the
 file-system invariant. After that, the system should run the recovery method on
-each reboot to behave like $\sdfy$ according to \autoref{thm:txn}.
+each reboot to behave like $\sdfy$ according to \cref{thm:txn}.
 
-While we can use \autoref{thm:txn} to show the code behaves like $\sdfy$, why
+While we can use \cref{thm:txn} to show the code behaves like $\sdfy$, why
 does $\sdfy$ behave like $\snfs$ across a crash? The specification we prove in
 Dafny about recovery is this:
 

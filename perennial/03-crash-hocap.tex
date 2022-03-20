@@ -226,7 +226,7 @@ network, processes it in a background thread, and replies over the network.
 Immediately following boot, before processing any requests, the server runs a
 recovery procedure to restore in-memory state. This whole procedure --- recovery
 followed by running the system --- gets an idempotent specification that is
-proven with \ruleref{wpr-idempotence} from \autoref{sec:perennial:recovery}. The
+proven with \ruleref{wpr-idempotence} from \cref{sec:perennial:recovery}. The
 crash condition for this theorem is a description of the state of the whole
 system at any intermediate step; describing this directly would be daunting, but
 it is doable since each layer describes its part of the crash condition.
@@ -333,7 +333,7 @@ overall crash condition. Thus using \ruleref{cfupd-use} before running the
 system both sets up the circular buffer for use (by establishing
 $\cc{is_circular}(\gamma)$) and guarantees the circular buffer's part of the
 crash condition from now on. We saw a simpler but abstract version of this
-reasoning in the \ruleref{wpc-inv-alloc} rule in \autoref{sec:perennial:wpc};
+reasoning in the \ruleref{wpc-inv-alloc} rule in \cref{sec:perennial:wpc};
 this theorem is a concrete use case (split into creating the cfupd and later
 using it, rather than in one step as in \ruleref{wpc-inv-alloc}). What Perennial
 makes possible is to take advantage of the invariant for crash reasoning ---
@@ -387,7 +387,7 @@ them, so it easy enough to reconstruct them globally. In contrast, some
 resources are used locally by a thread and we would like a way to retain
 ownership across a crash, into that thread's crash condition. This is exactly
 what happens with GoJournal's lifting-based specification, explained in greater
-detail in \autoref{s:design}. Exchanging gives threads a way to ``trade''
+detail in \cref{s:design}. Exchanging gives threads a way to ``trade''
 ownership prior to a crash, associated with the old $\gamma$ instance, for
 ownership after a crash, associated with $\gamma'$; this ownership can also be
 exclusive, because the process destroys the old ownership and thus can only be

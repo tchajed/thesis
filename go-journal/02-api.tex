@@ -35,7 +35,7 @@ func Free(a *Allocator, n uint64)
 The transaction system gives the caller a way to read and write on-disk
 objects (which can be smaller than the 4KB block size of the underlying disk),
 in such a way that a whole sequence of reads and writes appears atomic. The
-programming interface is listed in \autoref{fig:txn-api}. In practice this makes
+programming interface is listed in \cref{fig:txn-api}. In practice this makes
 it easier to implement a file system by handling the challenges of crash safety
 and concurrency, leaving the file system to implement its data structures and
 business logic using disk objects.

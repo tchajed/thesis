@@ -3,7 +3,7 @@
 
 A key principle in the design of Goose is to model features of Go as code,
 written as libraries on top of the base GooseLang language described in
-\autoref{sec:goose:lang}. In this section we describe some of the features of Go
+\cref{sec:goose:lang}. In this section we describe some of the features of Go
 we model, as well as reasoning principles we develop on top to verify code that
 uses these features.
 
@@ -151,7 +151,7 @@ Struct types are represented using a combination of two Gallina types,
 $t \in \textdom{GooseType}$ gives the type of a struct, while
 $s \in \textdom{StructDecl}$ is an (anonymous) struct declaration that gives its
 field names and their types. The definitions of these two types are given in
-\autoref{fig:goose:types}. The exact types are not important in the semantics,
+\cref{fig:goose:types}. The exact types are not important in the semantics,
 but we do use the shape of the struct to determine how they are laid out in
 memory to support pointers to individual fields. Using types to represent these
 shapes makes the translation much simpler, since we have access to types from

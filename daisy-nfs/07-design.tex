@@ -3,7 +3,7 @@
 
 We follow the standard approach for verifying software in Dafny: each
 file-system operation is implemented as a method on a class and its
-specification is given using pre- and post-conditions. In \autoref{sec:proof},
+specification is given using pre- and post-conditions. In \cref{sec:proof},
 we explained how the Dafny proof shows the code is a correct implementation of NFS in terms of sequential refinement. This
 section provides details about the file-system design and proof.
 
@@ -12,7 +12,7 @@ section provides details about the file-system design and proof.
 % calls to lemmas.
 
 \sys is implemented and verified in several layers of abstraction, depicted in
-\autoref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
+\cref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
 lower layer as a field. The transaction system is an assumed interface in Dafny,
 while the complete server implements the NFS wire protocol and calls into the
 top-level Dafny class for each operation.

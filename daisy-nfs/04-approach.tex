@@ -13,7 +13,7 @@ and the specification allows any timestamp to be picked for the
 current time. The RFC is precise about arguments and allowed return
 values, and the text is good about explaining the intended behavior,
 but it does not describe the state an NFS server maintains.  We define
-the NFS server state as shown in \autoref{fig:dafny-state}.
+the NFS server state as shown in \cref{fig:dafny-state}.
 
 \begin{figure}[h]
 \begin{small}
@@ -59,7 +59,7 @@ code for one of the errors defined in the standard. We systematically guarantee
 that the state is unchanged when an operation returns an error (though this is
 stronger than the text of the RFC); the transaction system makes this easy to
 achieve by aborting the whole transaction. For example,
-\autoref{fig:getsz} shows the
+\cref{fig:getsz} shows the
 specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
 the inode \cc{ino}.
 
@@ -93,7 +93,7 @@ compile if the specification does not earlier imply \cc{ino in fs}.
 
 We developed a state-machine model of the regular file and directory operations
 in NFS in this style, including specifying what certain errors
-signify. \autoref{fig:nfs} lists the entire NFS API and what parts we verified.
+signify. \Cref{fig:nfs} lists the entire NFS API and what parts we verified.
 
 \renewcommand{\check}{\textcolor{ForestGreen}{\checkmark}}
 \newcommand{\nope}{\textcolor{Maroon}{\ding{55}}}

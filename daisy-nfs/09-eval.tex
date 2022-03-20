@@ -42,7 +42,7 @@ clarity.
   \label{fig:eval:bench}
 \end{figure}
 
-The results are shown in \autoref{fig:eval:bench}. DaisyNFS gets about the same
+The results are shown in \cref{fig:eval:bench}. DaisyNFS gets about the same
 throughput as Linux on the smallfile benchmark, which is intended to
 be metadata-heavy. The smallfile benchmark repeatedly creates a file,
 writes 100 bytes to it and syncs the file, then deletes it.
@@ -76,7 +76,7 @@ demonstrated scalability. Here we report a similar experiment to demonstrate
 that DaisyNFS can take advantage of GoJournal's scalability, after accounting for
 the transaction system's two-phase locking and any overhead added by the
 transactions themselves. The benchmark used is the smallfile benchmark from
-\autoref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
+\cref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
 on an SSD, other threads have a chance to prepare transactions while the
 journal is committing to disk.
 
@@ -90,7 +90,7 @@ journal is committing to disk.
   \label{fig:eval:scale}
 \end{figure}
 
-The results are shown in \autoref{fig:eval:scale}. The graph shows that \sys
+The results are shown in \cref{fig:eval:scale}. The graph shows that \sys
 achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server.
 DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
@@ -98,7 +98,7 @@ installation of writes into disk blocks at commit time.
 
 \subsection{Testing the trusted code and spec}
 
-For the NFS server to satisfy \autoref{thm:correctness}, we trust that (1) the
+For the NFS server to satisfy \cref{thm:correctness}, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
 refinement is correctly encoded into Dafny, (3) the libraries for Go primitives
 are correctly specified in Dafny, and (4) the unverified Go code calling the
@@ -126,7 +126,7 @@ unrelated research project so we unfortunately lack space to give details on
 the methodology itself.} This testing produces a wider range of requests than
 are possible via the Linux client. This process helped us find and fix several bugs in
 the unverified parts of DaisyNFS and in the specification itself. These are
-reported in \autoref{fig:daisynfs-bugs}.
+reported in \cref{fig:daisynfs-bugs}.
 
 The two specification bugs are particularly interesting. The bounded inode bug
 was due to an \cc{ino} argument of type \cc{Ino}; this type is a Dafny
@@ -180,7 +180,7 @@ compatible.
   In-place directory updates & 2 days & 600\\
   Multi-block directories & 5 days & 800 \\
   NFS attributes & 4 days & 500 \\
-  Freeing space (\autoref{sec:dafny:freeing}) & 3 days & 1400\\
+  Freeing space (\cref{sec:dafny:freeing}) & 3 days & 1400\\
   \bottomrule
 \end{tabular}
 \end{center}
@@ -194,13 +194,13 @@ one of the authors, until it had support for enough of NFS to run. We
 added several features incrementally after the initial prototype
 worked, both to improve performance and to support more
 functionality. Some of the interesting changes are listed in
-\autoref{fig:features}.  To improve performance, we switched to
+\cref{fig:features}.  To improve performance, we switched to
 operating on the serialized representation of directories directly
 (decoding fields on demand and encoding in-place) and then added also
 multi-block directories.  We added support for attributes so that the file
 system stores the mode, uid/gid, and modification timestamp for files and directories.
 Finally, we implemented the freeing plan described
-in \autoref{sec:dafny:freeing}, which required additional code through the
+in \cref{sec:dafny:freeing}, which required additional code through the
 whole stack (but by design no changes to the file-system invariant).
 We believe additional features such as symbolic links
 could be added incrementally with modest effort because
@@ -220,6 +220,6 @@ of sequential reasoning and proof automation.
 %%   (4 days, 500 lines changed)
 %%   \item The file system initially only freed the first 8 direct blocks of an
 %%   inode. We implemented the space-freeing plan described in
-%%   \autoref{sec:dafny:freeing} through the whole stack afterward. (3 days, 1400
+%%   \cref{sec:dafny:freeing} through the whole stack afterward. (3 days, 1400
 %%   lines changed)
 %% \end{itemize}

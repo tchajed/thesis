@@ -57,7 +57,7 @@ concurrency control.
 %but the caller is required to use locks appropriately to guarantee concurrent
 %transactions do not access the same data. Instead of doing this manually, \sys extends GoJournal with
 %two-phase locking so that the file system code on top is automatically well-synchronized. Although verifying the two-phase locking requires
-%sophisticated reasoning (see~\autoref{sec:txn-proof}), this separation
+%sophisticated reasoning (see~\cref{sec:txn-proof}), this separation
 %allows \sys to use Dafny for sequential reasoning and benefit from
 %proof automation.
 

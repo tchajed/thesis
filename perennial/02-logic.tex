@@ -53,7 +53,7 @@ terminology that while we use the term ``crash'' these postconditions hold
 \emph{just prior} to the system actually shutting down, so that the contents of
 memory is unchanged.\footnote{They might more properly be called \emph{halt
 specifications}, but we used the terminology in the original FSCQ paper and it has
-stuck since then. Crash specs are a bit more catchy, anyway.} In \autoref{sec:perennial:recovery} we'll connect these
+stuck since then. Crash specs are a bit more catchy, anyway.} In \cref{sec:perennial:recovery} we'll connect these
 crash specifications to the memory wipe and reboot that happens right afterward.
 
 \begin{figure}[ht]
@@ -121,7 +121,7 @@ $\knowInv{}{R} \proves \knowInv{}{R} \sep \knowInv{}{R}$ --- this is sound
 because $\knowInv{}{R}$ is not the underlying resources $R$ but merely knowledge
 that $R$ is an invariant.
 
-Invariants have a special role in Perennial. \autoref{fig:wpc-concurrent} lists
+Invariants have a special role in Perennial. \Cref{fig:wpc-concurrent} lists
 some rules for concurrency reasoning. Perennial extends invariant allocation
 with a rule \ruleref{wpc-inv-alloc}. The non-crash parts of this rule are
 identical to \ruleref{wp-inv-alloc}, but applying the rule has the additional

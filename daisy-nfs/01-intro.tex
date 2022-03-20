@@ -91,7 +91,7 @@ sequential proofs can be seen in the proof-to-code ratio for the transaction
 system, which is $18\times$, versus the Dafny proofs which required about
 $2\times$ as many lines of proof as code. Further evidence can be seen in the
 incremental development of DaisyNFS, which we elaborate on in
-\autoref{sec:eval:incremental}.
+\cref{sec:eval:incremental}.
 
 % \joe{Should some of this paragraph's ideas move up to the part where we first argue for the split and describe Dafny as the best tool for the other side?}
 % The verification approach we propose makes the proof much simpler. The
@@ -122,10 +122,10 @@ cost of relaxed guarantees on crash.
 The contributions of this paper are:
 \begin{itemize}
   \item A formalization for a specification that captures how the transaction
-  system provides sequential reasoning (\autoref{sec:proof}) for any system
+  system provides sequential reasoning (\cref{sec:proof}) for any system
   implemented using a transaction per operation.
   \item A proof that the GoTxn implementation meets this specification
-(\autoref{sec:txn-proof}), written against the GoJournal specification.
+(\cref{sec:txn-proof}), written against the GoJournal specification.
   \item DaisyNFS, a verified file system that is designed to use transactions
   and work with the GoTxn correctness proof. The Dafny proofs for the
   file-system code enjoy low overhead compared to the concurrent proofs for GoTxn. A performance

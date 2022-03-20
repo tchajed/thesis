@@ -31,7 +31,7 @@ introduced locally since the chapter is otherwise about a transaction system}
 \resume
 
 The goal of \txn's specification is to support convenient reasoning about atomic
-operations, like the NFS \scc{write} implementation in \autoref{fig:nfswrite} and \autoref{fig:write}.
+operations, like the NFS \scc{write} implementation in \cref{fig:nfswrite} and \cref{fig:write}.
 In this section we walk through how the specification
 guarantees atomicity for the caller without forcing the caller to do
 much application-specific reasoning about concurrency or
@@ -41,26 +41,26 @@ The key to this specification is tracking resources, like the disk blocks making
 file, as they flow through the steps of the proof. We start by reviewing how
 separation logics like Perennial represent these resources, and how
 specifications in the logic track logical \emph{ownership} of
-resources~(\autoref{s:design:rep}). The specification for \txn introduces
+resources~(\cref{s:design:rep}). The specification for \txn introduces
 resources that distinguish between a journal operation's local view of an object and
 the durable, on-disk representation; obtaining either resource
 requires the caller to use correct synchronization, as required by the journal's
 implementation. \emph{Lifting} provides a
 way to translate
-a locked object from its on-disk view to a local view within the operation~(\autoref{s:design:lifting}).
+a locked object from its on-disk view to a local view within the operation~(\cref{s:design:lifting}).
 While preparing a journal operation, reads and writes modify the local
-view~(\autoref{s:design:read-write}). Finally, committing an operation writes
+view~(\cref{s:design:read-write}). Finally, committing an operation writes
 its updates to disk, so the specification asserts that the local
 view becomes a view over durable state.
 
 To take full advantage of the durable and operation-local views of
 journal objects, the proof of \scc{Write} uses two new techniques introduced by
-Perennial 2.0: crash-aware locking~(\autoref{s:design:crashlock}) and crash
-framing~(\autoref{s:design:crashframe}). With these techniques, the proof of
+Perennial 2.0: crash-aware locking~(\cref{s:design:crashlock}) and crash
+framing~(\cref{s:design:crashframe}). With these techniques, the proof of
 \cc{NFS3_WRITE_op} uses entirely sequential reasoning for preparing the
 journal operation, even though concurrent operations might write to disk and its
 disk writes are buffered rather than synchronous.
-Finally, \autoref{s:design:summary} summarizes how the proof
+Finally, \cref{s:design:summary} summarizes how the proof
 techniques combine to prove correctness and crash-safety for the NFS \scc{write}
 example.
 
@@ -182,7 +182,7 @@ To make it easier to work with lifting, the specification allows lifting an
 entire \emph{predicate} $P$ and transforms all of its points-to facts
 simultaneously, which we denote this paper denotes by switching subscripts. For
 example, we re-use
-the definition $\cc{file_rep}$ from \autoref{s:design:rep} for both a file laid
+the definition $\cc{file_rep}$ from \cref{s:design:rep} for both a file laid
 out on disk and a file as owned by a journal operation, which we denote with
 $\cc{file_rep}_{d}$ and $\cc{file_rep}_{\mathit{op}}$ respectively. The specification
 for lifting a generic predicate $P$ is:
@@ -206,7 +206,7 @@ $a \mapsto_{op} o$ predicates within $P_{op}$ (e.g., the
 $i \mapsto_{\mathit{op}} \mathit{meta}$ within $\cc{file_rep}_{\mathit{op}}(i, \mathit{data})$)
 give the caller
 the right to read and write objects from within the operation, as we will see
-in~\autoref{s:design:read-write}.
+in~\cref{s:design:read-write}.
 
 % The ghost state involved in defining the $a \mapsto_{\mathit{op}} o$ predicate
 % is somewhat subtle in order to implement lifting: the proof must track that
@@ -236,7 +236,7 @@ this predicate.
 The specification for \cc{ReadBuf} is more subtle.  \cc{ReadBuf}
 returns a buffer that the caller is allowed to modify in-place, which
 has the side-effect of updating the in-memory state of the ongoing journal operation, which
-will in turn be committed by \cc{Commit}.  \autoref{fig:write} shows
+will in turn be committed by \cc{Commit}.  \Cref{fig:write} shows
 an example, where lines 18--20 modify a read buffer in-place.  The specification
 captures this behavior as follows:
 %
@@ -264,12 +264,12 @@ to the new data $o'$.\footnote{To simplify the presentation, we have omitted
 the obligation that forces the caller to call $\mathit{buf}.\cc{SetDirty}()$
 before getting back \cc{is_op}.} The wand is just another resource that the
 caller can invoke at the right time in the proof (e.g., after the call to
-\cc{SetDirty} in \autoref{fig:write} on line 21).
+\cc{SetDirty} in \cref{fig:write} on line 21).
 
 \subsection{Crash-aware locking}
 \label{s:design:crashlock}
 
-As seen in \autoref{fig:nfswrite}, the NFS server acquires a per-file lock
+As seen in \cref{fig:nfswrite}, the NFS server acquires a per-file lock
 (within the lockmap) to prevent concurrent access to the same disk object.
 Each lock
 logically protects both the file metadata stored in its inode and the data block pointed
@@ -330,7 +330,7 @@ used by new threads spawned following the crash.
 % In practice for the
 % journaling system and its callers, crash framing eliminates much of the proof
 % burden for the $I_c$ obligation, as described in
-% \autoref{s:design:crashframe}; intuitively this is because in the
+% \cref{s:design:crashframe}; intuitively this is because in the
 % critical section, the code does not write to disk until the end when it
 % commits.
 
@@ -352,7 +352,7 @@ has to be reconstructed from only the durable state.
 % Not shown in these
 % simplified versions of $I(i)$ and $I_c(i)$ are the connections between
 % $\mathit{data}$ and the state of the inode that the top-level specification
-% describes (e.g., \autoref{fig:nfswritespec}).
+% describes (e.g., \cref{fig:nfswritespec}).
 
 
 \subsection{Crash framing}
@@ -439,7 +439,7 @@ sequential crash-free reasoning about how each operation (for example, each NFS3
 implementation) transitions from the representation invariant in one state to
 another, following the transition system of the specification. We
 illustrate that proof flow using the \cc{NFS3_WRITE} call in
-\autoref{fig:nfswrite} as an example.
+\cref{fig:nfswrite} as an example.
 
 %First, the function starts a transaction, creating an empty local view
 %$\bufobjDurable(txn, emp)$. We can mostly ignore $\cc{is_op}(txn)$, which is
@@ -464,8 +464,8 @@ illustrate that proof flow using the \cc{NFS3_WRITE} call in
 
 First, the function starts a journal operation and acquires a lock on \cc{i}. Then the proof
 requires some purely mechanical work to lift the lock invariant
-(\autoref{s:design:lifting}) and frame the crash obligation
-(\autoref{s:design:crashframe}). Next, the developer proves the correctness of
+(\cref{s:design:lifting}) and frame the crash obligation
+(\cref{s:design:crashframe}). Next, the developer proves the correctness of
 the sequential code. This proof does involve the bulk of the application code,
 but it requires neither worrying about concurrency (since reads and writes
 operate on the exclusive ownership of $a \mapsto_{\mathit{op}} o$) nor about crash safety

@@ -32,7 +32,7 @@ operations are memory safe and return in-bounds addresses.
 \newcommand{\txnmapsto}{\mapsto_{\cc{txn}}}
 \newcommand{\thdmapsto}{\Rightarrow}
 
-Recall that \autoref{thm:txn} establishes refinement between the Txn layer and
+Recall that \cref{thm:txn} establishes refinement between the Txn layer and
 Disk layer.  That is, given a program p written in $\gooselayer{Txn}$, if the
 transaction operations of p are linked with an implementation written in
 $\gooselayer{Disk}$, the implementation program's observable behaviors (from
@@ -85,7 +85,7 @@ prove is for a block of code $f$ enclosed in transaction \cc{Begin} and
 %      {C(\operatorname{Atomically}(f))}{v.\, j \thdmapsto v}
 %\]
 %
-%where $C$ is the translation function described in \autoref{sec:soundness-thm1}.
+%where $C$ is the translation function described in \cref{sec:soundness-thm1}.
 The difficulty in proving this triple is that the linearization point is at the
 very end when the code calls \cc{Commit}, at which point the actual earlier
 execution of $f$ becomes visible to other threads. The proof must show that
@@ -129,7 +129,7 @@ atomically updated to match $J'$.
 
 Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the
-transaction system, as mentioned in \autoref{sec:proof:linking}. Accesses to such global state
+transaction system, as mentioned in \cref{sec:proof:linking}. Accesses to such global state
 would violate the invariant because their behavior would then depend upon
 things outside of the footprint $\Sigma$. Because those global values could change
 by the time the transaction commits, the above argument would no longer work if they were allowed.

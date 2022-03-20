@@ -15,7 +15,7 @@
   \label{fig:system}
 \end{figure}
 
-As shown in \autoref{fig:system}, \sys is implemented in three layers:
+As shown in \cref{fig:system}, \sys is implemented in three layers:
 1) a dispatch loop that speaks the NFS wire protocol and calls the
 appropriate method for each operation; 2) a Dafny class that
 implements each method; and 3) a transaction system that applies the
@@ -28,12 +28,12 @@ third layer is directly written in Go and verified using Coq and
 Perennial.  By implementing the file system on top of the transaction
 system, we can implement each NFS method in Dafny as sequential code
 calling into a concurrent transaction system library. The NFS
-operations supported by \sys are listed in \autoref{fig:nfs}.
+operations supported by \sys are listed in \cref{fig:nfs}.
 
 %% We focus on the
 %% design of the transaction system here, but the file system also has several
 %% internal abstractions. These abstractions are primarily interesting in a
-%% verification context so we discuss them later in \autoref{sec:design}.
+%% verification context so we discuss them later in \cref{sec:design}.
 
 %% The file-system implementation calls the transaction system to store all
 %% file-system data, ensuring that it is written atomically and durably.
@@ -50,7 +50,7 @@ operations supported by \sys are listed in \autoref{fig:nfs}.
 The file system is responsible for implementing files and directories
 onto an array of disk blocks that is exported by the transaction
 system.  The disk layout used by the file system is shown in
-\autoref{fig:layout}, with regions for inode blocks, bitmap blocks,
+\cref{fig:layout}, with regions for inode blocks, bitmap blocks,
 and data blocks for files and directories. This figure is in terms of
 the disk exported by the transaction system; the transaction system
 itself has a 513-block write-ahead log to support multi-block atomic
@@ -61,7 +61,7 @@ building upon the previous: (1) implementing large (about 512GB), fixed-size
 files with zeros in place of unallocated data; (2) implementing byte-granularity
 reads and writes on top of blocks; and (3) implementing
 directories by encoding them as files with a special type together with
-operations to manipulate those files. \autoref{sec:design} explains the
+operations to manipulate those files. \Cref{sec:design} explains the
 internals of the file-system design in more detail, alongside the structure of
 the Dafny proof.
 
@@ -92,4 +92,4 @@ for deadlocks, for example if two threads acquire a pair of locks in the opposit
 order. The two-phase locking implementation does not implement a
 specific lock acquisition order, leaving it to the file system to
 avoid deadlock --- the most interesting case is \cc{RENAME}, which is discussed
-in more detail in \autoref{sec:dafny:rename}.
+in more detail in \cref{sec:dafny:rename}.
