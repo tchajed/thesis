@@ -2,7 +2,7 @@
 \label{s:gotxn-api}
 
 \begin{figure}
-\begin{verbatim}
+\begin{minted}{go}
 type Addr struct {
   Blkno  uint64
   Offset uint64
@@ -23,7 +23,7 @@ func WriteBit(tx *Txn, a Addr, d bool)
 func NewAllocator(max uint64) *Allocator
 func Alloc(a *Allocator) uint64
 func Free(a *Allocator, n uint64)
-\end{verbatim}
+\end{minted}
   \caption{The API for the transaction system and allocator. Reads and writes
     between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
     for other threads, while \cc{Abort} guarantees the transaction has no
@@ -54,9 +54,9 @@ method requires an explicit size argument while the size of a
 out the bit-sized operations to \cc{ReadBit} and \cc{WriteBit} (rather
 than using a single-element byte slice) to simplify the specification.
 
-\autoref{fig:txn-api} also includes an API for allocation alongside the
-transaction API. \autoref{sec:daisy-nfs} will explain in more detail why this
-API must be part of the transaction system in, since it is relevant to the
+\Cref{fig:txn-api} also includes an API for allocation alongside the
+transaction API.\@ \Cref{sec:daisy-nfs} will explain in more detail why this
+API must be part of the transaction system, since it is relevant to the
 file-system design. The allocator should be considered part of the transaction
 system API insofar as transactions are allowed to use this concurrent allocator.
 In general using shared memory within a transaction is not permitted since it
@@ -91,5 +91,5 @@ for deadlocks, if two threads acquire a pair of locks in the opposite
 order. The two-phase locking implementation does not implement a
 specific lock acquisition order, leaving it to the file system to
 avoid deadlock --- for example, the implementation of \cc{RENAME}
-makes sure to lock the smaller inode number first if the rename is
-between different directories.
+makes sure to lock the smaller inode number first (by reading from it) if the
+rename is between different directories.

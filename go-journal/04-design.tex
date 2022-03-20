@@ -100,7 +100,7 @@ The \simplenfs proof connects each file to its representation with the following
 representation invariant:
 %
 \begin{align*}
-  &\cc{file_rep}(i, \mathit{data}) \triangleq \exists \mathit{meta}, \exists \mathit{blk}, \\
+  &\cc{file_rep}(i, \mathit{data}) \defeq \exists \mathit{meta}, \exists \mathit{blk}, \\
   &\quad i \mapsto \mathit{meta} \sep \mathit{meta}.\cc{blkno} \mapsto blk \land \phantom{} \\
   &\quad \mathit{meta}.\cc{size} = \cc{length}(\mathit{data}) \land \cc{prefix}(\mathit{data}, \mathit{blk})
 \end{align*}
