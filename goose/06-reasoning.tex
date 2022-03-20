@@ -1,7 +1,36 @@
 \section{Modeling and reasoning about Go}%
 \label{sec:goose:reasoning}
 
-\tej{give some preliminaries on separation logic, untyped points-to assertion}
+A key principle in the design of Goose is to model features of Go as code,
+written as libraries on top of the base GooseLang language described in
+\autoref{sec:goose:lang}. In this section we describe some of the features of Go
+we model, as well as reasoning principles we develop on top to verify code that
+uses these features.
+
+Specifications in this section are written in Perennial, which is a concurrent
+separation logic. The basic specification of this logic is the triple
+$\hoare{P}{\cc{f()}}{Q}$, which says that if \cc{f()} is run in a state
+satisfying the precondition $P$ and terminates, the final state will satisfy the
+postcondition $Q$. Separation logic additionally means that $P$ and $Q$ can
+describe only the state actually involved in \cc{f()}, implicitly stating other
+state is unmodified (we can give so-called ``small footprint'' specifications).
+Assertions make use of the \emph{points-to assertion} $\ell \mapsto v$, which
+gives the value of one address in memory. For example, some basic specifications
+in separation logic are those for the load and store operations:
+%
+\begin{mathpar}
+  \hoare{\ell \mapsto v}{!\ell}{\Ret{v} \ell \mapsto v}
+
+  \hoare{\ell \mapsto v_0}{\ell \gets v}{\ell \mapsto v}
+\end{mathpar}
+
+The specification for load uses $\Ret{v}$ to specify what the return value is.
+
+The specifications in this section can be appreciated with only basic
+familiarity with sequential separation logic; concurrency concerns do not arise
+much at this level, and there is nothing specific to crash safety. All of these
+specifications are actually proven in the Perennial logic and can be used to
+reason about concurrency and crash safety, though, as we did for GoTxn.
 
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
@@ -79,9 +108,9 @@ that only returns a boolean on success and not also the previous value.
   \CAS &\defeq \gooselambda{x, v1, v2} \pi_{2}\app \goosekw{CmpXchg}(x, v1, v2) \\
   \goosedef{NewLock} & \defeq \gooselambda{\_} \goosekw{ref} \app \goosekw{false} \\
   \Acquire &\defeq \gooselambda{l} \\
-       &\goosekw{let}\app f = (\goosekw{rec}\: tryAcquire(\_) = \\
-       &\qquad \gooseif{\CAS \app l \app \goosekw{true} \app \goosekw{false}}%
-         {()}{tryAcquire \app ()}) \app\goosekw{in} \\
+       &\goosekw{let}\app f = (\goosekw{rec}\: \textlog{tryAcquire}(\_) = \\
+       &\qquad \gooseif{\CAS \app l \app \goosekw{false} \app \goosekw{true}}%
+         {()}{\textlog{tryAcquire} \app ()}) \app\goosekw{in} \\
        &f \app () \\
   \goosedef{Release} &\defeq \gooselambda{l} l \gets \goosekw{false} \\
 \end{align*}
@@ -96,9 +125,8 @@ used to model Go's builtin \cc{*sync.Mutex}, which is implemented more
 efficiently than spin locks with cooperation from the runtime and operating
 system.
 
-The reasoning principles for locks are more sophisticated than the spin-lock
-implementation. As is typical in concurrent separation logic, we associate a
-\emph{lock invariant} to the lock, which is a predicate that holds when the lock
+The specification for locks is a typical one for concurrent separation logic,
+based on associating a \emph{lock invariant} with each lock, which is a predicate that holds when the lock
 is free. Because this is a separation logic, we can also interpret the lock
 invariant as ownership over some data (for example, some region of memory); the
 lock mediates access to this ownership, handing it out when the lock is acquired
