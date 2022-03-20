@@ -36,11 +36,11 @@ The transaction system gives the caller a way to read and write on-disk
 objects (which can be smaller than the 4KB block size of the underlying disk),
 in such a way that a whole sequence of reads and writes appears atomic. The
 programming interface is listed in \cref{fig:txn-api}. In practice this makes
-it easier to implement a file system by handling the challenges of crash safety
-and concurrency, leaving the file system to implement its data structures and
-business logic using disk objects.
+it easier to implement a correct storage system by handling the challenges of crash safety
+and concurrency, leaving only correct implementing the data structures and logic
+of the system using disk objects.
 
-To use GoTxn, the file system follows a similar pattern for each operation of
+To use GoTxn, a storage system follows a similar pattern for each operation of
 wrapping all of the code for that operation in a single transaction. Operations
 start by creating an empty transaction with \cc{Begin()}.
 The entire
@@ -57,9 +57,10 @@ than using a single-element byte slice) to simplify the specification.
 \Cref{fig:txn-api} also includes an API for allocation alongside the
 transaction API.\@ \Cref{sec:daisy-nfs} will explain in more detail why this
 API must be part of the transaction system, since it is relevant to the
-file-system design. The allocator should be considered part of the transaction
-system API insofar as transactions are allowed to use this concurrent allocator.
-In general using shared memory within a transaction is not permitted since it
+file-system design. \tej{should not forward reference DaisyNFS, explain this
+somewhere in this chapter} The allocator should be considered part of the transaction
+system API insofar as its operations are allowed within a transaction.
+In contrast using other shared memory within a transaction is not permitted since it
 would compromise the atomicity guarantees --- the transaction system acquires
 locks to make reads and writes seem atomic, but it doesn't have any locking
 discipline for other state.
@@ -77,19 +78,15 @@ discipline for other state.
 % file-system statically allocates regions for the inodes, allocator bitmaps,
 % and data blocks, so that object sizes never change.
 
-The transaction system uses two-phase locking on top of a verified journal,
-GoJournal. The journaling system makes writes atomic but relies on the two-phase
-locking implementation to avoid conflicts between concurrent transactions.
-While a transaction is running, it acquires locks for
-any addresses it reads or writes, and on abort or commit, it releases
-all locks held. Transactions that don't conflict can prepare in
-parallel, and GoJournal will batch concurrently committed
-transactions for efficiency.
-
-Acquiring multiple locks during a transaction creates the possibility
-for deadlocks, if two threads acquire a pair of locks in the opposite
-order. The two-phase locking implementation does not implement a
-specific lock acquisition order, leaving it to the file system to
-avoid deadlock --- for example, the implementation of \cc{RENAME}
-makes sure to lock the smaller inode number first (by reading from it) if the
-rename is between different directories.
+As described next in \cref{s:gotxn:impl}, GoTxn is implemented using two-phase
+locking. As a result, a transaction acquires a per-address lock on every address
+it reads or writes along the way. Acquiring multiple locks during a transaction
+creates the possibility for deadlocks, if two threads acquire a pair of locks in
+the opposite order, and the specification does not forbid
+deadlocks.\footnote{Liveness reasoning in general is quite challenging when
+combined with concurrency. However, it would be interesting to specify and
+verify deadlock freedom without verifying full liveness.} The two-phase locking
+implementation does not implement a specific lock acquisition order, leaving it
+to the calling code to avoid deadlock --- for example, in DaisyNFS the
+implementation of \cc{RENAME} makes sure to lock the smaller inode number first
+(by reading from it) if the rename is between different directories.

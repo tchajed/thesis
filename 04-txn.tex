@@ -1,28 +1,31 @@
-GoTxn is a transaction system we implemented and verified as the foundation for
-DaisyNFS. The goal is to handle crash safety and concurrency for arbitrary
-operations within this layer, exporting an interface where transactions appear
-to run atomically. Reasoning within a transaction is left to the caller, but
-this reasoning is now sequential so it is easier to implement sophisticated and
-efficient code on top.
+GoTxn is a transaction system we implemented and verified with the goal of
+making crash safety and concurrency simple for a storage system implemented on
+top. Transactions appear to run atomically both on crash and to other threads.
+The GoTxn specification and proof formalize this property to enable
+\emph{sequential reasoning} for a concurrent system, which is what the verified
+file system DaisyNFS takes advantage of (described next in
+\cref{sec:daisy-nfs}).
 
-In this chapter we set out the precise specification that GoTxn provides. The
-GoTxn implementation is built up in several layers of abstraction. We outline
-this implementation and sketch the most interesting parts of the proof. Of
-foremost importance is that GoTxn consists primarily of a \emph{journaling
-system}, GoJournal~\cite{chajed:gojournal}. The journaling system makes
-operations crash atomic but requires the caller to guarantee concurrent
-operations do not conflict. GoTxn automatically implements this guarantee using
-the two-phase locking algorithm. While two-phase locking involves only a hundred
-lines of code or so, it changes the specification dramatically since the caller
-gets the illusion of sequential execution without any concurrency control.
+In this chapter we set out GoTxn's implementation and specification, then give
+some interesting aspects of the proof. A common theme is a division between the
+internal abstraction of \emph{journaling} and complete \emph{transactions}
+provided to the caller. This division is most pronounced in the specification
+and proof, since we prove a specification of independent interest about
+journaling before using it to establish GoTxn's top-level specification about
+transactions.
+
+While as part of this thesis we only used GoTxn to implement and verify a file
+system, in principle the system and its specification are generic for any
+storage system implemented on top, as long as its operations are implemented
+using transactions.
 
 %\input{go-journal/01-intro}
 \input{go-journal/02-api}
+\input{go-journal/03-system}
 \input{go-journal/01-spec}
 %\input{go-journal/02-related}
-\input{go-journal/03-system}
-\input{go-journal/overview}
 \input{go-journal/04-design}
+\input{go-journal/overview}
 \input{go-journal/05-proof}
 % spliced in here
 \input{daisy-nfs/06-txn}

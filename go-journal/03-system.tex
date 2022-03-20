@@ -1,5 +1,5 @@
 \section{Implementing GoTxn}
-\label{s:system:impl}
+\label{s:gotxn:impl}
 
 \begin{figure}
   \centering
@@ -30,15 +30,6 @@ allow callers to perform read and write operations on objects
 smaller than a block (``sub-block'' objects).  Writes are
 buffered in memory until the caller chooses to commit, at which point a multiwrite to the
 write-ahead log commits the writes to disk.
-
-The \scc{jrnl} layer implements a journaling system which gives the caller a
-useful abstraction over the disk that makes it easy to update the disk in a
-crash atomic way but which requires that the caller implement appropriate
-concurrency control. The \scc{txn} layer automatically implements the required
-concurrency control; this isn't much code beyond the journal, but it does
-dramatically change the specification since the caller sees any sequence of
-reads and writes as atomic both with respect to threads and crashes without
-having to implement any locking.
 
 The write-ahead log is implemented by organizing the disk into a small,
 fixed-size circular buffer and a remaining data region. Data is first atomically
@@ -95,7 +86,22 @@ would overwrite the concurrent modification, losing data. The code addresses
 this with a global commit lock that prevents concurrent modifications while
 reading the blocks to be written.
 
-\tej{also talk about 2PL in txn layer}
+The \scc{jrnl} layer implements a journaling system which gives the caller a
+useful abstraction over the disk that makes it easy to update the disk in a
+crash atomic way but which requires that the caller implement appropriate
+concurrency control. The \scc{txn} layer automatically implements the required
+concurrency control; this isn't much code beyond the journal, but it does
+dramatically change the specification since the caller sees any sequence of
+reads and writes as atomic both with respect to threads and crashes without
+having to implement any locking.
+
+Journaling makes writes atomic on crash. To make transactions appear atomic
+(also known as \emph{serializability}), we use two-phase locking on top of
+journaling. This algorithm acquires a lock on each address the first time it is
+used in a transaction. Writes are buffered locally until commit time, at which
+point they are written atomically using the journaling system. Finally all the
+locks are released, exposing the transaction's effects to subsequent
+transactions.
 
 % The implementation of the write-ahead log and transaction management is
 % complicated primarily because of a highly concurrent implementation. Without
