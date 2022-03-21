@@ -185,23 +185,10 @@ accompanying program logic~\cite{kokologiannakis:persevere}.
 
 \section{Transaction systems}
 
-A specification called the Push/Pull model of
-transactions~\cite{koskinen:pushpull} is similar to the \emph{lifting} technique
-in the journal system's specification~(\cref{s:design:lifting}) --- the core
-problem addressed is that a journal operation atomically modifies a small number
-of objects, but other objects can change between the start of the operation and when
-it commits. The Push/Pull model also discusses reasoning on top of the
-specification, using Lipton's reduction~\cite{lipton:movers} rather than
-separation-logic ownership to handle concurrency. However that work is about
-on-paper specifications and proofs, while we also prove an implementation meets
-our specification and proved \simplenfs on top.
-
-DFSCQ~\cite{chen:dfscq} verifies a high-performance file system built on top of
-a logging system with asynchronous disks and log-bypass writes, which are
-challenging optimizations that GoTxn does not support. ARIES is a database
-write-ahead logging system that was verified (with a pen-and-paper proof) in
-FTCSL~\cite{ntzik:faults}; it is more sophisticated than GoTxn's write-ahead log
-in that it can both undo and redo operations.
+As far as we know, GoTxn is the first transaction system that makes data durable
+and has a verified implementation. There is much related work on verifying
+aspects of transaction systems with and without durability, and on unverified
+transaction systems.
 
 \citet{ChkliaevHS99} verify serializability of two-phase locking and other
 transaction concurrency control mechanisms in the PVS theorem prover. Their
@@ -216,7 +203,25 @@ as I/O automata. They applied their framework to sophisticated STM algorithms, s
 NOrec algorithm~\cite{dalessandro:norec}. The STM algorithms considered do not
 handle persistence, so the framework does not address crash-safety reasoning.
 
-jbd2
+A specification called the Push/Pull model of
+transactions~\cite{koskinen:pushpull} is similar to the \emph{lifting} technique
+in the journal system's specification~(\cref{s:design:lifting}) --- the core
+problem addressed is that a journal operation atomically modifies a small number
+of objects, but other objects can change between the start of the operation and when
+it commits. The Push/Pull model also discusses reasoning on top of the
+specification, using Lipton's reduction~\cite{lipton:movers} rather than
+separation-logic ownership to handle concurrency. However that work is about
+on-paper specifications and proofs, while we also prove an implementation meets
+our specification and proved \simplenfs on top.
+
+DFSCQ~\cite{chen:dfscq} verifies a high-performance file system built on top of
+a logging system with asynchronous disks and log-bypass writes, which are
+challenging optimizations that GoTxn does not support. ARIES is a database
+write-ahead logging protocol that was verified (with a pen-and-paper proof) in
+FTCSL~\cite{ntzik:faults}; it is more sophisticated than GoTxn's write-ahead log
+in that it can both undo and redo operations.
+
+\tej{talk about jbd2}
 
 \section{Related to DaisyNFS}
 
@@ -226,9 +231,32 @@ DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
 in Konradi's master's thesis~\cite{akonradi-meng}) and
 Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
 
-AtomFS does concurrency reasoning~\cite{zou:atomfs}.
+Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
+in its API, but without formal verification. Its logging design is based on
+multi-version concurrency control (MVCC) rather than our use of pessimistic
+locking. The Isotope paper develops a file system called IsoFS and two
+persistent key-value stores; GoTxn is in principle also suitable to implement a
+key-value store, but we have only used it in combination with DaisyNFS.\@ Isotope
+is similar to DaisyNFS: it factors out isolation and atomicity to a transaction
+system, making it simpler to implement a correct file system. Unlike GoTxn and
+DaisyNFS, Isotope is still prone to subtle concurrency bugs in the transaction
+system and bugs in the IsoFS code, whereas we use this split design to verify
+both the transaction system and file-system code. One value of GoTxn is to
+simply be more precise about what the transaction API does; Isotope has two
+additional APIs to help tune the system, a \cc{mark_accessed} call to enable
+sub-block concurrency and a \cc{please_cache} call that improves performance. It
+seems the calling code must call \cc{mark_accessed} correctly for safety,
+whereas the latter is only an optimization, but the precise requirements and
+guarantees of Isotope are not clearly laid out.
 
-Isotope has a similar design but no verification~\cite{shin:isotope}.
+AtomFS~\cite{zou:atomfs} is a verified, concurrent file system, but its
+implementation does not store data durably. The proof structure is quite
+different from DaisyNFS all of the concurrency reasoning is part of the
+file-system operations and there is no interaction between persistence and
+concurrency. AtomFS is verified using a relational logic with rely-guarantee
+reasoning; unlike separation logic, the basic specification in this logic is a
+refinement statement that relates an implementation to a (simpler) specification
+program.
 
 We chose to verify an NFS server because it is widely used in practice
 and the expected behavior of NFS operations is well documented in
