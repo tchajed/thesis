@@ -2,20 +2,11 @@
 
 At a high level, GoTxn makes transactions atomic. We frame its specification in
 two ways. The first, \emph{program refinement}, formalizes the idea of ``atomic
-transactions'' more literally. The second, \emph{simulation transfer} uses
+transactions''. The second, \emph{simulation transfer}, uses
 program refinement to show that a sequential proof of a system's transactions
 implies the concurrent system is correct running on top of GoTxn.
 
-At a high level, GoTxn's specification says that transactions execute
-atomically. The way this is stated formally is by considering an arbitrary
-caller, a program that has transactions using the GoTxn API. Then correctness is
-defined by relating this executable code to an abstract, specification program,
-a version of the caller code where the GoTxn methods are treated as primitives.
-An important aspect of GoTxn is that the specification program is defined using
-an atomic block around each transaction, whose semantics is to run the body
-without interleaving other threads.
-
-Before we can get to defining these specification programs, we first set up
+Before we can get to defining program refinement, we first set up
 \emph{refinement}, which is the relationship between the code and spec.
 Abstractly, refinement from a code program to
 a specification program says that the behaviors of the code are a subset of the
@@ -24,10 +15,12 @@ behaviors of the specification.
 To define the specification, we need to be more precise about what a program is
 and how it executes to talk about the server loop program. We
 write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
-from layer X, where X is one of NFS, Txn, or Disk.
-Layer operations are always atomic transitions in a state machine. In the
-NFS layer, the operations behave according to the NFS state machine
-described previously in \cref{sec:spec} and defined formally in Dafny.
+from layer X, where X is one of Sys, Txn, or Disk.
+Layer operations are always atomic transitions in a state machine. Sys is a
+stand-in for an arbitrary system implemented on top of GoTxn. We write this
+generically to emphasize that the GoTxn specification does not fix how the
+caller uses transactions; in practice it will be instantiated with the NFS state
+machine for DaisyNFS.
 The Txn layer is specified both in Coq where it is part of the transaction
 system's correctness theorem and in Dafny where it appears as an assumption. The
 Disk transition system is formalized in Coq as part of the GoJournal proof,
@@ -37,19 +30,19 @@ operations, basic heap operations on pointers, slices, and maps, and computation
 on primitives like integers and structs.
 
 There are three programs involved in defining and proving the overall
-correctness of \sys, corresponding to the server loop at each abstraction layer.
-At the top, the specification is a loop $\snfs : \gooselayer{NFS}$ which
-atomically processes each NFS operation according to the NFS state machine. The
+correctness of some system using GoTxn, each at a different level of abstraction.
+The abstract specification is some system dispatch loop $\ssys : \gooselayer{Sys}$ which
+atomically processes each operation in the Sys interface. The
 next level is $\sdfy : \gooselayer{Txn}$, where each handler is the atomic body of the
 corresponding Dafny method, operating on top of the transaction system. Finally,
 the executable code is written
 $\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, indicating ``linking'' the
 Txn-layer server $\sdfy$ with the transaction system by taking each call to a
 Txn API and plugging in its implementation on top of a disk.
-\Cref{fig:refinement-execs} illustrates one execution of the DaisyNFS server,
-when clients issue a \cc{LOOKUP} and \cc{CREATE} in parallel; for correctness,
-the operations should be atomic and follow the NFS specification despite
-interleaving at the code level (the bottom execution).
+%\Cref{fig:refinement-execs} illustrates one execution of this dispatch loop for
+%the DaisyNFS server, when clients issue a \cc{LOOKUP} and \cc{CREATE} in
+%parallel; for correctness, the operations should be atomic and follow the NFS
+%specification despite interleaving at the code level (the bottom execution).
 
 In the Txn layer, we write $\atomically{\cc{f}}$ to represent a
 transaction running \cc{f}. This is a macro that expands to a
@@ -59,31 +52,14 @@ handling aborts is omitted in this snippet).
 % level, an atomically block represents a whole sequence of operations that
 % executes all at once, without crashes or other threads interrupting.
 
-\begin{figure}
-  %\includegraphics{fig/refinement-execs}
-  \begin{center}
-  \input{daisy-nfs/fig/refinement-execs.tex}
-  \end{center}
-  \vspace{-\baselineskip}
-  \caption{One possible execution of DaisyNFS, receiving parallel LOOKUP and
-    CREATE operations, at its three abstraction levels.
-    Within an execution each row is a thread, and dashed arrows indicate
-    context switches.
-    The proof shows the bottom execution is equivalent to an atomic execution of
-    each thread at
-    the Txn layer~(in \cref{thm:gotxn}),
-    and sequential reasoning shows each atomic sequence behaves according to the NFS
-    specification~(in \cref{thm:dafny}).}
-  \label{fig:refinement-execs}
-\end{figure}
-
 Refinement relates two programs in terms of their visible behavior, which we
 will use to connect the server loop at the disk layer to the transaction layer
-and finally to the NFS layer. For the purposes of this paper, all of the
-programs involved are servers that issue network I/O, either receiving an NFS
-request or responding to one. Regardless of the level of abstraction, each model
-of the server defines a trace of network I/O consisting of requests and
-responses, and this is the behavior refinement talks about:
+and finally to the Sys layer. For the purposes of this work, the visible
+behavior is always network I/O, corresponding to receiving requests for the
+system or responding to them (for example, processing NFS requests). Regardless
+of the level of abstraction, each model of the server defines a trace of network
+I/O consisting of requests and responses, and this is the behavior refinement
+talks about:
 
 \begin{definition}[Refinement]
   An implementation program $p_{c}$ refines a specification program $p_{s}$,
@@ -104,8 +80,8 @@ will generally say both states are all zeros and of the same size.
 
 \subsection{Program refinement}
 
-We define the correctness of the transaction system's implementation as a
-\emph{program refinement}.
+The first specification we give to GoTxn is using \emph{program refinement},
+which formalizes serializability (sometimes known as atomicity and isolation) for transactions.
 To set up this specification, consider a program $p : \gooselayer{Txn}$ that
 uses transactions.
 To run $p$, it is combined with the transaction-system implementation, producing
@@ -138,7 +114,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 The correctness of the transaction system is summarized by the following theorem:
 
 \begin{theorem}
-  The transaction system's implementation $\txncode$ is a program refinement, meaning for
+  The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for
   all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
   $\mathrm{link}(p, \txncode) \refines p$. The definition of
   $init(\sigma_{s}, \sigma_{c})$ in this refinement relates an all-zero physical
@@ -162,10 +138,16 @@ system's proof only applies to a safe caller.
 
 \subsection{Simulation transfer}
 
-The idea behind the transaction-system specification is to express that a system
+Program refinement captures how transactions execute. On top of this
+specification, we prove a \emph{simulation transfer} theorem that instead shows
+how transactions enable \emph{sequential reasoning} for a system on top. In
+DaisyNFS we will see how this justifies carrying out those proofs using Dafny, a
+sequential verification system.
+
+The idea behind the simulation transfer specification is to express that a system
 verified using sequential reasoning for each transaction is also correct when
-run concurrently through GoTxn --- intuitively, this follows from the fact that
-transactions appear to run atomically.
+run concurrently through GoTxn --- intuitively, this follows from the atomicity
+provided by program refinement.
 % , at which point the sequential reasoning
 % applies, but we have a more precise and formal proof in Coq.
 To make this precise, we define formally what we mean by
@@ -185,13 +167,13 @@ contents of memory.
   The implementation $i : S \to \gooselayer{T}$ is a \emph{sequential
     refinement}, written
   $\seqrefinement \targ{T, S}(i)$, if there exists an abstraction relation
-  $R : \Sigma_{S} \to \Sigma_{T} \to bool$ such that: \newline
+  $R : \Sigma_{S} \to \Sigma_{T} \to \textdom{bool}$ such that: \newline
 (1) for every operation
   $op \in S$, the following sequential Hoare triple holds:
   \[
     \hoare{R(\sigma)}{i(op)}{\exists \sigma'.\, R(\sigma') \land \sigma \overset{op}{\leadsto} \sigma'},
   \]
-(2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ must imply
+(2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ implies
 $R(\sigma_{S}, \sigma_{T})$, and \\
 (3) if $R(\sigma_{T}, \sigma_{S})$ holds and $\operatorname{crash}(\sigma_{T}$, $\sigma_{T}')$,
 then there exists a $\sigma_{S}'$ such that $R(\sigma_{T}', \sigma_{S}')$ and
@@ -241,7 +223,7 @@ operation is wrapped in a transaction.
 %  return v, ok
 %}
 %\end{verbatim}
-\begin{theorem}[GoTxn simulation transfer]
+\begin{theorem}[Simulation transfer]
   Let $S$ be a spec layer implemented using transactions with
 $i : S \to \gooselayer{Txn}$, such that $\seqrefinement(i)$ and
 $\forall op.\, \mathrm{safe}(i(op))$ hold. Then

@@ -60,6 +60,25 @@ Now we have enough to state the final DaisyNFS correctness theorem:
   $\mathrm{link}(\sdfy, \txncode) \refines \snfs$.%
   \label{thm:correctness}
 \end{theorem}
+
+\begin{figure}
+  %\includegraphics{fig/refinement-execs}
+  \begin{center}
+  \input{daisy-nfs/fig/refinement-execs.tex}
+  \end{center}
+  \vspace{-\baselineskip}
+  \caption{One possible execution of DaisyNFS, receiving parallel LOOKUP and
+    CREATE operations, at its three abstraction levels.
+    Within an execution each row is a thread, and dashed arrows indicate
+    context switches.
+    The proof shows the bottom execution is equivalent to an atomic execution of
+    each thread at
+    the Txn layer~(in \cref{thm:gotxn}),
+    and sequential reasoning shows each atomic sequence behaves according to the NFS
+    specification~(in \cref{thm:dafny}).}
+  \label{fig:refinement-execs}
+\end{figure}
+
 %
 In this correctness theorem, initialization requires running a Dafny method on
 an empty disk. Subsequently the system boots by first recovering the transaction
