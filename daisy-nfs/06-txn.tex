@@ -1,32 +1,5 @@
 % this continues the section that starts the GoJournal proof
 
-\subsection{Two-phase locking and allocator proof}
-
-Transaction atomicity relies on the guarantee that two different transactions
-cannot concurrently access the same object. The two-phase locking system
-guarantees this by logically maintaining a lock per object and then ensuring
-that the lock for an object is held whenever it is accessed. Allocating a lock
-upfront for every object would be expensive, so we use a more efficient lockmap
-data structure already implemented and verified in GoJournal.
-
-We isolate the reasoning about these locks into a set of Hoare-logic proofs
-about the two-phase locking methods. This intermediate specification exposes the
-durable state of the transaction system using ghost variables to the refinement
-proof. \tej{that's all we have to say about the 2PL's Hoare specs?} GoJournal exposes logical resources representing the on-disk and
-in-memory value of each object. The two-phase locking system wraps both of these
-resources in a lock that maintains a correspondence with the transaction
-system's ghost variables. To handle crashes, the proof uses Perennial's
-crash-aware lock specification~\citep{chajed:gojournal} to show that the durable
-state matches even if the system crashes while a transaction holds locks on some
-objects.
-
-% The lock reasoning uses the standard technique of wrapping access to resources in Iris invariants. When a lock is acquired, the proof gains access to the resources in its corresponding invariant; when the lock is released, the proof needs to return these resources to the invariant. Since the lock semantics guarantee that at most one thread can hold a particular lock at any point of time, this guarantees that at most one transaction can access the resources corresponding to a particular object at any point of time.
-
-The transaction system's allocator is also verified in Perennial through a
-series of Hoare triples.  Because \sys uses validation to check that the
-returned addresses are free, the triples only need to guarantee that these
-operations are memory safe and return in-bounds addresses.
-
 \subsection{Refinement to atomic language}
 
 \tej{copy the new version of this from DaisyNFS paper}
