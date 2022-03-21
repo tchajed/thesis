@@ -12,6 +12,9 @@
 
 \newcommand{\external}{\mathsf{\textcolor{red}{\langle External \rangle}}}
 
+\newcommand{\goosetrue}{\goosekw{true}}
+\newcommand{\goosefalse}{\goosekw{false}}
+
 \newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
   \goosekw{then} \app #2 \app \goosekw{else} \app #3}
 
@@ -58,7 +61,7 @@ Languages}~\cite[Chapter~5]{pierce:tapl}.
     &\binop &::= & + \ALT - \ALT * \ALT = \ALT < \ALT \dots \\
     &\unop &::= & - \ALT \goosekw{ToString} \ALT \goosekw{ToU64} \ALT
                          \dots \\
-    \textdom{Var}& v &::= & () \ALT \goosekw{true} \ALT \goosekw{false} \ALT n
+    \textdom{Var}& v &::= & () \ALT \goosetrue \ALT \goosefalse \ALT n
                             \ALT \ell \ALT s \\
     &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
              \recfx \\
@@ -291,8 +294,8 @@ this type. The full details are presented in \cref{fig:goose:semantics}.
   \begin{array}{rcll}
     v \binop v' &\purereduction & v'' & \mathrm{if} \: v'' = v \binop v' \\
     \unop v &\purereduction & v' & \mathrm{if} \: v' = \unop v \\
-    \gooseif{\goosekw{true}}{e_1}{e_2} &\purereduction & e_1 \\
-    \gooseif{\goosekw{false}}{e_1}{e_2} &\purereduction & e_2 \\
+    \gooseif{\goosetrue}{e_1}{e_2} &\purereduction & e_1 \\
+    \gooseif{\goosefalse}{e_1}{e_2} &\purereduction & e_2 \\
     \pi_i(v_1, v_2) &\purereduction &v_i \\
     \goosekw{case} \app \goosekw{inj}_i v \app\goosekw{of}\app %
     \goosekw{inj}_1 \app x_1 \Rightarrow e_1 \app\goosekw{or}\app%
@@ -323,12 +326,12 @@ this type. The full details are presented in \cref{fig:goose:semantics}.
   \begin{array}{rcll}
     ((h, w), e) &\reduces & ((h, w), e') &\mathrm{if} \: e \purereduction e' \\
     ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
-                          &((h\mapupd{\ell}{v_2}, w), (v, \goosekw{true}))%
+                          &((h\mapupd{\ell}{v_2}, w), (v, \goosetrue))%
                                          &\mathrm{if} \: h(\ell) =
                                            \goosekw{Reading} \app 0 \app v \land
     v = v_1 \\
     ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
-                          &((h, w), (v, \goosekw{false}))%
+                          &((h, w), (v, \goosefalse))%
                                          &\mathrm{if} \: h(\ell) =
                                            \goosekw{Reading} \app 0 \app v \land
                                            v \neq v_1 \\
@@ -420,7 +423,7 @@ relevant operation is at the top level or ``head'' of the expression, and when
 applied to values (notice for example that the rule for $\goosekw{AllocN}(n, v)$
 is only defined when applied to a number and a value, not other expressions).
 Context reductions are how those arguments get executed when we run something
-like $\goosekw{AllocN}(10, \goosekw{true || false})$.
+like $\goosekw{AllocN}(10, \goosetrue \| \goosefalse)$.
 
 Context reductions are defined by a type of evaluation contexts
 $\textdom{ECtx}$. Rather than going through the details of how these are used
