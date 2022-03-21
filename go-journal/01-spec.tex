@@ -1,4 +1,5 @@
-\section{GoTxn's specification}
+\section{GoTxn's specification}%
+\label{sec:gotxn:spec}
 
 At a high level, GoTxn makes transactions atomic. We frame its specification in
 two ways. The first, \emph{program refinement}, formalizes the idea of ``atomic
@@ -66,14 +67,14 @@ talks about:
 written $p_{c} \refines p_{s}$, if whenever there are initial states
 $\sigma_{s}$ and $\sigma_{c}$ satisfying $\mathrm{init}(\sigma_{s}, \sigma_{c})$
 and $p_{c}$ can execute from $\sigma_{c}$ and produce a trace of network I/O
-$tr$, then $p_{s}$ can execute from $\sigma_{s}$ and produce the same trace
-$tr$.  Execution might involve crashing and restarting a program (potentially
+$\textit{tr}$, then $p_{s}$ can execute from $\sigma_{s}$ and produce the same trace
+$\textit{tr}$.  Execution might involve crashing and restarting a program (potentially
 multiple times), wiping out any in-memory state after each crash.
   \label{def:refinement}
 \end{definition}
 
 The intuition behind the notation $p_{c} \refines p_{s}$ is that the set of
-behaviors of $p_{c}$ (the set of traces of network I/O $tr$) is a subset of the
+behaviors of $p_{c}$ (the set of traces of network I/O $\textit{tr}$) is a subset of the
 behaviors of $p_{s}$. Whenever we state $p_{c} \refines p_{s}$ we leave implicit
 a definition of initial states $\mathrm{init}(\sigma_{s}, \sigma_{c})$, which
 will generally say both states are all zeros and of the same size.
@@ -153,9 +154,7 @@ provided by program refinement.
 To make this precise, we define formally what we mean by
 ``sequential reasoning''. Suppose we have an
 implementation of layer $S$ using operations from $T$. Note that all the proofs
-about the transaction system are for an arbitrary system with operations in $S$;
-Though we use the system with an implementation of NFS, its proof is
-more general. The implementation $i$
+about the transaction system are for an arbitrary system with operations in $S$. The implementation $i$
 consists of a function $i(op) : \gooselayer{T}$ for each operation $op \in S$. The statement
 $\seqrefinement \targ{T, S}(i)$ says that $i$ is a correct sequential
 implementation of $S$ using $T$. To specify correctness under crashes, this
@@ -188,7 +187,9 @@ abstraction relation to be preserved by crashes, the proof engineer does \emph{n
 % for sequential crash safety~\cite{chajed:argosy}.
 The
 diagram in \cref{fig:refinement} depicts the main
-refinement condition (1) diagrammatically.
+refinement condition (1) diagrammatically. \tej{consider rearranging this, maybe
+move simulation transfer to DaisyNFS chapter, so we immediately connect to Dafny
+there?}
 % For example, it is fairly easy to use them to show
 % that for any sequential program $p : \gooselayer{S}$, the traces of the code
 % $\mathrm{link}(p, i)$ are a subset of the traces of the spec $p$ (we will not
@@ -224,11 +225,12 @@ operation is wrapped in a transaction.
 %}
 %\end{verbatim}
 \begin{theorem}[Simulation transfer]
-  Let $S$ be a spec layer implemented using transactions with
-$i : S \to \gooselayer{Txn}$, such that $\seqrefinement(i)$ and
+  Let $\textdom{Sys}$ be a layer implemented using transactions with
+$i : \textdom{Sys} \to \gooselayer{Txn}$, such that
+$\seqrefinement\targ{\gooselayer{Txn}, \textdom{Sys}}(i)$ and
 $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
 \[
-  \forall p : \gooselayer{S}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
+  \forall p : \gooselayer{Sys}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
 \]
 \label{thm:gotxn-transfer}
 \end{theorem}
@@ -236,5 +238,5 @@ $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
 % using transactions and a proof of its correctness in terms of standard
 % \emph{sequential} reasoning, while the conclusion says that the combination of
 % the implementation with GoTxn results in a correct \emph{concurrent} refinement.
-In \cref{sec:txn-proof} we discuss how this theorem
-is proven using Perennial and Coq.
+%In \cref{sec:txn-proof} we discuss how this theorem
+%is proven using Perennial and Coq.

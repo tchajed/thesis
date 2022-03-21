@@ -387,7 +387,7 @@ them, so it easy enough to reconstruct them globally. In contrast, some
 resources are used locally by a thread and we would like a way to retain
 ownership across a crash, into that thread's crash condition. This is exactly
 what happens with GoJournal's lifting-based specification, explained in greater
-detail in \cref{s:design}. Exchanging gives threads a way to ``trade''
+detail in \cref{sec:txn:lifting}. Exchanging gives threads a way to ``trade''
 ownership prior to a crash, associated with the old $\gamma$ instance, for
 ownership after a crash, associated with $\gamma'$; this ownership can also be
 exclusive, because the process destroys the old ownership and thus can only be

@@ -1,10 +1,5 @@
-%% indexing disk generations
-
-% And using its specs reads a little clunky to me -JDT
-%\section{Specifying \txn and using its specs}
-
-\section{Specifying GoJournal}
-\label{s:design}
+\section{Lifting specification for journaling}%
+\label{sec:txn:lifting}
 
 %% This section walks through the \txn specification as well as how an application
 %% proof uses it to prove linearizability.  We use the simple NFS server and its
@@ -29,6 +24,9 @@ the crash atomicity of a journal) do apply to this section, and need to be
 introduced locally since the chapter is otherwise about a transaction system}
 
 \resume
+
+A key aspect of verifying GoTxn is to reason about its intermediate
+\emph{journaling} abstraction.
 
 The goal of \txn's specification is to support convenient reasoning about atomic
 operations, like the NFS \scc{write} implementation in \cref{fig:nfswrite} and \cref{fig:write}.
