@@ -7,23 +7,6 @@ how to compose proofs across layers for modularity, to contain concurrency, or
 to cross between proof systems; we believe \sys advances this work by combining
 two software stacks of significant size and complexity.
 
-\subsection{Verifying storage systems}
-
-\paragraph{Directly related applications}  The authors of the
-Perennial system verified a crash-safe, concurrent mail server under
-the assumption that the file system is crash-safe. \sys is a
-crash-safe file system and its complexity is significantly larger than
-a mail server: the mail server is about 150 lines with a monolithic
-proof while \sys combines a transaction system (itself 1,300 lines) with
-a 3,000-line file system, each of which involve many intermediate
-abstractions.
-
-%% The Dafny side of \sys is a new implementation but its design and aspects of the
-%% proof strategy were inspired by other verified file systems like
-%% DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
-%% in Konradi's master's thesis~\cite{akonradi-meng}) and
-%% Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
-
 \paragraph{Other verified file systems}
 
 %% Yggdrasil is implemented with a high degree of automation, with the
@@ -192,19 +175,6 @@ concurrent, crash-safe program.
 % transaction system implementation. \tej{haven't figured out how to explain this}
 
 \subsection{Verified two-phase locking}
-
-\citet{ChkliaevHS99} verify serializability of two-phase locking and other
-transaction concurrency control mechanisms in the PVS theorem prover. Their
-proof formalizes two-phase locking as an abstract protocol consisting of
-sequences of read, write, and locking operations, as opposed to a concrete
-implementation as in \sys. \citet{pollak-2PL} uses a variant of the
-CAP separation logic~\citep{dinsdale:cap} to give a pencil-and-paper
-proof of serializability for a two-phase locking implementation.
-
-\citet{mohsen:stm} developed a framework for verifying software transactional memory algorithms, modeled
-as I/O automata. They applied their framework to sophisticated STM algorithms, such as
-NOrec algorithm~\cite{dalessandro:norec}. The STM algorithms considered do not
-handle persistence, so the framework does not address crash-safety reasoning.
 
 % Instead of
 % acquiring locks throughout a transaction, the system tracks a \emph{read set} of

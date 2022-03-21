@@ -1,8 +1,6 @@
 DaisyNFS draws on several lines of research. This chapter both explains the
 research DaisyNFS directly builds upon and other work solving similar problems.
 
-\resume
-
 \section{The Flashix file system}
 
 The Flashix project deserves special attention since it also develops a verified
@@ -100,7 +98,9 @@ then to show that when this happens it corresponds to an appropriate
 application-level transition modeling crashes (similar to the crash refinement
 definition from Yggdrasil and recovery refinement in Argosy, although this is
 associated with a code transition rather than a dedicated recovery procedure).
-VeriBetrKV is used to verify a persistent key-value store.
+VeriBetrKV is used to verify a persistent key-value store based on
+B\textsuperscript{$\epsilon$} trees, a data structure that also underlies
+BetrFS~\cite{jannen:betrfs}.
 
 Perennial has crash conditions that look similar to CHL's crash conditions,
 albeit as part of a concurrent program logic rather than a sequential one. We do
@@ -167,27 +167,58 @@ Iris had not typically been used for reasoning about executable code (though
 projects like RefinedC~\cite{sammler:refinedc} and our own work on Goose are
 changing that).
 
-\section{Other stuff}
+\section{Crash safety and concurrency}
 
-persistent memory semantics
+Program logics other than Perennial
+have been developed for formal reasoning about concurrent, crash-safe systems.
+Fault-Tolerant Concurrent Separation Logic (FTCSL)~\cite{ntzik:faults} extends
+the Views~\cite{dinsdale:views} concurrency logic to incorporate crash-safety.
+POG~\cite{raad:pog} is a program logic for reasoning about the interaction of
+x86-TSO weak-memory consistency and non-volatile memory.  Neither logic has a
+mechanism for modular proofs of layers, which we found essential to scale
+verification to a file system. Both are restricted to pen-and-paper proofs,
+whereas Perennial has machine-checked proofs. In the case of x86-TSO with
+persistence, merely defining the semantics at the ISA level was a line of
+research work leading up to POG~\cite{raad:px86,raad:px86-extended}. A similar
+semantics effort defines the semantics of ext4 under crashes, but without an
+accompanying program logic~\cite{kokologiannakis:persevere}.
 
-ext4 semantics from Azalea's group
+\section{Transaction systems}
 
-\section{Related to GoTxn}
+A specification called the Push/Pull model of
+transactions~\cite{koskinen:pushpull} is similar to the \emph{lifting} technique
+in the journal system's specification~(\cref{s:design:lifting}) --- the core
+problem addressed is that a journal operation atomically modifies a small number
+of objects, but other objects can change between the start of the operation and when
+it commits. The Push/Pull model also discusses reasoning on top of the
+specification, using Lipton's reduction~\cite{lipton:movers} rather than
+separation-logic ownership to handle concurrency. However that work is about
+on-paper specifications and proofs, while we also prove an implementation meets
+our specification and proved \simplenfs on top.
 
-comparison of system to jbd2
+DFSCQ~\cite{chen:dfscq} verifies a high-performance file system built on top of
+a logging system with asynchronous disks and log-bypass writes, which are
+challenging optimizations that GoTxn does not support. ARIES is a database
+write-ahead logging system that was verified (with a pen-and-paper proof) in
+FTCSL~\cite{ntzik:faults}; it is more sophisticated than GoTxn's write-ahead log
+in that it can both undo and redo operations.
 
-Push/Pull model
+\citet{ChkliaevHS99} verify serializability of two-phase locking and other
+transaction concurrency control mechanisms in the PVS theorem prover. Their
+proof formalizes two-phase locking as an abstract protocol consisting of
+sequences of read, write, and locking operations, as opposed to a concrete
+implementation as in \sys. \citet{pollak-2PL} uses a variant of the
+CAP separation logic~\citep{dinsdale:cap} to give a pencil-and-paper
+proof of serializability for a two-phase locking implementation.
 
-DFSCQ logging system. ARIES and its FTCSL proof
+\citet{mohsen:stm} developed a framework for verifying software transactional memory algorithms, modeled
+as I/O automata. They applied their framework to sophisticated STM algorithms, such as
+NOrec algorithm~\cite{dalessandro:norec}. The STM algorithms considered do not
+handle persistence, so the framework does not address crash-safety reasoning.
 
-\input{go-journal/02-related}
+jbd2
 
 \section{Related to DaisyNFS}
-
-some similarities to design of Yggdrasil
-
-indirect block verification-friendly design from DFSCQ
 
 The Dafny side of DaisyNFS is a new implementation but its design and aspects of
 the proof strategy were inspired by other verified file systems like
@@ -195,6 +226,26 @@ DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
 in Konradi's master's thesis~\cite{akonradi-meng}) and
 Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
 
-AtomFS does concurrency reasoning
+AtomFS does concurrency reasoning~\cite{zou:atomfs}.
 
-\input{daisy-nfs/02-related}
+Isotope has a similar design but no verification~\cite{shin:isotope}.
+
+We chose to verify an NFS server because it is widely used in practice
+and the expected behavior of NFS operations is well documented in
+RFCs.  FUSE is an alternative for implementing file systems in user
+space, but its operations have a less clear specification.
+
+To be conducive to verification, \sys is implemented differently than
+many NFS servers; in particular using two-phase locking is not common
+practice.  Other user-level NFS servers are typically implemented on
+top of an existing file system, relying on the underlying file system
+for logging and locking. The Linux NFS server is implemented inside
+the kernel using VFS and the ext3/ext4 file systems (if exporting an
+ext3/ext4 file system).  Ext3 and ext4 use a journaling system, but
+the file system and VFS layers perform locking.  WAFL~\cite{wafl:hitz}
+is NFS appliance that provides snapshots and logs NFS requests to
+NVRAM.  It has evolved its locking plan to obtain good
+parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
+are more complicated and have more features than \sys.
+
+\resume

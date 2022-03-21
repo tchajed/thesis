@@ -74,28 +74,3 @@ as a precondition in a transition system.
 % more abstract versions of the code. Neither of these frameworks
 % supports crash-safety guarantees, and neither supports modular verification of a
 % lower-level layer independently of upper layers that use it.
-
-
-\paragraph{Concurrent, crash-safe reasoning.}
-
-Program logics other than Perennial
-have been developed for formal reasoning about concurrent, crash-safe systems.
-Fault-Tolerant Concurrent Separation Logic (FTCSL)~\cite{ntzik:faults} extends
-the Views~\cite{dinsdale:views} concurrency logic to incorporate crash-safety.
-POG~\cite{raad:pog} is a program logic for reasoning about the interaction of
-x86-TSO weak-memory consistency and non-volatile memory.
-Neither logic has a mechanism for modular proofs of layers,
-which we found essential to scale verification to a system of \txn's
-complexity. Both are restricted to pen-and-paper proofs, whereas both Perennial
-1.0 and 2.0 have machine-checked proofs.
-
-A specification called the Push/Pull model of
-transactions~\cite{koskinen:pushpull} is similar to the \emph{lifting} technique
-in the journal system's specification~(\cref{s:design:lifting}) --- the core
-problem addressed is that a journal operation atomically modifies a small number
-of objects, but other objects can change between the start of the operation and when
-it commits. The Push/Pull model also discusses reasoning on top of the
-specification, using Lipton's reduction~\cite{lipton:movers} rather than
-separation-logic ownership to handle concurrency. However that work is about
-on-paper specifications and proofs, while we also prove an implementation meets
-our specification and proved \simplenfs on top.
