@@ -12,24 +12,28 @@
     \scc{jrnl} & In-memory buffered object operations \\
     \scc{obj} & Journaling sub-block writes \\
     \scc{wal} & Whole-block write-ahead logging \\
-    \scc{circular} & On-disk circular log data structure \\
+    \scc{circ} & On-disk circular log data structure \\
     \midrule
   \end{tabular}
-  \caption{\txn layers.}
+  \caption{The layers in the GoTxn implementation.}
   \label{fig:gotxn-layers}
 \end{figure}
 
-The transaction system is structured into several layers, as shown in \cref{fig:gotxn-layers}.
-At a high level, three of the abstractions are useful to understand the overall
-structure. The first useful abstraction is the write-ahead log, which behaves
-like a disk with an atomic multiwrite operation. Reads and writes still operate
-on 4KB blocks, but a multiwrite appears to update multiple disk blocks
-simultaneously even if the system crashes. On top of the write-ahead log the \scc{obj}
-and \scc{jrnl} layers
-allow callers to perform read and write operations on objects
-smaller than a block (``sub-block'' objects).  Writes are
-buffered in memory until the caller chooses to commit, at which point a multiwrite to the
-write-ahead log commits the writes to disk.
+The transaction system is structured into several layers, as shown in
+\cref{fig:gotxn-layers}. At a high level, three of the abstractions are useful
+to understand the overall structure: the \scc{wal}, the \scc{jrnl}, and finally
+the top-level \scc{txn}. The first useful abstraction is the
+write-ahead log, which behaves like a disk with an atomic multiwrite operation.
+Reads and writes still operate on 4KB blocks, but a multiwrite appears to update
+multiple disk blocks simultaneously even if the system crashes. Next, the
+\scc{jrnl} layer implements \emph{journaling}, persisting a whole operation with
+reads and writes to disk atomically. Concurrent operations must access disjoint
+addresses for safety; concurrency control is left to the caller in this layer.
+Operations can manipulate objects smaller than a block (``sub-block'' objects),
+which improves concurrency by making more operations disjoint. Finally, the
+\scc{txn} layer exports the complete transactional interface in
+\cref{fig:txn-api}. This layer implements automatic concurrency control so that
+the caller can freely read and write any addresses.
 
 The write-ahead log is implemented by organizing the disk into a small,
 fixed-size circular buffer and a remaining data region. Data is first atomically
