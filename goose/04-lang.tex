@@ -43,9 +43,9 @@ whole \emph{threadpool}, a list of concurrently executing expressions. You
 can think of each expression as representing the computation of a single thread,
 and each reduction step as being running the thread for one transition. The
 granularity of these transitions corresponds to what is considered atomic
-between threads. For a reader unfamiliar with operational semantics for the
-lambda calculus, X is a good reference \tej{figure out what to recommend for
-  lambda calculus}.
+between threads. For a reader unfamiliar with the lambda calculus, you can find
+a detailed introduction in the textbook \emph{Types and Programming
+Languages}~\cite[Chapter~5]{pierce:tapl}.
 
 \begin{figure}[hp!]
   \textbf{Syntax}
@@ -405,13 +405,15 @@ semantics. The specific case of the disk is presented in
 Finally, we define the full semantics over $((h, w), \mathcal{E})$. Instead of a
 single expression, we now have a \emph{threadpool}, a list of expressions, all
 running concurrently. This semantics is presented in a standard style using
-evaluation contexts. The previous relation involving a single expression
-is called a \emph{head reduction relation} because it only gives the semantics
-of expressions where the relevant operation is at the top level or ``head'' of
-the expression, and when applied to values (notice for example that the rule for
-$\goosekw{AllocN}(n, v)$ is only defined when applied to a number and a value,
-not other expressions). Context reductions are how those arguments get executed
-when we run something like $\goosekw{AllocN}(10, \goosekw{true || false})$.
+\emph{evaluation contexts} --- you can find an explanation in a simpler setting
+in the Harvard CS 152 course notes~\cite[Lec 10]{chong:cs152-notes}. The
+previous relation involving a single expression is called a \emph{head reduction
+  relation} because it only gives the semantics of expressions where the
+relevant operation is at the top level or ``head'' of the expression, and when
+applied to values (notice for example that the rule for $\goosekw{AllocN}(n, v)$
+is only defined when applied to a number and a value, not other expressions).
+Context reductions are how those arguments get executed when we run something
+like $\goosekw{AllocN}(10, \goosekw{true || false})$.
 
 Context reductions are defined by a type of evaluation contexts
 $\textdom{ECtx}$. Rather than going through the details of how these are used
