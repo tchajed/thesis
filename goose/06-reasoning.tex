@@ -376,39 +376,40 @@ $s$, the list of values it contains, excluding additional capacity. It
 also represents ownership over all these elements, in terms of the
 underlying struct points-to facts. We use this predicate to specify
 loads and stores:
-
-\[
+\begin{mathpar}
   \hoareV{\sliceRep(s, l) * i < |l|}%
 {\mathtt{s[i]}}%
 {\Ret{v} v = l[i] * \sliceRep(s, l)}
-\]
-\[
+
   \hoareV{\sliceRep(s, l) * i < |l|}%
  {\mathtt{s[i] = v}}%
 {\Ret{v} v = l[i] * \sliceRep(s, l\mapupd{i}{v})}
-\]
-
-Next, $\sliceCap(s)$ is an abstract predicate that represents
-\emph{ownership over the capacity} of $s$. It is necessary to append,
-since appending might need to write to the capacity, but unneeded to
-read and write to a slice.
-\[
-\hoareV{\sliceRep(s, l) * \sliceCap(s)}%
-{\mathtt{append(s, x)}}%
-{\Ret{s'} \sliceRep(s', l \lappend [x]) * \sliceCap(s')}
-\]
+\end{mathpar}
 
 \newidentmacro{sliceFull}
 \newdefmacro{take}
 \newdefmacro{drop}
 
-This specification is fairly simple. In fact, we often use a shorthand
-$\sliceFull(s, l) = \sliceRep(s, l) * \sliceCap(s)$ when the proof will
-always retain ownership of slice capacity, in which case the spec looks
-even simpler. However, the proof is non-trivial, since in one case it
-moves ownership from $\sliceCap(s)$ to $\sliceRep(s', l \lappend [x])$
-(where $\ptr(s') = \ptr(s)$), while in the other it constructs a
-completely new allocation for $s'$.
+Next, $\sliceCap(s)$ is an abstract predicate that represents
+\emph{ownership over the capacity} of $s$. It is necessary to append,
+since appending might need to write to the capacity, but unneeded to
+read and write to a slice. We introduce a shorthand
+$\sliceFull(s, l)$ for the append specification, which is like $\sliceRep$ but also
+includes ownership over the capacity:
+%
+\begin{mathpar}
+\sliceFull(s, l) \defeq \sliceRep(s, l) * \sliceCap(s) \\
+
+\hoareV{\sliceFull(s, l)}%
+{\mathtt{append(s, x)}}%
+{\Ret{s'} \sliceFull(s', l \lappend [x])}
+\end{mathpar}
+
+This specification looks simple but has a non-trivial proof, since in the case
+where there is sufficient capacity it moves ownership from $\sliceCap(s)$ to
+$\sliceRep(s', l \lappend [x])$ (and $\ptr(s') = \ptr(s)$), while in the other
+case where there is no capacity it allocates a new pointer for $s'$ and copies
+everything over.
 
 The most interesting rules are for subslicing and how they interact with
 capacity. Consider \cc{s[:i]} again. While Go has no formal
@@ -437,27 +438,37 @@ append to the subslice but stop using the old slice, or whether we want
 to continue using the remainder of \cc{s}.
 
 Concretely, GooseLang has two theorems for reasoning about taking a prefix of a
-list. These theorems all require $i < \len(s)$.
+list. Both of these theorems require $i < \len(s)$.
+\begin{mathpar}
+  \inferH{slice-take-full}{}{%
+{\begin{array}{ll}
+&\sliceFull(s, l) \vdash \\
+&\quad \sliceFull(s[:i], \take(l, i))
+\end{array}}
+}
 
-The first is $\sliceFull(s, l) \vdash \sliceFull(s[:i], \take(l, i))$, capturing
-how we can have full ownership over $s[:i]$ (including its capacity) by dropping
-the rest of $s$.
-
-The second is:
-\begin{align*}
+\inferH{slice-split}{}{
+  % extra braces are required to "protect" aligned, see
+  % https://tex.stackexchange.com/questions/37513/inserting-arrays-into-semantics-inference-rules
+  {\begin{array}{ll}
   &\sliceRep(s, l) \dashv\vdash \\
   &\quad \sliceRep(s[:i], \take(l, i)) \sep {} \\
   &\quad \sliceRep(s[i:], \drop(l, i))
-\end{align*}
-In just the left-to-right direction, this says that if we don't care about
-ownership over capacity (and thus the right to append to any of these slices),
-then we can split $s$ into two parts at the $i$th index.
+  \end{array}}
+  }
+\end{mathpar}
+
+The rule \ruleref{slice-take-full} captures that we can get full ownership of
+$s[:i]$, in exchange for dropping any ownership over the rest of $s$.
+The second rule \ruleref{slice-split} instead allows us to split $s$ into two
+parts at the $i$th index, but in exchange we lose $\sliceCap{s[:i]}$, the right
+to append to the first half.
 
 There is one more fact that is sometimes useful, which is that
 $\sliceCap(s) \dashv\vdash \sliceCap(s[i:])$ (this is somewhat intuitive;
 capacity is past the end of the array, so dropping elements from the front has
-no impact). As a corollary, we can split full ownership of a slice into two
-asymmetric parts:
+no impact). As a corollary of \ruleref{slice-split}, we can also split full
+ownership of a slice into two (asymmetric) parts:
 \begin{align*}
   &\sliceFull(s, l) \dashv\vdash \\
   &\quad \sliceRep(s[:i], \take(l, i)) \sep {} \\
@@ -467,10 +478,10 @@ asymmetric parts:
 These two reasoning principles correspond to two ways to think about indexing:
 taking a prefix while using the original slice as capacity for the prefix (the
 first theorem), or splitting the slice into two parts (the second theorem and
-its corollary). It was interesting that we discovered these principles while
-proving theorems in GooseLang. Even being experienced Go developers, we had
-never thought about subslicing and appending in enough detail to appreciate this
-difference in ownership reasoning.
+its corollary). It was interesting that we discovered these principles only
+while proving theorems about subslicing in GooseLang. Even as experienced Go
+developers, we had never thought about subslicing and appending in enough detail
+to appreciate this difference in ownership reasoning.
 
 \subsection{Maps}
 
