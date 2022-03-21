@@ -131,13 +131,19 @@ We can build intuition for both the syntax and semantics of GooseLang by looking
 at some very simple Go programs and their translations into GooseLang. First,
 let's look at some \emph{pure} functions that don't use pointers:
 
+\newcommand{\translaterule}{\rule{0.9\textwidth}{0.5pt}}
+
 \newenvironment{translatego}{
+  \noindent
+  \translaterule \\[-10pt]
   % get proper top alignment
   % https://tex.stackexchange.com/questions/378548/vertical-alignment-of-side-by-side-minipages
   \begin{minipage}[t]{0.5\textwidth}
   \strut\vspace*{-\baselineskip}
+  \setminted[go]{frame=none}
 }{
   \end{minipage}
+  \setminted[go]{frame=lines}
 }
 
 \newenvironment{translategooselang}{
@@ -145,6 +151,7 @@ let's look at some \emph{pure} functions that don't use pointers:
   \strut\vspace*{-8pt}
 }{
   \end{minipage}
+  \\[5pt] \translaterule
 }
 
 \begin{translatego}
@@ -232,7 +239,7 @@ func Swap(x *uint64,
   % next to the = or \gets
   &\quad\goosekw{let} \app tmp = {} !x \app\goosekw{in}\app \\
   &\quad x \gets {} !y \\
-  &\quad y \gets tmp\\
+  &\quad y \gets tmp
 \end{flalign*}
 \end{translategooselang}
 
@@ -246,7 +253,7 @@ func NewPtr() *uint64 {
 %
 \begin{translategooselang}
 \begin{flalign*}
-  &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0
+  &\goosedef{NewPtr} \defeq \gooselambda{\_} \goosekw{ref} \app 0 &
 \end{flalign*}
 \end{translategooselang}
 
