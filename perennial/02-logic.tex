@@ -303,9 +303,8 @@ The basic version of the soundness theorem says:
     \item If this execution is a normal termination and $e'$ is a value, then
     $\phi(e')$ holds.
     \item If this execution is a crash and recovery execution and $e'$ is a
-    value produced by $e_{r}$, then
-    $\phi_{r}(e')$ holds.
-    \item Any forked threads are either a value or are reducible in $\sigma'$
+    value produced by $e_{r}$, then $\phi_{r}(e')$ holds.
+    \item Any forked threads are either a value or are reducible in $\sigma'$.
   \end{enumerate}
 \end{theorem}
 To satisfy the premise of the soundness theorem, we get to assume points-to

@@ -114,7 +114,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 
 The correctness of the transaction system is summarized by the following theorem:
 
-\begin{theorem}
+\begin{theorem}[Program refinement]
   The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for
   all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
   $\mathrm{link}(p, \txncode) \refines p$. The definition of

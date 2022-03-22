@@ -2,17 +2,17 @@
 
 \subsection{Refinement to atomic language}
 
-\tej{copy the new version of this from DaisyNFS paper}
+\tej{merge any useful changes from the DaisyNFS paper}
 
 \newcommand{\txnmapsto}{\mapsto_{\cc{txn}}}
 \newcommand{\thdmapsto}{\Rightarrow}
 
-Recall that \cref{thm:txn} establishes refinement between the Txn layer and
-Disk layer.  That is, given a program p written in $\gooselayer{Txn}$, if the
-transaction operations of p are linked with an implementation written in
-$\gooselayer{Disk}$, the implementation program's observable behaviors (from
-running on a disk) are a subset of the specification's behaviors (with
-high-level transaction-system operations).
+Recall that \cref{thm:gotxn-program-refinement} establishes a program refinement
+for programs written the Txn layer and Disk layer. That is, given a program
+$p : \gooselayer{Txn}$, if the transaction operations of $p$ are linked with
+GoTxn (implemented in $\gooselayer{Disk}$), the implementation program's
+observable behaviors (from running on a disk) are a subset of the
+specification's behaviors (with high-level transaction-system operations).
 
 In general, the Perennial framework supports proving refinements between a
 specification layer $\gooselayer{S}$ and an implementation layer $\gooselayer{I}$ by constructing
