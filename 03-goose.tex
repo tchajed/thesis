@@ -1,238 +1,25 @@
-A key component of any infrastructure for systems verification is the connection
-between the proof and the executable code. The rest of this thesis focuses on
-crash safety and concurrency as challenges to reasoning about storage systems.
-This chapter is about Goose, which solves a more fundamental and practical
-problem of reasoning about efficient code.
-
-The basic setup we take for Goose is to first write the implementation in
-ordinary Go, automatically translate the code to a model in the Coq proof
-assistant, then carry out the proof on top of the model. Goose encompasses is
-the entire process: it includes the translation tool itself, the way we model Go
+This chapter is about Goose, which solves a practical
+problem of reasoning about efficient code. To use Goose, a developer writes
+code in Go, uses an automatic translator to convert the code to a model in the Coq proof
+assistant, then carries out the proof on top of the model in the Perennial logic. Goose encompasses
+the entire process: it includes the translation tool itself, the way it models Go
 code, and finally the reasoning principles for proving properties of translated
 Go. (We will also use ``Goose'' in some places to refer to the subset of Go
 supported by the translation tool.)
 
 This chapter is intentionally fairly independent of the rest of the thesis for a
-reader interested in verifying Go code but not the specifics of the
-transaction-system proof or the file system built on top. Concurrency is
-relevant to accurately modeling and reasoning about Go, but crash safety is also
-of little importance in this chapter. Crashes are modeled simply by stopping
+reader interested in verifying Go code but not crash safety or the specifics of
+the GoTxn and DaisyNFS proofs. Crashes are modeled simply by stopping
 execution and wiping out all of the state except for the disk, which does not
 relate to the specifics of Go.
 
 \input{goose/01-goals.tex}
 \input{goose/02-related.tex}
-
-\section{High-level overview}
-
-The goal of the translation is to model a Go program using GooseLang,
-which is a programming language defined in Coq for this purpose. When we
-say GooseLang is a programming language, we mean it in a theoretical
-sense: GooseLang consists of a type of programs in Coq and a small-step
-semantics of these programs. Since GooseLang programs support references
-to model the Go heap, the semantics is written in terms of transitions
-of (program, heap) pairs where the heap maps pointers to values. The
-intention of the translation is that the semantics of the translated
-function should cover all the behaviors of the Go code, in terms of
-return values and effect on the heap. As long as this is true, a proof
-that the translated code always satisfies some specification means that
-the real running code will, too.
-
-GooseLang is a low-level language, so many constructs in Go translate to
-(small) implementations in GooseLang. This implementation choice proved
-to be much more convenient than adding primitives to the language for
-every Go construct. For example, a slice is represented as a tuple of
-pointer, length, and capacity, and appending to a slice requires
-checking for available capacity and copying if none is available.
-Appending to a slice is a complicated operation, and it was easier to
-write it correctly as a program rather than directly as a transition in
-the semantics. The one cost to this design strategy is that an arbitrary
-GooseLang program is much more general than translated Go programs. This
-has no impact on verifying any \emph{specific} Go program.
-
-The extra generality of GooseLang does have some downsides since at one point in
-the development, in the transaction system's specification, we refer to an
-arbitrary GooseLang program. This theorem is made a bit more complicated since
-to there are some ill-defined GooseLang programs that no Go program could
-generate which the theorem needs to exclude. The transaction system
-specification uses a standard technique of restricting to well-typed GooseLang
-programs, and encoding syntactic restrictions in that type system.
-
-\tej{add a diagram, perhaps like the ones in the Goose talk, showing the
-translation process and how Go/Goose/GooseLang all fit together}
-
-An important aspect of GooseLang is supporting interactive proofs on top
-of the translated code. The interactive proofs use separation logic, a
-variant of Hoare logic, so specifications describe the behavior of each
-individual function. In order to support verification of any translated
-code, GooseLang comes with a specification for any primitive or function
-that the translated code might refer to, including libraries like slices
-used to model more sophisticated Go features. GooseLang has many
-``pure'' operations that have no effect on the heap, due to many
-primitive data types and operations (for example, there are both 8-,
-32-, and 64-bit integers, and arithmetic and logical operations for
-each). The specifications for these operations are handled with a single
-lemma, which is applied automatically with a tactic \cc{wp_pures}.
-
-Since our goal is to support interactive rather than automated proofs,
-it is helpful to make the model simple to work with. We try to maintain
-a strong correspondence between the model and source code: each Go
-package translates to a single Coq file, and each top-level declaration
-in the Go code maps to a Gallina definition (a GooseLang constant or
-function). Goose has a special case for translating immutable variables
-to let bindings in GooseLang (rather than allocating a pointer that will
-only be read). As a result, factoring out a sub-expression to a variable
-has little impact on proofs, since it just adds one more pure step.
-
-While the model is simple in terms of control flow and structure, we can
-safely translate any given Go operation to a sophisticated model as long
-as the proof abstracts it away. The subsequent sections in this chapter
-walk through several features of Go. In each case we first implement the
-feature in GooseLang, which as a model of its behavior primarily aims to
-be faithful to Go. Next, we develop reasoning principles for the
-features, in the form of separation logic assertions (for example, to
-represent a slice) and Hoare triples (for example, to specify the
-behavior of Append). The key is that the model is trusted to capture
-Go's behavior so some sophistication is useful, whereas the reasoning
-principles aim to hide that complexity to make proofs practical.
-
+\input{goose/03-overview.tex}
 \input{goose/04-lang.tex}
-
-\section{Supported and unsupported features}
-
-Each function is translated to a single Coq definition, which is a
-GooseLang function. For concurrency, Goose supports the \cc{go}
-statement and the synchronization primitives \cc{*sync.Mutex} and
-\cc{sync.Cond}.
-
-Go's primitive uint64, uint32, uint8 (byte), and boolean types are all
-supported, as well as most of the pure functions on those types. Goose
-also supports pointers, structs, and methods on structs. Finally, Goose
-supports Go's built-in data structures, slices and maps.
-
-Notably missing in Goose but prominent in Go is support for interfaces
-and channels. We believe both are easy enough to support, but interfaces
-were not necessary for our implementation, and rather than channels we
-use mutexes and condition variables for more low-level control over
-synchronization.
-
-Control flow is also slightly tricky since a Go function is translated
-to a single GooseLang expression that should evaluate to the function's
-return value. We can support many specific patterns, especially common
-cases like early returns inside \cc{if} statements and loops with
-\cc{break} and \cc{continue}, but more complex control flow ---
-particularly returning from within a loop --- is not supported. If we
-wanted to fix this the right solution would probably be to represent all
-functions in continuation-passing style, though this would complicate
-the translation of every function call.
-
-We do not support Go's defer statement. It would be nice to support some
-common and simple patterns, particularly for unlocking, by translating
-\cc{defer} statically; Go's general \cc{defer} statement is much more
-complicated to model since it can actually be issued dynamically and
-pushes to a stack of calls that are executed in reverse order at return
-time. This generality is rarely exploited so it would be useful to model even
-just uses of \cc{defer} that can be statically analyzed.
-
-We do not support mutual recursion between Go functions, and
-additionally require the translation to be in the right order so
-definitions appear before they are used. The subtlety here is that
-definition management in Go, as in most imperative languages,
-conceptually treats all top-level definitions as simultaneous, whereas
-Coq processes definitions sequentially. Using Coq definition management
-to model Go definition management imposes a limitation compared to Go,
-but is much simpler to work with compared to modeling a Go package as a
-set of mutually recursive definitions. Reasoning about code written in such a
-model would require setting up specification for all the definitions, then
-proving them in a recursive way while ensuring that no specification is used
-before it is proven.
-
+\input{goose/05-features.tex}
 \input{goose/06-reasoning.tex}
-
-\section{Testing Goose}
-
-Goose is a trusted component in the entire verification process. For the
-overall system's proof to be sound, we rely on the model to produce all
-of the behaviors of the Go code; that is, the behaviors of the Go code
-(in practice, using the Go compiler) should be a subset of the behaviors
-of its translated GooseLang (according to the Coq semantics). As long as
-this is case, the proof is sound in that if the modeled system always
-satisfies some property the code will, too.
-
-One subtlety in the trust we place in Goose is that it only applies when
-Goose translates code successfully, that code compiles in Coq, and the
-model has no undefined behavior. If any of these fail, then the proof of
-the system would either not be possible or not go through. Therefore the
-most important bugs are those where the translation's behavior differs
-from that of Go; these can compromise soundness of the system and lead
-to a proof that is not borne out in practice.
-
-To increase out confidence in Goose, we implemented a large suite of
-unit tests. While these tests check that Goose continues to translate
-existing code (and check that the translation has not unexpectedly
-change), for soundness the relevant test is to compare Go to the Goose
-output. Unfortunately GooseLang is not natively an executable language.
-Its semantics is expressed as a Coq relation that specifies how an
-expression is evaluated (or gets stuck, indicating undefined behavior).
-To test GooseLang code, we implemented an interpreter in Coq, which can
-run GooseLang code and produce either an error due to undefined behavior
-or a result. While the interpreter is not very efficient, it has good
-enough performance to run the Goose unit tests.
-
-The interpreter is an important part of the testing strategy, but
-ultimately the comparison is intended to be between Go and the GooseLang
-semantics. Thus we verified that the interpreter produces executions in
-accordance with the semantics. The correctness theorem is slightly
-subtle in that the interpreter produces only one possible execution, but
-the non-determinism is only due to the choice of what locations to use
-for pointers, which should not affect any visible behavior.
-
-The technical challenge with implementing and verifying the interpreter
-is that the semantics uses a convenient but non-executable way of
-expressing the order of evaluation. GooseLang is a lambda calculus, so
-its semantics is expressed as a transition system between expressions.
-It is easy to give the semantics of a primitive at the \emph{head} of an
-expression; for example, we can say what $\goosekw{Store}(l, v)$ does in a given
-heap if $l$ and $v$ are already values (it stores $v$ in the heap
-and evaluates to \texttt{\#()}, the unit value). It is also easy to
-interpret \emph{pure} reductions like \cc{x + y} where \cc{x}
-and \cc{y} are values since the semantics of these pure expressions
-is already given as a Gallina function.
-
-The challenge in the interpreter comes from \emph{context} reductions,
-which specify how to find a sub-expression within \cc{e} to reduce
-if the head is not immediately a value. The semantics follows a standard
-presentation of context reduction using \emph{evaluation contexts}. The
-idea is to define a type of evaluation contexts $E \in \mathcal{E}$ that
-represent an expression with a hole; $E[e]$ represents filling that hole with
-the expression $e$. The possible evaluation
-contexts give all the context reductions in one compact rule, \ruleref{context-reduce}: if $e$
-can step to $e'$, then $E[e]$ can step to $E[e']$. This rule applies whenever
-such an $E$ exists, while the
-interpreter recurses through an expression (in the right order) and
-evaluates a sub-expression, then fills it into the context. We prove
-this correct, showing that the interpreter and semantics agree on an
-evaluation order. Specifically, the interpreter proof shows the interpreter
-produces a valid evaluation order, and a separate proof shows that evaluation
-contexts are unique.\footnote{See the lemma
-\href{https://github.com/mit-pdos/perennial/blob/6f5ed5e7c2d3e8d657a0022c51e1d1e32a81e671/src/goose_lang/lang.v\#L1443-L1447}%
-{\cc{head_redex_unique} in src/goose\_lang/lang.v}.} There is other non-determinism in the semantics that the
-interpreter does not fully explore, though.
-
-The test suite is structured as a number of test functions, each producing a
-boolean that should be true. To check that the test itself is written correctly,
-we test that it produces \cc{true} in Go first. Then to check the semantics of
-the translation, in GooseLang we check that the interpreter succeeds and returns
-true for each test function. While we could compare more sophisticated results
-like integers or structs between the two, this strategy is especially easy to
-implement, since there is no need to correlate Go and GooseLang outputs and
-compare structured data.
-
-The interpreter and test framework was designed and implemented by
-Sydney Gibson, and is described in greater detail in her master's
-thesis. The thesis includes more details on evaluating the interpreter
-itself, for example documenting bugs caught by the test suite and other
-bugs that are now part of our regression tests.
+\input{goose/07-testing.tex}
 
 \section{Conclusion}
 

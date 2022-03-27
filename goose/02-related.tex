@@ -2,7 +2,7 @@
 \label{s:goose:rel-work}
 
 There are several areas of related work. First and foremost Goose is an approach
-to verifying executable programs, so we start by discussing alternate
+to verifying executable programs, so this section discusses alternate
 approaches. Second, Goose implicitly gives a semantics to Go, and there are
 related projects giving semantics to other programming languages.
 
@@ -36,7 +36,7 @@ in those languages to something executable like OCaml.
 
 There are approaches that are somewhere in between using built-in compilation
 and writing code in a model. For example, FSCQ~\cite{chen:fscq} uses Coq
-extraction, but it works from a model of I/O interaction which is implemented by
+extraction, but it works from a model of I/O interaction that is implemented by
 combining the extracted code with a Haskell library. This combines Coq's
 extraction (compilation) with translating from a model to code. For \fstar,
 there is a specialized toolchain called KaReMeL~\cite{protzenko:lowstar} that
@@ -49,22 +49,21 @@ abstract syntax tree (AST) in Coq, which the user can then specify and verify in
 VST. However, it is then possible to run this AST through the CompCert verified
 compiler and produce assembly code (or more specifically, a model of assembly
 represented in Coq). The proof than covers this assembly model, which is
-pretty-printed and run through an assembler to run it. While we started with C
+pretty-printed and compiled with an assembler to run it. While the user writes C
 code, this system only requires trusting the model of assembly. On the other
-hand, in terms of flexibility this system is limited to verifying what
-\cc{clightgen} supports and its performance is in part determined by the quality
-of the CompCert compiler.
+hand, the performance of the code is determined by what features \cc{clightgen}
+supports and the quality of the CompCert compiler.
 
 Verified compilation is used in a way similar to VST in
 Vale~\cite{bond:vale,fromherz:vale-fstar}. Code is written in a specialized
 assembly-like language called Vale, with proof annotations. This is then
 compiled to Dafny or \fstar (Vale has two backends) where the proofs are carried
-out before finally being printed back down to assembly. Again, the original Vale
-code is no longer relevant from a soundness perspective, but it is this DSL that
-determines how flexible the system is.
+out before finally being printed back down to assembly. Vale supports highly
+efficient code because it is written in assembly, but this code pays a price in
+being harder to verify.
 
 Cogent~\cite{amani:cogent,oconnor:cogent-lang} also uses a form of verified
-compilation to make proofs easier without making reasoning more difficult. Code
+compilation known as translation validation to make proofs easier without compromising on sounds. Code
 written in the Cogent language (an imperative language with linear types) is
 translated to a model in Isabelle/HOL along with a functional specification for
 the code and a proof of correspondence. Thus the user can write proofs on top of
@@ -72,23 +71,12 @@ the functional specification, but the proofs go down to an imperative model.
 
 \subsection{Modeling programming languages}
 
-% We wanted control over the translation process to simplify the resulting
-% model that we needed to write proofs for. Using an existing translator
-% that essentially translates syntax would still leave the task of giving
-% a semantics to the output code and proving the right specifications in
-% Perennial to reason about various parts of the semantics.
-
-While Goose is designed around verification, it is also a semantics for a subset
-of Go. Each function in Go is translated to a term in GooseLang, and we then
-give that term a semantics in Coq in the form of a transition system. Indeed
-this must be the case, because the proof is about the behavior of the code, so
-we first need to say what the behavior of the code is before verifying it.
-
-There are several projects that have tackled the problem of giving a semantics
-to real-world languages. Many of these are focused on the goal of completeness,
-which makes them much more challenging than Goose. By only giving a treatment to
-a subset of the language, we were able to make the work more manageable, while
-still meeting our goal of reasoning about efficient code.
+Goose gives a semantics to a subset of Go. Each function in Go is translated to
+a term in GooseLang, which has a semantics in Coq in the form of a transition
+system. Giving a semantics to a real-world language is interesting in its own
+right, not just for verifying code in that language. Many similar semantics
+efforts are focused on the goal of completeness, in order to understand how all
+of the language features interact.
 
 CH20~\cite{krebbers:c-coq} is a fairly complete formalization of the C standard.
 CH20 defines C in operational and axiomatic styles, along with an executable
@@ -119,9 +107,6 @@ with unsafe features like pointer arithmetic. Due to different goals, RustBelt
 also does not have an automatic translation from Rust to \lambdarust, though
 some libraries have been translated by hand and verified using Iris.
 
-Finally, it is worth mentioning WebAssembly~\cite{haas:wasm} as a rare example
-of a production language with a formal semantics, and even more rarely that was
-designed with the formal semantics in mind. As a result, the WebAssembly
-semantics is relatively clean. Compare this situation to that of C, which
-CH20~\cite{krebbers:c-coq} describes as ``oriented towards being efficiently
-implementable rather than being abstract in a mathematical sense.''
+Finally, WebAssembly is a rare example of a production language with a formal
+semantics~\cite{haas:wasm}, and moreover it was designed with the formal
+semantics in mind.

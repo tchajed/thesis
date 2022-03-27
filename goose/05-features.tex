@@ -1,0 +1,48 @@
+\section{Supported and unsupported features}
+
+Each function is translated to a single Coq definition, which is a
+GooseLang function. For concurrency, Goose supports the \cc{go}
+statement and the synchronization primitives \cc{*sync.Mutex} and
+\cc{sync.Cond}.
+
+Go's primitive uint64, uint32, uint8 (byte), and boolean types are all
+supported, as well as most of the pure functions on those types. Goose
+also supports pointers, structs, and methods on structs. Finally, Goose
+supports Go's built-in data structures, slices and maps.
+
+Notably missing in Goose but prominent in Go is support for interfaces
+and channels. We believe both are easy enough to support, but interfaces
+were not necessary for our implementation, and rather than channels we
+use mutexes and condition variables for more low-level control over
+synchronization.
+
+Control flow is also slightly tricky since a Go function is translated
+to a single GooseLang expression that should evaluate to the function's
+return value. We can support many specific patterns, especially common
+cases like early returns inside \cc{if} statements and loops with
+\cc{break} and \cc{continue}, but more complex control flow ---
+particularly returning from within a loop --- is not supported. If we
+wanted to fix this the right solution would probably be to represent all
+functions in continuation-passing style, though this would complicate
+the translation of every function call.
+
+We do not support Go's defer statement. It would be nice to support some
+common and simple patterns, particularly for unlocking, by translating
+\cc{defer} statically; Go's general \cc{defer} statement is much more
+complicated to model since it can actually be issued dynamically and
+pushes to a stack of calls that are executed in reverse order at return
+time. This generality is rarely exploited so it would be useful to model even
+just uses of \cc{defer} that can be statically analyzed.
+
+We do not support mutual recursion between Go functions, and
+additionally require the translation to be in the right order so
+definitions appear before they are used. The subtlety here is that
+definition management in Go, as in most imperative languages,
+conceptually treats all top-level definitions as simultaneous, whereas
+Coq processes definitions sequentially. Using Coq definition management
+to model Go definition management imposes a limitation compared to Go,
+but is much simpler to work with compared to modeling a Go package as a
+set of mutually recursive definitions. Reasoning about code written in such a
+model would require setting up specification for all the definitions, then
+proving them in a recursive way while ensuring that no specification is used
+before it is proven.

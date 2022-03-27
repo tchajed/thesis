@@ -1,32 +1,30 @@
 \section{Goals and motivation}
 \label{sec:goose:goals}
 
-There are three main goals for Goose: \textbf{flexibility} in writing code,
+There are three main goals for Goose: supporting \textbf{efficient} code,
 \textbf{soundness} for the translation process, and \textbf{convenient
-reasoning}. Flexibility is a goal so that the developer can write efficient,
-high-performance code, as long as the proof engineer can also reason about it. Goose
+reasoning}. The subset of Go that Goose supports is
+intended to enable writing and verifying high-performance code. Goose
 is sound if the model captures the behaviors of the code, which is required for
-the proofs to say something meaningful about the executable Go code. If the code
-could go wrong in some way that the model doesn't capture, we might finish a
-correctness proof but still have a bug; soundness makes sure this doesn't
-happen. Finally, Goose ships with reasoning principles for how to prove
-correctness of code using Go primitives like structs, slices, and maps, and aims
-to make these easy to use.
+the proofs to say something meaningful about the executable Go code. If the model
+misses some buggy behavior in the code, then a correctness proof wouldn't mean
+anything about the code. Finally, Goose aims to make reasoning convenient by developing reasoning
+principles for the model of Go primitives like structs, slices, and maps.
 
 There are alternate setups for verification where the connection between the
-proofs and the code is not given by a model and translation, but the Goose
-approach prioritizes flexibility in order to write fast code. The transaction
-system sometimes does something efficient to shave off a bit of time, and its
-proof pays the price by including a more complex correctness argument.
+proofs and the code is not given by a model and translation. Goose supports
+efficient code both by connecting to ordinary Go, which benefits from the Go
+compiler and runtime, and by supporting efficient, imperative code. Sometimes
+efficient code is more complex to prove, but this is a tradeoff the user can
+make.
 
-Soundness isn't a property we can immediately measure, since the translation
-might miss subtleties of the source code that we have not noticed. However, the
+The
 design of Goose tries to achieve soundness through simplicity and careful choice
-of what to model. The tradeoff between simplicity and expressivity was generally
-made in favor if getting good performance and not always to write idiomatic
-code. That is, if a language feature is needed for good performance (for
-example, taking pointers to individual struct fields), then Goose models it. If
-a feature would only result in more idiomatic code and modeling it seems too
+of what to model. There is sometimes a tradeoff between simplicity and
+supporting efficient code. If a language feature is needed for good performance (for
+example, taking pointers to individual struct fields), then Goose models it,
+even if the feature is complex. If
+a feature would only result in more idiomatic code and modeling it seems
 subtle, then it might not be implemented (for example, simple uses of
 \texttt{defer} could be modeled but aren't because the feature is complicated in
 general). The result is that Goose is generally pleasant and productive enough
@@ -39,24 +37,24 @@ also found code patterns that weren't well captured in the reasoning.
 
 \subsection{Why Go?}
 
-Go turns out to be a very convenient language for building verification
-infrastructure. It is productive enough to build systems that get good
-performance. The language is simple, facilitating a sound translation.
+Go is a convenient language for building verified systems. It is productive
+enough to build systems that get good performance. The language is simple,
+facilitating a sound translation.
 
-For our first goal, flexibility, Go has enough features to build good systems
-in. It has efficient and useful built-in slice and map collections, while we can
-verify data structures writtn on top. The runtime handles concurrency
-efficiently and has good support for synchronization using locks and condition
-variables, allowing a low-level implementation.
+For our first goal, efficiency, Go has enough features to build good systems
+in. It has efficient and useful built-in slice and map data structures. The
+runtime handles concurrency efficiently and has good support for synchronization
+using locks and condition variables, allowing a low-level implementation.
 
 There is also an advantage to Go as a programming environment rather than
 programming language. The tooling for testing, debugging, and profiling is
 extremely good, making it easy to fix bugs (before verification or in unverified
 code) and find performance problems while optimizing. We were able to use
-low-level interfaces to the operating system to access the disk, which even
-helps with soundness since it's easier to understand the OS in isolation rather
-than when combined with a library. Garbage collection simplifies some code and
-carries a relatively low performance impact due to the efficient runtime.
+low-level interfaces to the operating system to access the disk --- these are
+easier to understand in isolation, compared to understanding the combination of
+a file-system library and the operating system's behavior. Garbage collection
+simplifies writing code, particularly with concurrency, and carries a relatively
+low performance impact due to the efficient runtime.
 
 For the second goal, soundness, it helps that Go is a simple language. The Goose
 translator effectively gives a semantics to the source code; in a complex
@@ -68,34 +66,22 @@ only do these libraries save time in implementing Goose, they greatly improve
 reliability since they are written by experts (the Go compiler team, extracting
 code from the compiler itself).
 
-\subsection{Why not C?}
+\subsection{Why not C or Rust?}
 
-C would actually make sense, but we felt Go had a better cost-benefit tradeoff
-for GoTxn. Using C would have the benefit of supporting even lower-level code,
-with manual memory management. C code is also easy to integrate into the kernel,
-if one wanted to deploy a verified component of an operating system. The main
-cost would be more difficult tooling to parse and typecheck C; the translation
-might need to be built with clang or some other existing tool. It would make
-sense to adopt the Goose approach to C, and a C version would probably retain
-similar reasoning principles and restrictions on the source code.
-
-\subsection{Why not Rust?}
+C is not too different from Go as a basis for Goose. The main differences are
+the need to implement and verify manual memory management, and it would be more
+challenging to parse and type-check C code.
 
 Using Rust as a source language seems attractive but would likely not be much
 better than Go. One subtlety is that while the source code is type checked, the
-model is an untyped program. If the verification engineer wanted to somehow take
-advantage of this type checking, it would be extremely difficult to express the
-assumption that the source code is well-typed without making a mistake,
-particularly for the guarantees of the Rust type system; it would be easier to
-simply re-prove whatever memory safety the type system guarantees afresh, as we
-end up doing in Goose. Type safety would still help write the original Rust
-program correctly, and especially when it comes to ownership Rust could enforce
-some discipline and catch errors before even reaching verification.
+model is an untyped program. It would be difficult to take advantage of the fact
+that the code is type-checked, and thus the verification engineer would anyway
+re-prove memory safety in the same way as Goose requires with Go. The main
+benefit would be reduced bugs before reaching verification.
 
 Another difficulty with Rust would be the size and complexity of the language
 --- the subset supported might be restrictive enough that the experience no
-longer feels like Rust and you might as well be writing C, except for the
-lifetime system and tooling. For example, the \cc{Vec<T>} type has 152 methods
+longer feels like Rust. For example, the \cc{Vec<T>} type has 152 methods
 without even including trait implementations. Using any of these methods would
 require assuming a semantics for it, which is trusted to be sound (that is,
 getting the semantics wrong could compromise the whole verification). Thus in
