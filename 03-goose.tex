@@ -21,13 +21,54 @@ relate to the specifics of Go.
 \input{goose/06-reasoning.tex}
 \input{goose/07-testing.tex}
 
+\section{Limitations}%
+\label{sec:goose:limitations}
+
+Notably missing in Goose but prominent in Go is support for interfaces
+and channels. We believe both are easy enough to support, but interfaces
+were not necessary for our implementation, and rather than channels the code
+verified in this thesis
+use mutexes and condition variables for more low-level control over
+synchronization.
+
+Goose do not support Go's \cc{defer} statement. It would be nice to support some
+common and simple patterns, particularly for unlocking, by translating
+\cc{defer} statically. The behavior of Go's \cc{defer} statement in general is
+to push the deferred function to a stack of calls associated with the current function that are executed in reverse order at return
+time. GooseLang does not have a first-class notion of a Go function to associate
+the stack of deferred functions with, nor the concept of returning
+from a function. However, it would be useful to simple static uses of \cc{defer}
+at the top-level of a function.
+
+Named return values are recommended to document return parameters, and sometimes
+simplify and clarify the body of a function.\footnote{See the description in
+\href{https://go.dev/doc/effective_go\#named-results}{Effective Go}.} However, in
+general they are quite subtle, due to interaction with \cc{defer} statements and
+concurrency \tej{cite PLDI 2022 paper}. One source of difficulty is that the
+return values are treated like local variables declared at the top of the
+function, and it is easy to accidentally have races on these variables if they
+are accessed concurrently.
+
+Goose does not support mutual recursion between Go functions, and
+additionally requires the translation to be in the right order so
+definitions appear before they are used. The subtlety here is that
+definition management in Go, as in most imperative languages,
+conceptually treats all top-level definitions as simultaneous, whereas
+Coq processes definitions sequentially. Using Coq definition management
+to model Go definition management imposes a limitation compared to Go,
+but is much simpler to work with compared to modeling a Go package as a
+set of mutually recursive definitions. Reasoning about code written in such a
+model would require setting up specification for all the definitions, then
+proving them in a recursive way, all while ensuring that no specification is
+used before it is proven.
+
 \section{Conclusion}
 
 Goose is an approach for verifying Go code. We define GooseLang as a model of Go
 and automatically translate a subset of Go to this language. GooseLang comes
 with a number of reasoning principles for handling features of Go. The benefit
-of this approach is the flexbility to write high-performance code in a
-productive language, while also getting convenient reasoning while verifying
+of this approach is the ability to write high-performance code in a
+productive language, with convenient reasoning while verifying
 that code. Several aspects of the design contribute to making the approach
 sound, ranging from the subset of Go supported, to the design of GooseLang, and
 the use of standard Go tools for analyzing the source code.
