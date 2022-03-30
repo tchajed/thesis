@@ -37,16 +37,18 @@ focuses on the low-level aspects of the language itself.
 GooseLang, and the reasoning principles for those models.
 
 The basic unit of GooseLang is the expression $e$, which supports recursive
-functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. Then, we give
+functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. GooseLang has
+a semantics for
 these expressions a semantics in terms of the reduction relation
 $(\sigma, e) \reduces (\sigma', e')$ which says that $e$ reduces to (or executes
 to) $e'$ in the state $\sigma$, and the resulting state is $\sigma'$. This
-reduction relation is eventually lifted to not just a single expression but a
+reduction relation is lifted to describe not just a single expression but to a
 whole \emph{threadpool}, a list of concurrently executing expressions. You
 can think of each expression as representing the computation of a single thread,
 and each reduction step as being running the thread for one transition. The
-granularity of these transitions corresponds to what is considered atomic
-between threads. For a reader unfamiliar with the lambda calculus, you can find
+semantics determines what primitive operations are considered atomic for the
+purpose of concurrent reasoning. For a reader unfamiliar with the lambda
+calculus and formal presentations of its syntax and semantics, you can find
 a detailed introduction in the textbook \emph{Types and Programming
 Languages}~\cite[Chapter~5]{pierce:tapl}.
 
@@ -215,6 +217,8 @@ this definition allocates a pointer with $\goosekw{ref}$, using
 $\goosekw{AllocN}$ which more generally allocates $n$ contiguous pointers. The
 initial value of 0 is the ``zero value'' of the \cc{uint64} type, a promise made
 by Go.
+
+\tej{add an example involving CmpXchg, or forward reference locks}
 
 The Goose syntax includes an $\external$ alternative. The language, both syntax
 and semantics, are parameterized over an external interface of operations, for

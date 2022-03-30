@@ -46,7 +46,7 @@ up guarantees that any
 specification for a program implies that the
 program never exhibits undefined behavior. The hardware provides some
 guarantees, but they are typically weak: for example, it is common that different cores
-can observe buffered writes at different times. Go's own memory model specifies
+can observe the effect of a write at different times. Go's own memory model specifies
 even weaker guarantees. Rather than attempt to formalize Go's rules
 (which are complex and involve defining a partial order over all program
 instructions), the semantics side steps the issue and makes any races undefined,
