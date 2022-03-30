@@ -135,8 +135,8 @@ based on associating a \emph{lock invariant} with each lock, which is a predicat
 is free. Because this is a separation logic, we can also interpret the lock
 invariant as ownership over some data (for example, some region of memory); the
 lock mediates access to this ownership, handing it out when the lock is acquired
-and requiring it back when the lock is released. We prove this specification
-sound against the GooseLang spin-lock implementation.
+and requiring it back when the lock is released. GooseLang has a proof that this
+specification holds for the spin-lock implementation given above.
 
 \subsection{Structs}
 

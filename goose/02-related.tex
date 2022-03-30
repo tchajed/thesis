@@ -10,10 +10,11 @@ related projects giving semantics to other programming languages.
 
 At a high level, all verification systems need to solve the problem of
 connecting the world of the proof assistant to the ``real world'' that runs the
-code. The proofs are always over a model of the code, so somewhere in that
-process we trust that the running code has been modeled correctly. The approach
+code. The proofs are always over a model of the code, and the theorems are
+always contingent on the assumption that the running code has been modeled correctly. The approach
 imposes some requirements on the code that can be written and how proofs are
-written. Thus each approach makes a tradeoff between flexibility, soundness, and
+written. Thus each approach makes a tradeoff between how efficient verified code
+can be, soundness, and
 convenient reasoning, as outlined above in \cref{sec:goose:goals}.
 
 There are basically three ways to verify programs (with several interesting
