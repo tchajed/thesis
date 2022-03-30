@@ -1,12 +1,11 @@
 \section{High-level overview}
 
 The goal of the translation is to model a Go program using GooseLang,
-which is a programming language defined in Coq for this purpose. When we
-say GooseLang is a programming language, we mean it in a theoretical
-sense: GooseLang consists of a type of programs in Coq and a small-step
-semantics of these programs. Since GooseLang programs support references
+which is a programming language defined in Coq for this purpose. That is,
+GooseLang is defined using a type of expressions in Coq equipped with a
+semantics also given in Coq. Since GooseLang programs support references
 to model the Go heap, the semantics is written in terms of transitions
-of (program, heap) pairs where the heap maps pointers to values. The
+of (expression, heap) pairs where the heap maps pointers to values. The
 intention of the translation is that the semantics of the translated
 function should cover all the behaviors of the Go code, in terms of
 return values and effect on the heap. As long as this is true, a proof
@@ -22,16 +21,18 @@ checking for available capacity and copying if none is available.
 Appending to a slice is a complicated operation, and it was easier to
 write it correctly as a program rather than directly as a transition in
 the semantics. The one cost to this design strategy is that an arbitrary
-GooseLang program is much more general than translated Go programs. This
+GooseLang program is much more general than translated Go programs --- for
+example, GooseLang has support for pointer arithmetic. This
 has no impact on verifying any \emph{specific} Go program.
 
 The extra generality of GooseLang does have some downsides since at one point in
-the development, in the transaction system's specification, we refer to an
-arbitrary GooseLang program. This theorem is made a bit more complicated since
-to there are some ill-defined GooseLang programs that no Go program could
-generate which the theorem needs to exclude. The transaction system
-specification uses a standard technique of restricting to well-typed GooseLang
-programs, and encoding syntactic restrictions in that type system.
+the development, the transaction system's specification about
+arbitrary GooseLang programs. The complete theorem statement is made a bit more
+complicated since there are some ill-defined GooseLang programs --- which are
+not possible to produce by writing Go and translating it to GooseLang --- which
+the theorem needs to exclude. The transaction system specification uses a
+standard technique of restricting to well-typed GooseLang programs, and encoding
+syntactic restrictions in that type system.
 
 \tej{add a diagram, perhaps like the ones in the Goose talk, showing the
 translation process and how Go/Goose/GooseLang all fit together}
@@ -50,23 +51,25 @@ each). The specifications for these operations are handled with a single
 lemma, which is applied automatically with a tactic \cc{wp_pures}.
 
 Since our goal is to support interactive rather than automated proofs,
-it is helpful to make the model simple to work with. We try to maintain
+it is helpful to make the model simple to work with. The translation process maintains
 a strong correspondence between the model and source code: each Go
 package translates to a single Coq file, and each top-level declaration
 in the Go code maps to a Gallina definition (a GooseLang constant or
 function). Goose has a special case for translating immutable variables
 to let bindings in GooseLang (rather than allocating a pointer that will
 only be read). As a result, factoring out a sub-expression to a variable
-has little impact on proofs, since it just adds one more pure step.
+has little impact on proofs.
 
-While the model is simple in terms of control flow and structure, we can
-safely translate any given Go operation to a sophisticated model as long
-as the proof abstracts it away. The subsequent sections in this chapter
-walk through several features of Go. In each case we first implement the
-feature in GooseLang, which as a model of its behavior primarily aims to
-be faithful to Go. Next, we develop reasoning principles for the
-features, in the form of separation logic assertions (for example, to
+The translation process sometimes translates a Go operation to a sophisticated
+model in order to capture some corner-case behavior, for example in the model of
+slices described in \cref{sec:goose:slices}. This complex models don't have an
+undue affect on proofs as long as Goose's reasoning principles can abstract away
+the complexity for common cases. The subsequent sections in this chapter
+walk through several features of Go. Each section first describes a model that
+implements the feature in GooseLang, which primarily aims to
+be faithful to Go. Next, the section describes reasoning principles we developed for that
+feature, in the form of separation logic assertions (for example, to
 represent a slice) and Hoare triples (for example, to specify the
-behavior of Append). The key is that the model is trusted to capture
-Go's behavior so some sophistication is useful, whereas the reasoning
-principles aim to hide that complexity to make proofs practical.
+behavior of the \cc{append()} operation). The goal for the model is to capture
+Go's behavior, whereas the reasoning
+principles aim to make proofs using the model practical.
