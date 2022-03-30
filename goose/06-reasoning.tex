@@ -7,8 +7,9 @@ written as libraries on top of the base GooseLang language described in
 Goose models, as well as reasoning principles developed on top to verify code
 that uses these features.
 
-Specifications in this section are written in Perennial, which is a concurrent
-separation logic. The basic specification of this logic is the triple
+Specifications in this section are written in the Perennial, which is a concurrent
+separation logic described in detail in \cref{sec:perennial}. The basic
+specification of this logic is the triple
 $\hoare{P}{\cc{f()}}{Q}$, which says that if \cc{f()} is run in a state
 satisfying the precondition $P$ and terminates, the final state will satisfy the
 postcondition $Q$. Separation logic additionally means that $P$ and $Q$ can
@@ -27,25 +28,29 @@ in separation logic are those for the load and store operations:
 The specification for load uses $\Ret{v}$ to specify what the return value is.
 
 The specifications in this section can be appreciated with only basic
-familiarity with sequential separation logic; concurrency concerns do not arise
-much at this level, and there is nothing specific to crash safety. All of these
-specifications are actually proven in the Perennial logic and can be used to
-reason about concurrency and crash safety, though, as we did for GoTxn.
+familiarity with sequential separation logic. The model of pointers does handle
+some subtleties related to concurrency, but as explained in
+\cref{sec:goose:pointers} these are abstracted away for the purpose of proofs.
+None of the reasoning principles for Goose are specific to crash safety. All of these
+specifications are actually proven in the Perennial logic and thus can be used
+as part of concurrency and crash safety proofs, as we did for GoTxn.
 
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
 
-Pointers turn out to be slightly subtle because of concurrency. In
+The model of pointer loads and stores turns out to be slightly subtle because of
+concurrency. In
 short, GooseLang disallows concurrent reads and writes to the same
-location by making such racy access undefined behavior (any
-specification for a program implies that if the precondition holds, the
-program never exhibits undefined behavior). The hardware provides some
-guarantees, but they are relatively weak: for example, different cores
-can observe writes at different times. Go's own memory model specifies
+location by making such racy access undefined behavior. The way proofs are set
+up guarantees that any
+specification for a program implies that the
+program never exhibits undefined behavior. The hardware provides some
+guarantees, but they are typically weak: for example, it is common that different cores
+can observe buffered writes at different times. Go's own memory model specifies
 even weaker guarantees. Rather than attempt to formalize Go's rules
 (which are complex and involve defining a partial order over all program
-instructions), we side step the issue and make any races undefined,
-which works for our intended use cases since we always synchronize
+instructions), the semantics side steps the issue and makes any races undefined,
+which works for our intended use cases since the verified code always synchronize
 concurrent access with locks.
 
 To disallow concurrent reads and writes the semantics must first detect them. The key is to make
@@ -71,8 +76,8 @@ $\goosekw{FinishRead}$; these increment and decrement the number of readers,
 respectively, so that multiple readers can run concurrently but any concurrent
 writer has undefined behavior.
 
-Next, we need reasoning principles to abstract away this complexity from
-program verification. Separation logic turns out to provide the right
+Next, Goose provides reasoning principles to abstract away this complexity while
+verifying programs. Separation logic turns out to provide the right
 language to reason about racy access. When a thread owns
 $\ell \mapsto v$, the logic guarantees no other thread can have access to location
 $\ell$, so the specifications for reads and writes are unaffected by the
@@ -143,7 +148,7 @@ sound against the GooseLang spin-lock implementation.
 
 One of the most important features of Go to support is structs. Goose support
 for structs uses a form of \emph{shallow embedding} using a combination of
-Gallina (Coq's functional language) and GooseLang. We encode
+Gallina (Coq's functional language) and GooseLang. Goose encodes
 higher-level primitives like field access on top of GooseLang primitives like
 tuples and continguous memory.
 
@@ -152,13 +157,15 @@ $t \in \textdom{GooseType}$ gives the type of a struct, while
 $s \in \textdom{StructDecl}$ is an (anonymous) struct declaration that gives its
 field names and their types. The definitions of these two types are given in
 \cref{fig:goose:types}. The exact types are not important in the semantics,
-but we do use the shape of the struct to determine how they are laid out in
-memory to support pointers to individual fields. Using types to represent these
-shapes makes the translation much simpler, since we have access to types from
-the Go type checker via the \cc{go/types} package. As an example of how
-approximate these types are, it is sufficient to have a \goosekw{ptrT} type for
-all pointers; we will use the Go types to determine its type and the types of
-its fields if it is a pointer to a struct.
+but the translation does use the shape of a struct to determine how it is laid
+out in memory and to support pointers to individual fields. As an example of how
+approximate str are, it is sufficient to have a \goosekw{ptrT} type for
+all pointers; if a pointer to a struct is actually deferenced (or a pointer to a
+struct field), then the translation uses its type in Go to determine how that
+dereference should be implemented. Using types to represent struct shapes
+also makes the translation simpler, since the Goose implementation has
+access to accurate types from the \cc{go/types} package, which is essentially
+the Go type checker.
 
 \begin{figure}[ht!]
 \begin{mathpar}
@@ -179,24 +186,26 @@ its fields if it is a pointer to a struct.
 \label{fig:goose:types}
 \end{figure}
 
-First we need to handle struct values. We treat a struct value as just a tuple
+First Goose needs to model handle struct values. A struct value is represented as a tuple
 of its fields. The definition of the struct gives an ordering of the fields.
 This is enough to construct a struct from its fields and to access a field by
-name. Here the shallow embedding comes in: we define struct declarations in
-Gallina, and struct construction and field access are Gallina definitions that
-produce GooseLang expressions, rather than all of this being directly
-implemented in GooseLang.
+name. Here the shallow embedding comes in: struct declarations are translated to
+a definition of the struct type in
+Gallina, and struct construction and field access are written as Gallina definitions that
+produce GooseLang expressions. From the perspective of GooseLang then the struct
+implementations are a type of macro, since they are implemented in the meta
+language (Gallina) rather than within GooseLang itself.
 
 Structs in memory are more interesting than struct values. Structs could
 be stored in a single location; due to our non-atomic semantics for
 memory, this would be sound even for structs larger than a machine word.
 However, this model would be too restrictive: it is safe for threads to
 concurrently access \emph{different fields}, just not the same field,
-and we actually take advantage of this property (largely to write more
-natural Go code; working around this restriction requires splitting
-structs up if they are stored in memory).
+and our code actually takes advantage of this property so that code is more
+natural; working around this restriction requires splitting structs up if they
+are stored in memory.
 
-To support this concurrency, we model a struct in memory with a
+To support this concurrency, Goose models a struct in memory with a
 flattened representation, with each base element in a separate memory
 cell. The flattening applies recursively to fields that are themselves
 structs, until a base literal is reached (like an integer or boolean);
@@ -204,7 +213,7 @@ base elements are at most a machine word, but can be smaller. When
 allocating a new pointer, the semantics flattens composite values and
 stores the elements in a sequence of contiguous addresses.
 
-With a flattened representation we need non-trivial code to read a struct
+With a flattened representation the translation needs non-trivial code to read a struct
 through a pointer, particularly when some of its fields are themselves flattened
 structs. Any load of a value from memory is translated to a call to
 $\LoadTyped$. This is a Gallina definition of type
@@ -242,7 +251,7 @@ also justified as being similar to how the implementation works. Structs
 in memory are in reality represented by contiguous memory, and field
 access is implemented by computing a pointer from the base of the
 struct. The main difference between the physical implementation and the
-model is that we use a single, abstract memory location for each field,
+model is that the model has a single, abstract memory location for each field,
 whereas the implementation encodes all data into bytes.
 
 Recall that $\ell \mapsto_t v$ is internally composed of untyped

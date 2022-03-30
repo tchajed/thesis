@@ -13,9 +13,9 @@ supported, as well as most of the pure functions on those types. Goose
 also supports pointers, structs, and methods on structs. Finally, Goose
 supports Go's built-in data structures, slices and maps.
 
-Control flow is also slightly tricky since a Go function is translated
+Control flow is slightly tricky since a Go function is translated
 to a single GooseLang expression that should evaluate to the function's
-return value. We can support many specific patterns, especially common
+return value. Goose supports many specific patterns, especially common
 cases like early returns inside \cc{if} statements and loops with
 \cc{break} and \cc{continue}, but more complex control flow ---
 particularly returning from within a loop --- is not supported. If we
