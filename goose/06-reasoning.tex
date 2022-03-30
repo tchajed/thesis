@@ -223,8 +223,8 @@ for GooseLang that is represented in Gallina as a meta language. $\LoadTyped(t)$
 is directed by a type $t$ passed in Gallina to determine how to load and
 assemble the fields of a struct of type $t$.
 
-For the purpose of proofs we represent a pointer to an arbitrary type
-$t$ with a typed points-to fact of the form $\ell \mapsto_t v$. This
+For the purpose of proofs GooseLang's specifications use a \emph{typed points-to fact}
+of the form $\ell \mapsto_t v$ to describe a pointer to a value of type $t$. This
 definition expands to a number of primitive points-to facts, one for
 each base element. The specification for loading says
 $\hoare{\ell \mapsto_t v}{\LoadTyped(t) \app \ell}{\Ret{v} \ell \mapsto_t v}$, which
@@ -232,8 +232,7 @@ $\hoare{\ell \mapsto_t v}{\LoadTyped(t) \app \ell}{\Ret{v} \ell \mapsto_t v}$, w
 non-atomic is happening and looks like an ordinary dereference.
 Similarly, $\StoreTyped$ also takes a type, although the specification
 requires the caller to prove that the value has the right shape (in
-reality it always will because the Go code we translate from is
-well-typed).
+reality it always will because the source code in Go is well-typed).
 
 The payoff of structs being many independent locations is that it is
 possible to model references to individual struct fields. From a pointer
@@ -256,7 +255,7 @@ whereas the implementation encodes all data into bytes.
 
 Recall that $\ell \mapsto_t v$ is internally composed of untyped
 points-to facts for all the base elements of $v$. In order to reason
-about $v$'s fields, we introduce a new struct field points-to fact,
+about $v$'s fields, we introduce a new \emph{struct field points-to fact},
 written $\ell \mapsto_{s.f} v$, which asserts ownership of just field
 $f$ of a struct with descriptor $s$ rooted at $\ell$, and gives that field's
 value as $v$. A recursive function gives an ``exploded'' set of struct
@@ -305,16 +304,15 @@ Go's built-in slice operations include bounds checks on all slice
 operations and panic if a memory access or sub-slice operation goes out
 of bounds.
 
-GooseLang has a primitive for contiguous memory, which we use to model
+GooseLang has a primitive for contiguous memory, which Goose uses to model
 the allocation underlying a slice (though these are not directly
 accessible to Go code, since they do not carry enough information for
-bounds checking). On top of these we model slices as a tuple of a base
+bounds checking). On top of these Goose models slices as a tuple of a base
 pointer, length, and capacity.
 
 The GooseLang slice model is directly inspired by the implementation of
-slices, including modeling slice capacity. Initially we had a more
-abstract model that ignored capacity (which would appear to be just an
-optimization), but were surprised to find that this was insufficient to
+slices, including modeling slice capacity. Initially Goose used a more
+abstract model of slices that ignored capacity, but we were surprised to find that this was insufficient to
 even accurately model subslicing and appending. Directly modeling slice
 capacity was the simplest solution to obtain a model that is faithful to
 the Go implementation. The Go language reference isn't specific about
@@ -327,12 +325,12 @@ GooseLang model picks a non-deterministic capacity in several places
 \newidentmacro{cap}
 
 The most basic operations on slices are indexing and storing. The
-GooseLang model of $s$ is a three-tuple, but for clarity we will refer
+GooseLang model of $s$ is a three-tuple, but for clarity this section will refer
 to its elements as $\ptr(s)$, $\len(s)$, and $\cap(s)$. The
 translation of \cc{s[i]} is essentially a (typed) load from
 $\ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
-Similarly \cc{s[i] = x} stores to the same location. We
-translate Go's \cc{len(s)} directly to $\len(s)$. Go also supports
+Similarly \cc{s[i] = x} stores to the same location. Goose
+translates Go's \cc{len(s)} directly to $\len(s)$. Go also supports
 accessing a slice's capacity, but this is rarely used and Goose does not
 support it.
 
@@ -358,12 +356,12 @@ behavior by implementing \cc{append} exactly as above, taking into
 account that \cc{append(s, x)} might be an in-place operation.
 
 The GooseLang model is specifically designed to be sound by sticking to
-the Go implementation as closely as possible, but we want reasoning
-about slices to be convenient and high-level, without worrying about
-slice capacity directly. The design of GooseLang nicely separates the
-model from the reasoning principles --- we verify specifications against
-the concrete model, so that only the model is trusted and not the
-separation logic specifications.
+the Go implementation as closely as possible. On the other hand the reasoning principles
+for slices are intended to be convenient and high-level, and do not involve
+directly reasoning about slice capacity. The design of GooseLang separates the
+model from the reasoning principles --- Goose has specifications verified against
+the concrete model, so that the model is trusted and not the
+separation-logic specifications.
 
 \newcommand{\sliceRep}{\mathtt{sliceRep}}
 \newcommand{\sliceCap}{\mathtt{sliceCap}}
@@ -371,20 +369,20 @@ separation logic specifications.
 \newcommand{\lappend}{\mdoubleplus}
 
 The GooseLang model of slices is based on two abstract predicates:
-$\sliceRep(s, l)$ and $\sliceCap(s)$. In the code, the model of a slice value is
-a Gallina record $s$, which we convert explicitly to a GooseLang value, but for
-this thesis we will not make a distinction. We will only present the
+$\sliceRep(s, l)$ and $\sliceCap(s)$. In the Coq implementation, the model of a slice value is
+a Gallina record $s$ that must be converted explicitly to a GooseLang value, but
+this thesis will not make a distinction. Furthermore this section presents just the
 \emph{untyped} version of this specification where $l : \textlog{list}(\textdom{Val})$, but
 GooseLang also has a typed version where $l : \textlog{list}(T)$ for a type $T$
-with a Gallina function $\mathtt{to\_val} : T \to \textdom{Val}$. The typed
-version is practically convenient in proofs but is only a small extension to the
-untyped version.
+that has an associated Gallina function $\mathtt{to\_val} : T \to \textdom{Val}$. The typed
+version is convenient in proofs and can be verified as a small extension to the
+untyped specification.
 
 The first predicate $\sliceRep(s, l)$ gives the abstract value of
 $s$, the list of values it contains, excluding additional capacity. It
 also represents ownership over all these elements, in terms of the
-underlying struct points-to facts. We use this predicate to specify
-loads and stores:
+underlying struct points-to facts. GooseLang's slice specifications use this
+predicate to describe loading and storing by index:
 \begin{mathpar}
   \hoareV{\sliceRep(s, l) * i < |l|}%
 {\mathtt{s[i]}}%
@@ -422,29 +420,29 @@ everything over.
 
 The most interesting rules are for subslicing and how they interact with
 capacity. Consider \cc{s[:i]} again. While Go has no formal
-notion of ownership, our specifications do. We can model the
-\emph{value} for \cc{s[:i]} easily enough: it simply returns a new slice value
-with a smaller length and the same capacity. In fact, we will use $s[:i]$ as the
-notation since the two are so similar. There is one slight complication that
-\cc{s[:i]} causes a runtime error in Go if $i \geq \len(s)$. Thus we actually
-give indexing the following specification:
+notion of ownership, our specifications do. The model for the
+\emph{value} \cc{s[:i]} is easy enough: it is a pure function that returns a new slice value
+with a smaller length and the same capacity. This thesis uses $s[:i]$ as the
+notation for this pure function since the two are so similar. There is one slight complication that
+\cc{s[:i]} causes a runtime error in Go if $i \geq \len(s)$. Thus GooseLang
+proves the following specification for indexing:
 \[
   \hoare{i < \len(s)}{\cc{s[:i]}}{\Ret{s[:i]} \TRUE}
 \]
 This specification is slightly unusual in that it has a logical precondition but
 does not refer to the heap (or any other state).
 
-To reason about the effect of subslicing on the memory is,
-we need to decide how ownership of
-$\sliceRep(s, l) * \sliceCap(s)$ should relate to ownership of
+To reason about subslicing from the perspective of memory, the specification
+needs to relate ownership of
+$\sliceRep(s, l) * \sliceCap(s)$ to ownership of
 $\sliceRep(s[:i], \take(l, i))$. It turns out there are two
-possibilities: we can either give up ownership of the remainder of $s$
-in exchange for $\cap(s[:i])$, or we can ignore the
+possibilities that the proof engineer can choose between: either give up ownership of the remainder of $s$
+in exchange for $\cap(s[:i])$, or ignore the
 capacity of the subslice and keep
 $\sliceRep([i:], \drop(l, i))$. These are incomparable and
-unexpressed in the code: the decision is based on whether we intend to
-append to the subslice but stop using the old slice, or whether we want
-to continue using the remainder of \cc{s}.
+unexpressed in the code: the decision is based on whether subsequently the program will
+append to the slice prefix but stop using the old slice, or if it will use both
+$s[:i]$ and $s[i:]$.
 
 Concretely, GooseLang has two theorems for reasoning about taking a prefix of a
 list. Both of these theorems require $i < \len(s)$.
@@ -467,16 +465,16 @@ list. Both of these theorems require $i < \len(s)$.
   }
 \end{mathpar}
 
-The rule \ruleref{slice-take-full} captures that we can get full ownership of
+The rule \ruleref{slice-take-full} captures that the program proof can get full ownership of
 $s[:i]$, in exchange for dropping any ownership over the rest of $s$.
-The second rule \ruleref{slice-split} instead allows us to split $s$ into two
-parts at the $i$th index, but in exchange we lose $\sliceCap{s[:i]}$, the right
+The second rule \ruleref{slice-split} instead allows the program proof to split $s$ into two
+parts at the $i$th index, but in exchange lose $\sliceCap{s[:i]}$, the right
 to append to the first half.
 
 There is one more fact that is sometimes useful, which is that
 $\sliceCap(s) \dashv\vdash \sliceCap(s[i:])$ (this is somewhat intuitive;
 capacity is past the end of the array, so dropping elements from the front has
-no impact). As a corollary of \ruleref{slice-split}, we can also split full
+no impact). As a corollary of \ruleref{slice-split}, the proof can also split full
 ownership of a slice into two (asymmetric) parts:
 \begin{align*}
   &\sliceFull(s, l) \dashv\vdash \\
@@ -501,18 +499,21 @@ to appreciate this difference in ownership reasoning.
 \newidentmacro{mapIter}
 
 After slices, maps are the next most commonly used collection type in
-Go. We implement maps as lists of key-value pairs, stored in a single
-memory location in reverse insertion order. Go's builtin maps are
+Go. GooseLang models maps using an implementation that represents a map as a
+list of key-value pairs, stored in a single memory location in reverse insertion
+order. Go's builtin maps are
 \emph{not} thread-safe, so the model enforces single-threaded access by
 marking the map as being read while reading from it; this re-uses the
-race detection for other pointers to ensure that racy access to a map is
+race detection for other pointers to ensure that any write to a map while iterating
+over it is considered
 undefined behavior, while allowing concurrent read-read access. Maps
-support all the Go operations: insertions, reads (including returning
+support all the usual Go operations: insertions, reads (including returning
 whether the key is present), \cc{len} to get the number of elements
 in the map, deletion, and iteration. Go map iteration is
-non-deterministic and in practice random, but we did not model this
-since it would be challenging to do so; however, the reasoning
-principles for map iteration do not expose an iteration order.
+non-deterministic and in practice random, but Goose does not explicitly model this
+since it would be challenging to do so. The reasoning
+principles for map iteration do not expose an iteration order so changing the
+model would not affect any existing proofs.
 
 The implementation of maps is the most involved out of any of the Go
 primitives. It required directly implementing maps (albeit
@@ -520,7 +521,7 @@ inefficiently, using an association list) using recursive GooseLang
 code. GooseLang is an untyped language, so our first attempts had basic
 errors like missing arguments. We improved our confidence in this
 implementation both by testing it and by verifying it. Both of these
-essentially rule out type errors (regardless of what specification we give),
+essentially rule out type errors (regardless of what the specification says),
 and the specification is simple enough
 to be a reliable test of behavior. Both simple tests and verification
 cover easy mistakes like reading the oldest write to a key rather than
@@ -528,13 +529,15 @@ the latest, or duplicate keys during iteration (the implementation must
 skip over a key after observing it once).
 
 The proof and specification for maps is relatively easy since they are
-not safe to use concurrently, so the proof assumes ownership over the entire map. We
-treat a map as a pointer to an abstract map value, a GooseLang value
+not safe to use concurrently, so the proof assumes ownership over the entire
+map. The model represents
+a Go map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation $\mapVal(v, m)$ that relates
 this encoded value to a Gallina map $m$, which uses \cc{gmap} from
-stdpp; for simplicity we use \cc{gmap u64 val} and limit map
-keys to integers. Values are not a visible notion to the Go code, since
+stdpp; for simplicity $m$ is of type \cc{gmap u64 val} and Goose only supports
+maps whose key type is \cc{uint64}.
+Map values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
 all use $\mapRep(\ell, m) = \exists v.\, \ell \mapsto v * \mapVal(v, m)$. The
 indirection is important, since the Go map value
@@ -547,7 +550,7 @@ For example, this is the specification for map deletion:
 \hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}
 \]
 
-Map iteration has a more sophisticated specification. Suppose we have a generic loop
+Map iteration has a more sophisticated specification. Consider a generic loop
 over a map in Go like the following:
 
 \begin{verbatim}
@@ -562,9 +565,9 @@ loop. Goose translates generic loop bodies, so the Go code does not literally
 need to consist of a call to a separate function. The possibility of
 \emph{iterator invalidation} adds one subtlety to Go's map iteration --- it
 would be incorrect for the body of the loop to modify the map (it might be sound
-to write to the map without modifying the domain, but we do not attempt to model
-this). The model of maps puts the entire contents of a map in one heap location,
-so naively we would not enforce this property. The solution is to mark the map's
+to write to the map without modifying the domain, but Goose does not attempt to model
+this). The model of maps puts the entire contents of a map in one heap location.
+In order to ensure iterator invalidation is undefined behavior, the model marks the map's
 reference as being read for the entire duration of iteration, using the
 $\goosekw{StartRead}$ and $\goosekw{FinishRead}$ GooseLang primitives at the
 beginning and end of $\cc{MapIter}$. If the map value in the heap is
@@ -589,11 +592,13 @@ consumed so far:
 }
 \]
 
-On top of this generic specification we prove some alternate specifications that
+GooseLang includes some alternate specifications, proven on top of this one, that
 express the invariant in slightly different ways --- for example, it is often
-useful to express the invariant in terms of both the map iterated over so far
-and the remaining subset of the map.
+useful for a proof to express its loop invariant in terms of both the map
+iterated over so far and the remaining subset of the map.
 
+\tej{there's a redundant explanation above (this one seems better), and maybe
+this should be moved to limitations}
 Map iteration in Go happens in a non-deterministic order\footnote{In fact the
 runtime randomizes the starting position of the iteration, to avoid callers
 accidentally relying on any particular behavior. See
@@ -601,7 +606,7 @@ accidentally relying on any particular behavior. See
 {\cc{mapiterinit} from src/runtime/map.go}.}
 Thus strictly speaking $\cc{MapIter}$ should shuffle the elements of the map
 before iterating over it, in order to model the non-determinism of the
-implementation. We do not (currently) do this, simply because the shuffle would
+implementation. Goose does not (currently) do this, simply because the shuffle would
 be hard to implement in GooseLang. However, the specification for map iteration
 does not expose an iteration order and would apply unchanged to this more
 precise model. All proofs go through this specification, so our proofs should

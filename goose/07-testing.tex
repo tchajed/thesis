@@ -9,47 +9,45 @@ of its translated GooseLang (according to the Coq semantics). As long as
 this is case, the proof is sound in that if the modeled system always
 satisfies some property the code will, too.
 
-One subtlety in the trust we place in Goose is that it only applies when
-Goose translates code successfully, that code compiles in Coq, and the
-model has no undefined behavior. If any of these fail, then the proof of
-the system would either not be possible or not go through. Therefore the
+One subtlety to Goose soundness is that the system is automatically sound if
+Goose fails to translate some code, or the code does not compile in Coq, or the
+model has undefined behavior; in each of these cases it is impossible to verify
+incorrect code. These might still reflect a bug in Goose, or at least an
+unsupported feature, but they do not compromose soundness. Therefore the
 most important bugs are those where the translation's behavior differs
 from that of Go; these can compromise soundness of the system and lead
 to a proof that is not borne out in practice.
 
 To increase out confidence in Goose, we implemented a large suite of
-unit tests. While these tests check that Goose continues to translate
+unit tests. On their own these tests check that Goose continues to translate
 existing code (and check that the translation has not unexpectedly
-change), for soundness the relevant test is to compare Go to the Goose
-output. Unfortunately GooseLang is not natively an executable language.
-Its semantics is expressed as a Coq relation that specifies how an
-expression is evaluated (or gets stuck, indicating undefined behavior).
+change). To test the soundness of the translation, the relevant comparison is
+between Go and GooseLang. Unfortunately GooseLang is not natively an executable language.
+Its semantics is expressed as a Coq relation that describes the valid executions
+of an expression, but not how to run a particular expression.
+
 To test GooseLang code, we implemented an interpreter in Coq, which can
 run GooseLang code and produce either an error due to undefined behavior
-or a result. While the interpreter is not very efficient, it has good
-enough performance to run the Goose unit tests.
-
-The interpreter is an important part of the testing strategy, but
-ultimately the comparison is intended to be between Go and the GooseLang
-semantics. Thus we verified that the interpreter produces executions in
-accordance with the semantics. The correctness theorem is slightly
-subtle in that the interpreter produces only one possible execution, but
+or a result. The interpreter is itself
+verified to match the semantics. The specification for the interpreter is slightly
+subtle in that the interpreter produces only one possible execution rather than
+all the executions allowed by the semantics, but
 the non-determinism is only due to the choice of what locations to use
 for pointers, which should not affect any visible behavior.
 
-The technical challenge with implementing and verifying the interpreter
-is that the semantics uses a convenient but non-executable way of
-expressing the order of evaluation. GooseLang is a lambda calculus, so
+GooseLang is a lambda calculus, so
 its semantics is expressed as a transition system between expressions.
-It is easy to give the semantics of a primitive at the \emph{head} of an
-expression; for example, we can say what $\goosekw{Store}(l, v)$ does in a given
-heap if $l$ and $v$ are already values (it stores $v$ in the heap
-and evaluates to \texttt{\#()}, the unit value). It is also easy to
+It is easy to
 interpret \emph{pure} reductions like \cc{x + y} where \cc{x}
-and \cc{y} are values since the semantics of these pure expressions
-is already given as a Gallina function.
+and \cc{y} are values, since the semantics of these pure expressions on their own
+is already given as a Gallina function rather than a relation. The semantics of each core primitive is
+given by a transition relation, which the interpreter implements as a function
+and its correctness theorem shows this function produces an allowed transition.
+For example, the semantics of allocation stores a value in an unused address,
+whereas the interpreter concretely identifies an unused location (the maximum
+used address, plus one).
 
-The challenge in the interpreter comes from \emph{context} reductions,
+The challenge in the interpreter's correctness theorem comes from \emph{context} reductions,
 which specify how to find a sub-expression within \cc{e} to reduce
 if the head is not immediately a value. The semantics follows a standard
 presentation of context reduction using \emph{evaluation contexts}. The
@@ -60,26 +58,26 @@ contexts give all the context reductions in one compact rule, \ruleref{context-r
 can step to $e'$, then $E[e]$ can step to $E[e']$. This rule applies whenever
 such an $E$ exists, while the
 interpreter recurses through an expression (in the right order) and
-evaluates a sub-expression, then fills it into the context. We prove
-this correct, showing that the interpreter and semantics agree on an
+evaluates a sub-expression, then fills it into the context. The interpreter's
+proof shows that
+this traversal is correct, proving that the interpreter and semantics agree on an
 evaluation order. Specifically, the interpreter proof shows the interpreter
 produces a valid evaluation order, and a separate proof shows that evaluation
 contexts are unique.\footnote{See the lemma
 \href{https://github.com/mit-pdos/perennial/blob/6f5ed5e7c2d3e8d657a0022c51e1d1e32a81e671/src/goose_lang/lang.v\#L1443-L1447}%
 {\cc{head_redex_unique} in src/goose\_lang/lang.v}.} There is other non-determinism in the semantics that the
-interpreter does not fully explore, though.
+interpreter does not fully explore, though, such as for allocation.
 
 The test suite is structured as a number of test functions, each producing a
 boolean that should be true. To check that the test itself is written correctly,
-we test that it produces \cc{true} in Go first. Then to check the semantics of
-the translation, in GooseLang we check that the interpreter succeeds and returns
-true for each test function. While we could compare more sophisticated results
-like integers or structs between the two, this strategy is especially easy to
-implement, since there is no need to correlate Go and GooseLang outputs and
-compare structured data.
+a Go test checks that it produces \cc{true}. Then to check the semantics of
+the translation, the GooseLang test infrastructure translates the test and runs
+it through the interpreter, checking that this produces $\goosetrue$ in
+GooseLang. While the interpreter is not extremely efficient, it is fast enough
+to run the tests in the test suite.
 
 The interpreter and test framework was designed and implemented by
 Sydney Gibson, and is described in greater detail in her master's
-thesis. The thesis includes more details on evaluating the interpreter
-itself, for example documenting bugs caught by the test suite and other
-bugs that are now part of our regression tests.
+thesis~\cite{gibsons-meng}. That thesis includes more details on evaluating the
+interpreter itself, for example documenting bugs caught by the test suite and
+other bugs that are now part of our regression tests.
