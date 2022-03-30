@@ -1,0 +1,108 @@
+\begin{figure}[hp]
+  \textbf{Pure reduction}%
+  \hfill %
+  \boxedassert[line width=0.4pt]{e \purereduction e'} %
+  \hspace{20pt}
+
+  \begin{mathpar}
+  \begin{array}{rcll}
+    v \binop v' &\purereduction & v'' & \mathrm{if} \: v'' = v \binop v' \\
+    \unop v &\purereduction & v' & \mathrm{if} \: v' = \unop v \\
+    \gooseif{\goosetrue}{e_1}{e_2} &\purereduction & e_1 \\
+    \gooseif{\goosefalse}{e_1}{e_2} &\purereduction & e_2 \\
+    \pi_i(v_1, v_2) &\purereduction &v_i \\
+    \goosekw{case} \app \goosekw{inj}_i v \app\goosekw{of}\app %
+    \goosekw{inj}_1 \app x_1 \Rightarrow e_1 \app\goosekw{or}\app%
+    \goosekw{inj}_2 \app x_2 \Rightarrow e_2%
+                &\purereduction & \subst{e_i}{x_i}{v} \\
+    (\recfx) \app v &\purereduction & \subst{\subst{e}{f}{(\recfx)}}{x}{v} \\
+    \goosekw{ArbitraryInt} &\purereduction &n & \forall n \in \textdom{U64} \\
+  \end{array}
+  \end{mathpar}
+
+  \textbf{Per-thread head reduction}%
+  \hfill %
+  \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
+  \hspace{20pt}
+  %
+  \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{NonAtom}& z &::= & \goosekw{Reading} \app n \app v \ALT
+                                \goosekw{Writing} \app v \\
+    \textdom{Heap}& h &\in& \textdom{Loc} \overset{\mathrm{fin}}{\to}
+                        \textdom{NonAtom} \\
+    \textdom{World}& w & & \external  \\
+    %\textdom{State}& \sigma &::= (h, w) \\
+    \textdom{TPool}& \mathcal{E} &\in &\textdom{List}\app\textdom{Exp} \\
+    %\textdom{Config}& \rho &::= (\sigma, \mathcal{E}) \\
+  \end{array}
+
+  \begin{array}{rcll}
+    ((h, w), e) &\reduces & ((h, w), e') &\mathrm{if} \: e \purereduction e' \\
+    ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
+                          &((h\mapupd{\ell}{v_2}, w), (v, \goosetrue))%
+                                         &\mathrm{if} \: h(\ell) =
+                                           \goosekw{Reading} \app 0 \app v \land
+    v = v_1 \\
+    ((h, w), \goosekw{CmpXchg}(\ell, v_1, v_2)) &\reduces %
+                          &((h, w), (v, \goosefalse))%
+                                         &\mathrm{if} \: h(\ell) =
+                                           \goosekw{Reading} \app 0 \app v \land
+                                           v \neq v_1 \\
+    ((h, w), \goosekw{AllocN}(n, v)) &\reduces %
+                          &((h[\ell + i \mapsto v \mid 0 \leq i < n], w), \ell) %
+                                         &\mathrm{if} \: \forall 0 \leq i < n,
+                                           \, \ell + i \notin \dom(h) \\
+    ((h, w), \goosekw{PrepareWrite}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Writing} \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] = \goosekw{Reading} \app 0
+                                           \app v \\
+    ((h, w), \goosekw{FinishStore}(\ell, v)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app 0 \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Writing} \app v' \\
+    ((h, w), \goosekw{StartRead}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app (n+1) \app v}, w), ()) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Reading} \app n \app v \\
+    ((h, w), \goosekw{FinishRead}(\ell)) &\reduces %
+                          &((h\mapupd{l}{\goosekw{Reading} \app n \app v}, w), v) %
+                                         &\mathrm{if} \: h[\ell] =
+                                           \goosekw{Reading} \app (n+1) \app v \\
+    ((h, w), \goosekw{Load}(\ell)) &\reduces %
+                          &((h, w), v) &\mathrm{if} \: %
+                                         h[\ell] = \goosekw{Reading} \app n \app v \\
+  \end{array}
+  \end{mathpar}
+
+  \textbf{Context reduction}%
+  \hfill%
+  \boxedassert[line width=0.4pt]{((h, w), \mathcal{E}) \reduces ((h', w'), \mathcal{E}')}%
+  \hspace{20pt}
+
+  \begin{mathpar}
+  \begin{array}{llcl}
+    \textdom{ECtx}& E &::= & \square \ALT e \app E \ALT E \app v  %
+                             \ALT E \binop e \ALT v \binop E \ALT \unop E \ALT \\
+                  &&\ALT & \gooseif{E}{e}{e} \\
+                  &&\ALT & (E, e) \ALT (v, E) \ALT \pi_i \app E \ALT
+                           \goosekw{inj}_i \app E \\
+                  &&\ALT & \goosekw{AllocN}(E, e) \ALT \goosekw{AllocN}(v, E)
+                           \ALT \dots
+  \end{array}
+
+    \inferH{context-reduce}%
+    {((h, w), e) \reduces ((h,', w'), e') \\ \text{$E$ is an evaluation context}}%
+    {((h, w), \mathcal{E}\mapupd{i}{E[e]}) \reduces%
+      ((h', w'), \mathcal{E}\mapupd{i}{E[e']})}
+
+    \inferH{fork-reduce}%
+    {j \notin \dom(\mathcal{E}) \cup \{j\} \\ \text{$E$ is an evaluation context}}%
+    {((h, w), \mathcal{E}\mapupd{i}{E[\goosekw{Fork}(e)]}) \reduces%
+      ((h, w), \mathcal{E}\mapupd{i}{E[()]}\mapupd{j}{e})
+    }
+  \end{mathpar}
+
+  \caption{GooseLang semantics}%
+  \label{fig:goose:semantics}
+\end{figure}

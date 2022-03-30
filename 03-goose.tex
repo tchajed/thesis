@@ -62,6 +62,13 @@ model would require setting up specification for all the definitions, then
 proving them in a recursive way, all while ensuring that no specification is
 used before it is proven.
 
+GooseLang does have one extant bug related to evaluation contexts. The contexts
+$e \app E$ and $E \app v$ define a right-to-left evaluation order for functions,
+which is the opposite of Go. We haven't yet fixed this, either by adjusting the
+GooseLang semantics or changing the translation to emit code that explicitly
+evaluates all the arguments in the correct order before calling the function.
+
+
 \section{Conclusion}
 
 Goose is an approach for verifying Go code. We define GooseLang as a model of Go

@@ -1,0 +1,60 @@
+\begin{figure}[hp!]
+  \textbf{Syntax}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    &x,f &\in &\textdom{Var} \\
+    &\ell &\in &\textdom{Loc} \\
+    &n &\in & \textdom{U64} \cup \textdom{U32} \cup \textdom{U8} \\
+    &s &\in &\textdom{String} \\
+    &\binop &::= & + \ALT - \ALT * \ALT = \ALT < \ALT \dots \\
+    &\unop &::= & - \ALT \goosekw{ToString} \ALT \goosekw{ToU64} \ALT
+                         \dots \\
+    \textdom{Var}& v &::= & () \ALT \goosetrue \ALT \goosefalse \ALT n
+                            \ALT \ell \ALT s \\
+    &&\ALT & \goosekw{inj}_1 \app v \ALT \goosekw{inj}_2 \app v \ALT
+             \recfx \\
+    \textdom{Exp}& e &::= & x \ALT v \ALT e \app e \ALT \recfx \\
+    &&\ALT & \gooseif{e}{e}{e} \\
+    &&\ALT & \goosekw{Fork}(e) \\
+    &&\ALT & (e, e) \ALT \pi_1 \app e \ALT \pi_2 \app e \\
+    &&\ALT & \goosekw{inj}_1 \app e \ALT \goosekw{inj}_2 \app e
+    \ALT %
+      \goosekw{case} \app e \app \goosekw{of} \app \goosekw{inj}_1 \app x
+      \Rightarrow e \app \goosekw{or} \app \goosekw{inj}_2 \app x \Rightarrow e
+    \\
+    &&\ALT & e \binop e \ALT \unop e \ALT \goosekw{ArbitraryU64} \\
+    &&\ALT & \goosekw{AllocN}(e, e)
+             \ALT \goosekw{CmpXchg}(e, e, e) %
+             \ALT \goosekw{Load}(e) \\
+    &&\ALT & \goosekw{PrepareWrite}(e) %
+             \ALT \goosekw{FinishStore}(e, e) %
+             \ALT \goosekw{StartRead}(e) %
+             \ALT \goosekw{FinishRead}(e) \\
+    &&\ALT & \goosekw{Panic}(s) \\
+    &&\ALT & \external
+  \end{array}
+  \end{mathpar}
+
+  \textbf{Derived forms and notation}
+  \begin{mathpar}
+  \begin{array}{rcl}
+    \gooselambda{x} e &\defeq & \goosekw{rec} \: \_(x) = e \\
+    \gooselambda{x, y} e &\defeq & \gooselambda{x} \gooselambda{y} e \\
+    \goosekw{let} \: x = e_1 \app \goosekw{in} \app e_2 %
+                             &\defeq &%
+                                   (\goosekw{\lambda} x.\, e_2) \app e_1 \\
+    e_1\seq e_2 &\defeq &%
+                   \goosekw{let} \: \_ = e_1 \app \goosekw{in} \app e_2 \\
+    \goosekw{ref} \app e &\defeq &\goosekw{AllocN}(1, e) \\
+    !x &\defeq & \goosekw{Load}(x) \\
+    \goosedef{Store} &\defeq & \gooselambda{x, e} \goosekw{PrepareWrite}(x);
+                               \goosekw{FinishStore}(x, e) \\
+    x \gets e &\defeq & \goosedef{Store} \app x \app e \\
+    % \goosekw{do}\,\goosekw{while} \app e &\defeq &%
+    %                         (\goosekw{rec} \: loop(\_) = \gooseif{e \app ()}{loop
+    %                         \app ()}{()}) \app () \\
+  \end{array}
+  \end{mathpar}
+  \caption{GooseLang syntax}%
+  \label{fig:goose:syntax}
+\end{figure}
