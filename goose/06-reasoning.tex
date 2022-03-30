@@ -3,9 +3,9 @@
 
 A key principle in the design of Goose is to model features of Go as code,
 written as libraries on top of the base GooseLang language described in
-\cref{sec:goose:lang}. In this section we describe some of the features of Go
-we model, as well as reasoning principles we develop on top to verify code that
-uses these features.
+\cref{sec:goose:lang}. This section describes some of the features of Go that
+Goose models, as well as reasoning principles developed on top to verify code
+that uses these features.
 
 Specifications in this section are written in Perennial, which is a concurrent
 separation logic. The basic specification of this logic is the triple
@@ -13,7 +13,7 @@ $\hoare{P}{\cc{f()}}{Q}$, which says that if \cc{f()} is run in a state
 satisfying the precondition $P$ and terminates, the final state will satisfy the
 postcondition $Q$. Separation logic additionally means that $P$ and $Q$ can
 describe only the state actually involved in \cc{f()}, implicitly stating other
-state is unmodified (we can give so-called ``small footprint'' specifications).
+state is unmodified (supporting so-called ``small footprint'' specifications).
 Assertions make use of the \emph{points-to assertion} $\ell \mapsto v$, which
 gives the value of one address in memory. For example, some basic specifications
 in separation logic are those for the load and store operations:
@@ -48,15 +48,16 @@ instructions), we side step the issue and make any races undefined,
 which works for our intended use cases since we always synchronize
 concurrent access with locks.
 
-To disallow concurrent reads and writes we first detect them. The key is to make
+To disallow concurrent reads and writes the semantics must first detect them. The key is to make
 $x \gets v$, the primitive store operation, \emph{non-atomic} by splitting it
 into two operations. The GooseLang semantics tracks the behavior of these
 operations by augmenting the heap with extra information; each address in the
 semantics has a $\textdom{NonAtom}$ which can be
 $\goosekw{Reading} \app n \app v$ if there are $n$ readers and the value is $v$,
-or $\goosekw{Writing} \app v$ if a thread is currently writing. We actually only
-use non-atomic stores for normal pointers, but we have support for non-atomic
-reads as well for iterating over maps.
+or $\goosekw{Writing} \app v$ if a thread is currently writing. For most
+pointers, stores are translated to a non-atomic store while loads are translated
+use GooseLang's atomic Load. GooseLang has support for non-atomic
+reads as well in order to model map iteration.
 
 Ordinarily values in the heap are of the form $\goosekw{Reading} \app 0 \app v$,
 to indicate no readers or writers. Writes are split into
@@ -73,7 +74,7 @@ writer has undefined behavior.
 Next, we need reasoning principles to abstract away this complexity from
 program verification. Separation logic turns out to provide the right
 language to reason about racy access. When a thread owns
-$\ell \mapsto v$, we know no other thread can have access to location
+$\ell \mapsto v$, the logic guarantees no other thread can have access to location
 $\ell$, so the specifications for reads and writes are unaffected by the
 operations being non-atomic (although their proofs are a bit more
 complicated to deal with the new semantics). The only change is that the
@@ -93,11 +94,10 @@ using an implementation based on simpler primitives. Since locks are the
 only synchronization primitive, implementing them requires shared
 concurrent access, which ordinary pointers do not have in GooseLang.
 Instead, the language also includes a primitive atomic compare-and-swap
-operation that is only used to implement a model of locks. We could also
-use the same operation to model Go's low-level atomic operations, like
-\cc{atomic.CompareAndSwapUint64} and \cc{atomic.LoadUint64}, but
-have not implemented this yet since we don't have code that uses these
-low-level synchronization primitives.
+operation that is only used to implement a model of locks. Similar primitives
+could be used to model Go's low-level atomic operations, like
+\cc{atomic.CompareAndSwapUint64} and \cc{atomic.LoadUint64}, but Goose does not
+support them since our code hasn't required such synchronization primitives.
 
 The model of locks is simple enough to give the code in its entirety. The lock
 is represented as a pointer to a boolean that is true if the lock is held. As a
