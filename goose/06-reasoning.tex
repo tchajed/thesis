@@ -7,8 +7,8 @@ written as libraries on top of the base GooseLang language described in
 Goose models, as well as reasoning principles developed on top to verify code
 that uses these features.
 
-Specifications in this section are written in the Perennial, which is a concurrent
-separation logic described in detail in \cref{ch:perennial}. The basic
+Specifications in this section are part of the Perennial logic, described in
+detail in \cref{ch:perennial}. Perennial is based on separation logic. The basic
 specification of this logic is the triple
 $\hoare{P}{\cc{f()}}{Q}$, which says that if \cc{f()} is run in a state
 satisfying the precondition $P$ and terminates, the final state will satisfy the
@@ -45,13 +45,16 @@ location by making such racy access undefined behavior. The way proofs are set
 up guarantees that any
 specification for a program implies that the
 program never exhibits undefined behavior. The hardware provides some
-guarantees, but they are typically weak: for example, it is common that different cores
-can observe the effect of a write at different times. Go's own memory model specifies
-even weaker guarantees. Rather than attempt to formalize Go's rules
-(which are complex and involve defining a partial order over all program
-instructions), the semantics side steps the issue and makes any races undefined,
-which works for our intended use cases since the verified code always synchronize
-concurrent access with locks.
+guarantees, but they are typically weak: for example, it is common that
+different cores can observe the effect of a write at different times. Go's own
+memory model documentation specifies even weaker guarantees.  Rather than
+attempt to formalize Go's rules, the semantics side-steps the issue and makes
+any races undefined, which works for our intended use cases since the verified
+code always synchronize concurrent access with locks.\footnote{Go doesn't have
+any formal semantics, but it does have a \href{https://go.dev/ref/mem}{memory
+model} document that says reads may observe any concurrent write. This document
+generally encourage well-synchronized programs, which is what the GooseLang
+semantics enforces.}
 
 To disallow concurrent reads and writes the semantics must first detect them. The key is to make
 $x \gets v$, the primitive store operation, \emph{non-atomic} by splitting it
@@ -226,8 +229,11 @@ assemble the fields of a struct of type $t$.
 For the purpose of proofs GooseLang's specifications use a \emph{typed points-to fact}
 of the form $\ell \mapsto_t v$ to describe a pointer to a value of type $t$. This
 definition expands to a number of primitive points-to facts, one for
-each base element. The specification for loading says
-$\hoare{\ell \mapsto_t v}{\LoadTyped(t) \app \ell}{\Ret{v} \ell \mapsto_t v}$, which
+each base element. The specification for loading a pointer to a value of type
+$t$ is
+\[
+\hoare{\ell \mapsto_t v}{\LoadTyped(t) \app \ell}{\Ret{v} \ell \mapsto_t v},
+\] which
 (much like the primitive load $!\ell$) hides the fact that something
 non-atomic is happening and looks like an ordinary dereference.
 Similarly, $\StoreTyped$ also takes a type, although the specification
