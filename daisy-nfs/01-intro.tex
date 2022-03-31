@@ -119,13 +119,13 @@ in place to avoid copying). We do note that ext4's default \cc{data=ordered}
 mode can get about $2\times$ better throughput for data-heavy workloads, at the
 cost of relaxed guarantees on crash.
 
-The contributions of this paper are:
+The contributions of this paper are: \tej{not really the contributions in this chapter}
 \begin{itemize}
   \item A formalization for a specification that captures how the transaction
-  system provides sequential reasoning (\cref{sec:proof}) for any system
+  system provides sequential reasoning (\cref{sec:daisy:proof}) for any system
   implemented using a transaction per operation.
-  \item A proof that the GoTxn implementation meets this specification
-(\cref{sec:txn-proof}), written against the GoJournal specification.
+  \item A proof that the GoTxn implementation meets this specification, written
+  against the GoJournal specification.
   \item DaisyNFS, a verified file system that is designed to use transactions
   and work with the GoTxn correctness proof. The Dafny proofs for the
   file-system code enjoy low overhead compared to the concurrent proofs for GoTxn. A performance

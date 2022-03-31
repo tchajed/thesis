@@ -1,5 +1,5 @@
 \section{System design}%
-\label{sec:system}
+\label{sec:daisy:system}
 
 % \begin{figure}
 %   \center
@@ -33,7 +33,7 @@ operations supported by \sys are listed in \cref{fig:nfs}.
 %% We focus on the
 %% design of the transaction system here, but the file system also has several
 %% internal abstractions. These abstractions are primarily interesting in a
-%% verification context so we discuss them later in \cref{sec:design}.
+%% verification context so we discuss them later in \cref{sec:daisy:design}.
 
 %% The file-system implementation calls the transaction system to store all
 %% file-system data, ensuring that it is written atomically and durably.
@@ -61,7 +61,7 @@ building upon the previous: (1) implementing large (about 512GB), fixed-size
 files with zeros in place of unallocated data; (2) implementing byte-granularity
 reads and writes on top of blocks; and (3) implementing
 directories by encoding them as files with a special type together with
-operations to manipulate those files. \Cref{sec:design} explains the
+operations to manipulate those files. \Cref{sec:daisy:design} explains the
 internals of the file-system design in more detail, alongside the structure of
 the Dafny proof.
 

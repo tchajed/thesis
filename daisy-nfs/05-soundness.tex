@@ -1,5 +1,5 @@
 \section{Verifying DaisyNFS}
-\label{sec:proof}
+\label{sec:daisy:proof}
 
 A key contribution of DaisyNFS is a proof structure that isolates concurrency and crash
 reasoning to the transaction system. This is done by giving GoTxn a specification
@@ -32,7 +32,7 @@ implementation.
 \bf Layer & \bf Operations & \\
 \midrule
   NFS
-      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:spec} \\
+      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:daisy:spec} \\
   Txn
       & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
         \dots & \cref{sec:system:txn} \\
