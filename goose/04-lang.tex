@@ -62,9 +62,9 @@ The syntax for GooseLang programs is given in \cref{fig:goose:syntax}. The
 important top-level definition is $e \in \textdom{Exp}$, giving expressions in
 GooseLang. Before getting to the expressions, it's worth noting that the values
 in GooseLang are designed for Go's primitive data, in particular with
-first-class support for bytes and 32-bit and 64-bit unsigned integers. We did
-not need signed integers and so did not model them, but adding them would simply
-require extending the type of literals and adding many more pure operations to
+first-class support for bytes and 32-bit and 64-bit unsigned integers. Our code does
+not use signed integers and so Goose does not model them, but adding them would simply
+require extending the type of literals and adding several pure operations to
 implement various integer conversions.
 
 The basic lambda calculus primitives are given on the first line: variables $x$,
@@ -77,8 +77,8 @@ main control-flow primitive, and $\goosekw{Fork}$ to create concurrent threads.
 Finally, there are many primitives for the heap, which are discussed in more
 detail later.
 
-We can build intuition for both the syntax and semantics of GooseLang by looking
-at some very simple Go programs and their translations into GooseLang. First,
+This section builds intuition for both the syntax and semantics of GooseLang by presenting
+some very simple Go programs and their translations into GooseLang. First,
 let's look at some \emph{pure} functions that don't use pointers:
 
 \newcommand{\translaterule}{\rule{0.9\textwidth}{0.5pt}}

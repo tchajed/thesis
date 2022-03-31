@@ -519,12 +519,12 @@ model would not affect any existing proofs.
 The implementation of maps is the most involved out of any of the Go
 primitives. It required directly implementing maps (albeit
 inefficiently, using an association list) using recursive GooseLang
-code. GooseLang is an untyped language, so our first attempts had basic
-errors like missing arguments. We improved our confidence in this
-implementation both by testing it and by verifying it. Both of these
-essentially rule out type errors (regardless of what the specification says),
-and the specification is simple enough
-to be a reliable test of behavior. Both simple tests and verification
+code. We improved our confidence in this
+implementation both by running it on concrete examples (using the infrastructure
+described in \cref{sec:goose:testing}) and proving a specification for the
+various map operations. Both of these
+essentially rule out type errors,
+and the specification is a redundant check on the behavior. Both simple tests and verification
 cover easy mistakes like reading the oldest write to a key rather than
 the latest, or duplicate keys during iteration (the implementation must
 skip over a key after observing it once).
