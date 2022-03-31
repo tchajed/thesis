@@ -13,9 +13,9 @@ background on GoTxn is needed to understand it.
 
 \subsection{The circular buffer library}
 
-The circular buffer (``circ'' for short) is essentially an on-disk queue of
+The circular buffer (``circ'' for short) is a fixed-size, \emph{on-disk} queue of
 updates, which are pairs of an address and a disk block. It is used to implement
-write-ahead logging: disk writes are first stored in the circular buffer, and
+write-ahead logging: updates are first stored in the circular buffer, and
 then eventually moved to a separate data region. It supports two operations
 during normal usage: \cc{Append(upds)} appends a list of updates to the buffer
 and \cc{TrimTill(pos)} deletes updates up to \cc{pos}. Queue positions grow
@@ -23,24 +23,31 @@ indefinitely, but the buffer can hold at most 511 updates at a time and it
 is the caller's responsibility to avoid overflowing with \cc{Append}. The only
 read operation is recovery, which restores the durable updates and current queue
 position; the write-ahead log caches updates during normal execution, but this
-is not the circular buffer's concern.
+is not the circular buffer's concern. The complete Go API is shown in
+\cref{fig:circ:api}.
 
 \begin{figure}[ht]
 \begin{minted}{go}
-// Go API
-type Update {
-  Addr  uint64
-  Block []byte
-}
+// Circular buffer Go API
 
 func InitCircular() *Appender
 func (c *Appender) Append(end uint64, upds []Update)
 func TrimTill(start uint64)
-func RecoverCircular() (c *Appender,
-        start uint64, upds []Update)
+func RecoverCircular() (c *Appender, start uint64, upds []Update)
+
+type Update {
+  Addr  uint64
+  Block []byte
+}
 \end{minted}
+  \caption{The Go API for the circular buffer.}%
+  \label{fig:circ:api}
+\end{figure}
+
+\begin{figure}[ht]
 \begin{minted}{coq}
-(* Coq specification *)
+(* Circular buffer Coq specification *)
+
 Definition update := u64 * Block;
 Record circ_state := {
   upds: list update;
@@ -48,29 +55,19 @@ Record circ_state := {
 }.
 
 (* requires length s.(upds) + length new_upds <= 511 *)
-Definition append (s:circ_state) (new_upds: list update) :=
+Definition append (s: circ_state) (new_upds: list update) : circ_state :=
   s <[ upds := s.(upds) ++ new_upds ]>.
 
 (* requires s.(start) <= new_start *)
-Definition trim_till (s:circ_state) (new_start: u64) :=
+Definition trim_till (s: circ_state) (new_start: u64) : circ_state :=
   let num_removed := new_start - s.(start) in
   s <[ start := new_start ]>
     <[ upds := drop num_removed s.(upds) ]>.
 \end{minted}
-  \caption{The API for the circular buffer. Also included are the Coq
-    definitions of the abstract transition system of the circular buffer.}
+  \caption{The specification for the circular buffer, described as transitions
+    on the abstract state.}
+  \label{fig:circ:spec}
 \end{figure}
-
-There are three challenges in giving the circ library a specification. First, we
-want to show that \cc{Append} appears to be atomic to the caller, even though it
-internally writes many disk blocks. Second, the library has some thread-safety
-requirements to enforce on the caller: in particular \cc{Append} and
-\cc{TrimTill} can be called concurrently from separate threads, but it is not
-safe to overlap multiple appends or multiple trim requests. Finally, the library
-relies on the caller to guarantee that append and trim are called with enough
-available space. These last two challenges are due to leaving concurrency
-control to the caller, which is more efficient than the circular buffer having
-its own redundant locking.
 
 The basic idea is that the circular buffer is specified in terms of an abstract
 state that evolves through an atomic transition for each operation. Recovery can
@@ -81,7 +78,20 @@ many updates occurred prior to the current list of updates. Append, as
 mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
 is a position of this form; the effect of \cc{TrimTill(pos)} is to delete
 \cc{pos - start} updates from the beginning of the list of updates and set the
-new start position to \cc{pos}.
+new start position to \cc{pos}. A more formal specification is given in
+\cref{fig:circ:spec}.
+
+There are three challenges in specifying the circular buffer's implementation,
+connecting it to the abstract transitions given above. First, we
+want to show that \cc{Append} appears to be atomic to the caller, even though it
+internally writes many disk blocks. Second, the library has some thread-safety
+requirements to enforce on the caller: in particular \cc{Append} and
+\cc{TrimTill} can be called concurrently from separate threads, but it is not
+safe to overlap multiple appends or multiple trim requests. Finally, the library
+relies on the caller to guarantee that append and trim are called with enough
+available space. These last two challenges are due to leaving concurrency
+control to the caller, which is more efficient than the circular buffer having
+its own redundant locking.
 
 The write-ahead log uses the circular buffer from two threads, one dedicated to
 \emph{logging} which appends to the circular buffer to make writes durable and another
