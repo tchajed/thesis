@@ -70,25 +70,26 @@ Definition trim_till (s: circ_state) (new_start: u64) : circ_state :=
 \end{figure}
 
 The basic idea is that the circular buffer is specified in terms of an abstract
-state that evolves through an atomic transition for each operation. Recovery can
-recover the pre-crash state of the buffer. The state for this library consists
-of two components: a list of updates (which are pairs of an address to write to
+state that transitions for each operation. The recovery operation
+restores the pre-crash state of the queue from disk. The state for this library consists
+of two components: a queue of updates (which are pairs of an address to write to
 and a 4KB block to write there) and a 64-bit start position that indicates how
 many updates occurred prior to the current list of updates. Append, as
 mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
-is a position of this form; the effect of \cc{TrimTill(pos)} is to delete
+is an absolute position; the effect of \cc{TrimTill(pos)} is to delete
 \cc{pos - start} updates from the beginning of the list of updates and set the
 new start position to \cc{pos}. A more formal specification is given in
 \cref{fig:circ:spec}.
 
 There are three challenges in specifying the circular buffer's implementation,
 connecting it to the abstract transitions given above. First, we
-want to show that \cc{Append} appears to be atomic to the caller, even though it
-internally writes many disk blocks. Second, the library has some thread-safety
+want to show that \cc{Append} appears to be atomic to the caller, even though
+its implementation writes many disk blocks and the system could crash after
+persisting only some of them. Second, the library has some thread-safety
 requirements to enforce on the caller: in particular \cc{Append} and
 \cc{TrimTill} can be called concurrently from separate threads, but it is not
-safe to overlap multiple appends or multiple trim requests. Finally, the library
-relies on the caller to guarantee that append and trim are called with enough
+safe to concurrently issue multiple appends or multiple trim requests. Finally, the library
+relies on the caller to guarantee that \cc{Append} and \cc{TrimTill} are called with enough
 available space. These last two challenges are due to leaving concurrency
 control to the caller, which is more efficient than the circular buffer having
 its own redundant locking.
@@ -105,7 +106,7 @@ separate in-memory cache of the entries in the circular buffer.
 \subsection{Circular buffer custom resources}
 
 Perennial, like Iris, has support for user-defined separation-logic resources.
-These are defined using lower-level mechanisms, but here we simply present the
+These are defined using lower-level mechanisms, but this section simply presents the
 resources and the intuition for how they are used without going into details on
 how they are implemented. The circular buffer defines and issues the
 following custom separation-logic resources:

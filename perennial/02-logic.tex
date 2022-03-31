@@ -409,10 +409,8 @@ Named conjuncts made a huge difference to proof burden --- many individual
 definitions have 5--6 conjuncts, and across the entire GoTxn proof we name some
 900 total conjuncts. Implementing them was actually quite simple, taking only
 about 400 lines of code in Coq on top of the Iris Proof Mode. The implementation
-is separate from Perennial, depending only on Iris.\footnote{You can find the
-code at \url{https://github.com/tchajed/iris-named-props}. Hopefully by the time
-you read this the feature has been upstreamed in Iris and the library is
-obsolete, though!}
+is separate from Perennial, depending only on Iris.\footnote{The code is
+available at \url{https://github.com/tchajed/iris-named-props}.}
 
 % cat src/program_proof/{buf,wal,txn,obj,jrnl}/**.v | grep -c '∷
 % 907
