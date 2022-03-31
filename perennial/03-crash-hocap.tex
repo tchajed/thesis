@@ -150,16 +150,17 @@ Formally the way each operation is specified is using a style called
 higher-order concurrent abstract predicates (HOCAP)~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
 library maintains an invariant $P(\sigma)$, where $\sigma$ is the current
 abstract state; a key idea in the HOCAP specification is that this predicate $P$
-is chosen by the client. For each operation, the client passes in a
-\emph{view-shift assertion} written $P(\sigma) \vs P(\sigma') * Q$, where the
-transition from $\sigma$ to $\sigma'$ is a valid transition for the operation.
+is chosen by \emph{the client} (that is, the code calling the library).
+For each operation, the client passes in a
+\emph{view-shift assertion} written $P(\sigma) \vs P(\sigma') * Q$, for any
+transition from $\sigma$ to $\sigma'$ that is a valid transition for the operation.
 This view shift represents a kind of once-usable ``callback'' which transforms
 $P(\sigma)$ into $P(\sigma')$, typically by updating the caller's ghost state in
 $P$. At the end of the operation, the client receives $Q$ as a kind of
-certificate that the callback ran. The intuition for why this specification
-style captures linearizability is that the library does not know anything about
-$P$ or $Q$ and thus the only way to preserve $P$ and produce $Q$ at the end is
-to call the callback at exactly the linearization point of the operation.
+certificate that the callback ran. The intuition here is that the library's proof must
+``fire'' or ``call'' the view shift in order to preserve $P$ and produce $Q$,
+but the proof gets to pick the exact moment when it should fire the view shift,
+which is the linearization point of the operation.
 
 We can see both the HOCAP pattern and the circular buffer resources in action in
 the specification for Append:
@@ -178,11 +179,11 @@ There are several aspects to the specification, mostly in the precondition. The
 first line is the most straightforward: we need the circular buffer's invariant
 to hold, for a particular ghost name $\gamma$. The second line is part of the
 general HOCAP pattern. The view-shift updates $P(\sigma)$ to the appropriate new
-state, noted as $\sigma \lappend \cc{upds}$ as shorthand for $\sigma$ with \cc{upds}
+state, denoted with $\sigma \lappend \cc{upds}$ as shorthand for $\sigma$ with \cc{upds}
 appended to the updates field (and the same \cc{start}). The proof of this
 specification executes the view shift at the linearization point of the \cc{Append}
 operation, changing the state inside the $\cc{is_circular}$ invariant. The view
-shift produces a client-supplied assertion $Q$ which is returned in the
+shift produces a client-supplied assertion $Q$, which is returned in the
 postcondition.
 
 The rest of the specification is specific to how the circular buffer manages
@@ -367,14 +368,14 @@ $\cinv{R}$ behaves very similarly to an invariant assertion $\knowInv{}{R}$, exc
 that like a crash fancy update it can only be used after a crash. This crash
 invariant ``freezes'' the old state of the circular buffer (notice that
 $\circstate(\gamma, \sigma)$ is now unchanging, since future operations will
-interact with the instance named $\gamma'$). In the process we also maintain
-some ghost state relating the old and new instances in the form of the
-$\cc{circ_exchanger}(\gamma, \gamma')$ predicate. The circular buffer in
-particular does not have an interesting exchanger predicate, but an interesting
-use shows up in the GoJournal proof.
+interact with the instance named $\gamma'$). This process also produces
+$\cc{circ_exchanger}(\gamma, \gamma')$, which includes additional ghost state
+relating the old and new instances in the form of the predicate. The circular buffer in
+particular does not have an interesting exchanger predicate, but this feature of
+the specification pattern shows up in the GoTxn proof.
 
-In general, each layer supplies a post-recovery init theorem. All of the layers' crash
-obligation alt theorems are called after running all the recovery code just
+In general, each layer supplies a post-recovery init theorem. All of these
+theorems are called after running all the recovery code just
 before starting the system (that is, this would be just after line 4 in the
 \cc{RunSystem()} code above). Calling these view shifts allocates all the layers'
 invariants while simultaneously getting ``credit'' for this allocation in the
@@ -388,7 +389,7 @@ single-threaded.) Once the system starts running the invariant allows multiple
 threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
-The final aspect of our logically-atomic specification pattern is the role of
+The final aspect of the logically-atomic specification pattern is the role of
 the exchanger, one of the conclusions of the post-recovery init theorem. The
 purpose of this predicate is to give the caller a way to, on crash, relate
 resources issued by the library before a crash to those after a crash. In the
@@ -418,7 +419,8 @@ cannot be lifted again.\footnote{In the implementation,
 $a \mapsto_{d}^{\mathrm{lftd}}$ is in the primitive resource. There is a
 resource $\textlog{token}(a)$ that gives the right to lift $a$. Then
 $a \mapsto_{d} o$ is simply defined to be
-$a \mapsto_{d}^{\mathrm{lftd}} o \sep \textlog{token}(a)$.} We can give Commit a
+$a \mapsto_{d}^{\mathrm{lftd}} o \sep \textlog{token}(a)$.} We can give
+GoJournal's \cc{Commit} operation a
 (highly-simplified) specification like the following:
 %
 \begin{align*}
@@ -429,8 +431,16 @@ $a \mapsto_{d}^{\mathrm{lftd}} o \sep \textlog{token}(a)$.} We can give Commit a
   {a \mapsto_{d} o \lor a \mapsto_{d} o'}
 \end{align*}
 
+In the non-error, non-crash return, the postcondition turns $a \mapsto_{op} o'$
+into a durable fact $a \mapsto_{d} o'$. If the system doesn't crash but the
+transaction fails (which happens if it is too large to fit in the circular
+buffer), then the caller gets back an unlifted disk fact $a \mapsto_{d} o$,
+reflecting that the transaction did not affect the disk. In the case of a crash
+the specification promises to give one of these assertions, and which one
+depends on exactly when the crash occurs.
+
 This specification is simplified to only give the case of committing an
-operation that modifies a single address, when in reality Commit's main purpose
+operation that modifies a single address, when in reality \cc{Commit}'s main purpose
 is to atomically commit multiple addresses; a single address is enough to
 understand the proof issues involved. If the system doesn't crash, it is
 relatively straightforward to reverse the lifting process and restore full
