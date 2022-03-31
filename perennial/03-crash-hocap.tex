@@ -11,7 +11,7 @@ buffer, a library used in GoTxn that has interesting crash safety and
 concurrency behavior. This library operates directly on top of the disk, so no
 background on GoTxn is needed to understand it.
 
-\subsection{The circular buffer library}
+\subsection{Circular buffer API}
 
 The circular buffer (``circ'' for short) is a fixed-size, \emph{on-disk} queue of
 updates, which are pairs of an address and a disk block. It is used to implement
@@ -144,7 +144,7 @@ following custom separation-logic resources:
   bound.
 \end{itemize}
 
-\subsection{Specifications for Append and TrimTill}
+\subsection[Specification for Append and TrimTill]{Specifications for \cc{Append} and \cc{TrimTill}}
 
 Formally the way each operation is specified is using a style called
 higher-order concurrent abstract predicates (HOCAP)~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
