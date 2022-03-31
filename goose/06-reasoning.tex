@@ -529,9 +529,7 @@ cover easy mistakes like reading the oldest write to a key rather than
 the latest, or duplicate keys during iteration (the implementation must
 skip over a key after observing it once).
 
-The proof and specification for maps is relatively easy since they are
-not safe to use concurrently, so the proof assumes ownership over the entire
-map. The model represents
+The model represents
 a Go map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation $\mapVal(v, m)$ that relates
@@ -544,15 +542,18 @@ all use $\mapRep(\ell, m) = \exists v.\, \ell \mapsto v * \mapVal(v, m)$. The
 indirection is important, since the Go map value
 \cc{m : map[uint64]V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
-length, and capacity --- and heap data).
+length, and capacity --- and heap data). Concurrency is simple for these
+specifications because Go's maps are not thread safe, so all the specifications
+assume full ownership over the map's reference.
 
-For example, this is the specification for map deletion:
+Many of the map specifications relate an implementation to a model over the
+Gallina map. For example, this is the specification for map deletion:
 \[
 \hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}
 \]
 
-Map iteration has a more sophisticated specification. Consider a generic loop
-over a map in Go like the following:
+Map iteration has a more sophisticated implementation and specification.
+Consider a generic loop over a map in Go like the following:
 
 \begin{verbatim}
 for k, v := range m {
@@ -563,8 +564,15 @@ for k, v := range m {
 The model for this entire construct is given by $\cc{MapIter}(m, \textlog{body})$, where
 $m$ is a reference to the map and $body$ is an expression for the body of the
 loop. Goose translates generic loop bodies, so the Go code does not literally
-need to consist of a call to a separate function. The possibility of
-\emph{iterator invalidation} adds one subtlety to Go's map iteration --- it
+need to consist of a call to a separate function. Recall that the representation
+for a map is a list of all appended key-value pairs in reverse insertion order
+(puts do not delete old values). To iterate over the map's contents, the
+implementation gets the next key-value pair, then deletes that key from the rest
+of the map before making a recursive call, avoiding iterating over old values
+that are no longer logically part of the map.
+
+The possibility of
+\emph{iterator invalidation} adds a subtlety to Go's map iteration --- it
 would be incorrect for the body of the loop to modify the map (it might be sound
 to write to the map without modifying the domain, but Goose does not attempt to model
 this). The model of maps puts the entire contents of a map in one heap location.
@@ -611,4 +619,18 @@ implementation. Goose does not (currently) do this, simply because the shuffle w
 be hard to implement in GooseLang. However, the specification for map iteration
 does not expose an iteration order and would apply unchanged to this more
 precise model. All proofs go through this specification, so our proofs should
-remain unchanged if $\cc{MapIter}$ started modeling non-determinitic ordering.
+remain unchanged if $\cc{MapIter}$ started modeling non-deterministic ordering.
+
+Getting the size of a map has a relatively simple specification but a somewhat
+complex implementation. Like map iteration, the code for \cc{MapLen} (modeling
+\cc{len(m)} in Go) must delete old keys from the map's association list in order
+to avoid counting overwritten values. A subtlety is that the map length is a
+64-bit integer, and this counter could in principle overflow while iterating
+over the map. This situation is unrealistic since a map with $2^{64}$ elements
+would take an unreasonable amount of memory, so the model \emph{assumes} that
+the map size stays below $2^{64}$. The specification for \cc{MapLen} is
+\[
+\hoare{\mapRep(\ell, m)}{\cc{MapLen}(\ell)}{\Ret{s} s = |m| * \mapRep(\ell, m)},
+\]
+which reflects
+the bounded size assumption because $s$ is a 64-bit integer.
