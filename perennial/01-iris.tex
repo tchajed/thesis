@@ -14,17 +14,18 @@ Separation logic is an extension of Hoare logic that has proven profitable for
 reasoning about heap-manipulating programs with pointers and concurrency
 (surprisingly, the same techniques help solve both problems). A good
 introduction to the basic ideas of separation logic is found in O'Hearn's
-``Separation Logic'' article~\cite{ohearn:seplogic}. Here we will give a more
-terse overview to introduce the relevant notation.
+``Separation Logic'' article~\cite{ohearn:seplogic}. This section gives a more
+terse overview, especially to introduce the relevant notation.
 
 Separation logic introduces some notation for the logical assertions that
 describe the heap. The core assertion to talk about pointers is $p \mapsto v$,
-which says that the pointer $p$ when dereferenced has value $v$, or more simply
-``$p$ points to $v$''. Separation logic introduces a new logical connective
+pronounced ``$p$ points to $v$'',
+which says that the pointer $p$ when dereferenced has value $v$. The new logical
+connective of separation logic is
 $P \sep Q$, pronounced ``$P$ and separately $Q$'', which says that the heap can
 be divided into two disjoint pieces, one satisfying $P$ and the other satisfying
-$Q$. We can relate two propositions with $P \proves Q$, where $\proves$ can be
-read as either ``entails'' or ``proves'', which says that in any heap where $P$
+$Q$. Entailment between propositions is written $P \proves Q$, read as ``$P$
+entails $Q$'' or ``$P$ proves $Q$'', which says that in any heap where $P$
 holds, $Q$ must also hold.
 
 When working in separation logic, specifications like $\hoare{P}{e}{Q}$ are
@@ -45,17 +46,18 @@ explanation of weakest preconditions vs Hoare triples can be found in
 
 The term ``weakest precondition'' is because $\wpre{e}{Q}$ is supposed to be the
 \emph{weakest} predicate that implies $Q$ holds after $e$'s execution, in the
-sense that any other precondition would imply $\wpre{e}{Q}$, but we will not
+sense that any other precondition would imply $\wpre{e}{Q}$, but our work does not
 emphasize this aspect of weakest preconditions. Furthermore the literature will
 sometimes distinguish between weakest liberal preconditions that only guarantee
 $Q$ if $e$ terminates and reserve the term weakest preconditions for a predicate
-that also guarantees termination. We just use weakest precondition for the
+that also guarantees termination. This thesis uses the term weakest precondition for the
 ``liberal'' version (also called \emph{partial correctness} as opposed to
 \emph{total correctness}), because proving termination in the presence of
 concurrency is quite challenging.
 
 As an example of weakest precondition reasoning, the frame rule becomes
-\ruleref{wp-frame} in terms of WPs. Reading this rule forwards, if we have $F$
+\ruleref{wp-frame} in terms of WPs. Reading this rule forwards, if in a proof
+the assumptions include $F$
 and separately $\wpre{e}{Q}$, then we can move $F$ to the postcondition because
 separation logic guarantees the proof of the WP does not affect or invalidate
 the resources in the frame $F$.
@@ -105,21 +107,22 @@ In Dafny, a variable can be marked \cc{ghost}. Ghost variables can be written
 and read in the proof, but Dafny enforces that the ghost variables' values never
 influences execution; they can only be used to inform uses of lemmas,
 assertions, and other proof annotations. Then at runtime ghost variables and all
-uses of them are \emph{erased} before running the program. Why would we add a
-ghost variable to a program? The simplest examples are code where a ghost
-variable holds the old value of some variable, say prior to a loop; this lets
-the proof refer to the old value while clarifying that the regular execution
-does not need it.
+uses of them are \emph{erased} before running the program. Why would adding a
+ghost variable to a program help with its proof? The simplest examples are code
+where a ghost variable holds the old value of some variable, say prior to a
+loop; this lets the proof refer to the old value while clarifying that the
+regular execution does not need it.
 
 %% for a concrete example see bubble sort in
 %% https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf
 
-We can think about the technique of ghost variables as carrying out the proof in
-two steps. First, for every normal execution (without ghost variables), the
-proof constructs a ``parallel'' execution that tracks the ghost state alongside
-physical state. The rest of the proof is carried out on the parallel execution,
+One intuition for the technique of ghost variables is that it augments the
+execution of the program with additional information, which is used only for the proof
+and thus not tracked at runtime. For every actual execution, there is a
+corresponding execution where the ghost variables are maintained and updated.
+The proof is carried out on this augmented execution,
 but the proofs apply to the normal execution because by design they have the
-same behavior. We find that verifying the program with ghost
+same behavior. Verifying the program with ghost
 variables is easier because the ghost variables can track important
 information about the history of the program, such as in the example above of
 the pre-loop values of the local variables.
@@ -127,12 +130,13 @@ the pre-loop values of the local variables.
 In Iris, the proof is a separate entity from the code. The program logic still
 has a way to use ghost variables, with proof rules that construct and update a
 ghost variable, applied at the appropriate points in the proof rather than added
-to the code. The high-level idea for why this works --- the parallel execution ---
-remains the same. In fact the argument is a bit simpler because it is obvious
+to the code. The high-level idea for why this works --- that there is an
+augmented execution with the ghost variables ---
+remains the same. In fact in Iris it is more obvious
 that the ghost variables do not affect program execution, since their creation
 and updates only appear in the proof.
 
-So far, we've explained ghost state as being ghost variables, with the familiar
+So far, we've explained ghost state in terms of ghost variables, with the familiar
 API where they can be read and written. Iris ghost state is a bit more
 sophisticated in order to support concurrency reasoning. First, Iris has
 separation logic assertions for \emph{ownership} of ghost state, which can be
@@ -143,8 +147,10 @@ how it may be updated.
 \newcommand{\ghostvar}[2][]{\dashedbox{\gamma \mapsto_{#1} #2}}
 
 A simple example to illustrate both principles is Iris's fractional ghost
-variables. We will write $\ghostvar[q]{v}$ to indicate that $\gamma$ has value
-$v$ (of any fixed type) and that we own a (positive) fraction $q$ of it.
+variables. The assertion $\ghostvar[q]{v}$ says that $\gamma$ has value
+$v$ (of any fixed type) and asserts ownership over a (positive) fraction $q$ of
+it --- any fraction $q < 1$ represents read-only access to the ghost variable,
+while full ownership $q = 1$ allows writing as well.
 Complete ownership $\ghostvar[1]{v}$ is common enough that we will also write it
 $\ghostvar{v}$, with no fraction. There are several rules for manipulating and
 using this fractional ghost state:
@@ -178,8 +184,8 @@ over it; this is analogous to how the Hoare triple for allocation has no
 precondition. The formal rule that allows the user to get access to $P$ is
 \ruleref{upd-fire}. It corresponds to advancing the proof of $\wpre{e}{Q}$ by
 changing whatever ghost state is needed to turn $\upd P$ into $P$. As long as
-the user is proving a weakest precondition, we can always apply this rule to
-``eliminate'' an update modality.
+the user of the logic is proving a weakest precondition as the goal, they can
+apply this rule to ``eliminate'' an update modality.
 
 Fractional ghost state can be updated after creation with \ruleref{frac-update}.
 The update requires full ownership. Fractional ghost variables can instead be
@@ -188,15 +194,19 @@ be updated (since this would invalidate the rest of the assertions), but two
 assertions for the same ghost variable must be for equal values since the
 underlying variable has only one value.
 
-In this thesis we describe constructing ghost state to carry out parts of the
-proof. In reality all ghost state in Iris is constructed by defining an
-algebraic structured $M$ called a ``resource algebra'', and ownership is always
-ownership of an element $a \in M$, but we will not explain the details --- see
-``Iris from the ground up''~\cite{jung:iris-jfp}. When we explain some ghost
-state, it will be in terms of some resources and rules that allow updating those
-resources. The Iris logic ensures that the updates are ``sound'', enforcing a
-global property that updates to a resource in one part of the proof never
-invalidate resources owned by concurrent threads at the same time.
+This thesis describes a few constructions for ghost state to carry out parts of
+the proof, including fractional ghost state described above. In reality all
+ghost state in Iris is defined using a single, general mechanism. Ghost state
+can come from any instance of an algebraic structure $M$ called
+a ``resource algebra'', where ownership really means
+ownership of an element $a \in M$. This thesis does not explain the details of
+how ghost state is constructed using resource algebras --- see
+``Iris from the ground up''~\cite{jung:iris-jfp}. For the ghost
+state in this thesis, we will only give the API, in terms of presources and
+rules that allow updating those resources. The Iris logic ensures that the
+updates are ``sound'', enforcing a global property that updates to a resource in
+one part of the proof never invalidate resources owned by concurrent threads at
+the same time.
 
 A fundamental reasoning principle for concurrency is the notion of an
 \emph{invariant}. Threads will eventually need to share state, and invariants

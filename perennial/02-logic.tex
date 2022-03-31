@@ -52,8 +52,8 @@ defined to be $P \proves \wpc{e}{Q}{Q_{c}}$. There is one subtlety in the
 terminology that while we use the term ``crash'' these postconditions hold
 \emph{just prior} to the system actually shutting down, so that the contents of
 memory is unchanged.\footnote{They might more properly be called \emph{halt
-specifications}, but we used the terminology in the original FSCQ paper and it has
-stuck since then. Crash specs are a bit more catchy, anyway.} In \cref{sec:perennial:recovery} we'll connect these
+conditions}, but the original FSCQ paper used ``crash conditions'' and the term has
+stuck since then.} In \cref{sec:perennial:recovery} we'll connect these
 crash specifications to the memory wipe and reboot that happens right afterward.
 
 \begin{figure}[ht]
@@ -96,10 +96,10 @@ The logical ``and'' makes this spec much more powerful. If at some point at the
 proof we have resources $R$ and want to prove $\wpc{e}{P}{P_{c}}$, the rule says
 it is sufficient to prove two things: $R \proves P_{c}$ and
 $R \proves \wpre{e}{P_{c} \land P}$. Notice that unlike most separation logic
-reasoning, we don't need to split up $R$ to prove these two entailments, and
-that we have reduced crash reasoning to non-crash reasoning. There are two
+reasoning, we don't need to split up $R$ to prove these two entailments. Also
+observe that this rule reduces crash reasoning to non-crash reasoning. There are two
 reasons why this reasoning is sound: first, $e$ takes only a single step, and
-the system either crashes or not, but not both, so we only need to show either
+the system either crashes or not, but not both, so the proof only needs to show either
 the crash or post condition. If the system crashes before $e$ then
 $R \proves P_{c}$ shows the crash condition holds now, and otherwise the
 resources $R$ are still available to prove $\wpre{e}{P_{c} \land P}$. That proof
@@ -169,8 +169,8 @@ about the locked state if the system crashes in the middle of a critical
 section --- this is fine if the lock protects in-memory state that is anyway
 lost on crash, but insufficient for reasoning about locks that protect durable
 state. One intuition for what goes wrong is that a crash ``steals'' ownership of
-the locked state and forcibly transfers it to recovery, which is something we
-need to reason about in practice in a concurrent, crash-safe system.
+the locked state and forcibly transfers it to recovery, which is something the
+proof of a concurrent, crash-safe system needs to reason about.
 
 \begin{figure}
   \begin{mathpar}
@@ -211,8 +211,8 @@ to be restored at the end).
 
 A practical storage system handles crashes by restoring its in-memory state of
 the system. We call the procedure that runs after a crash on every reboot the
-system's \emph{recovery procedure}. To reason about the recovery process, we
-introduce a \emph{recovery} weakest precondition $\wpr{e}{e_{r}}{P}{P_{r}}$,
+system's \emph{recovery procedure}. To allow the user to reason about the recovery process, Perennial
+has a \emph{recovery} weakest precondition $\wpr{e}{e_{r}}{P}{P_{r}}$,
 where $e$ represents the storage system, $e_{r}$ is a recovery procedure that
 will run on restart, $P$ is the postcondition for normal execution, and $P_{r}$
 is the \emph{recovery postcondition}. When $e$ is run in a state satisfying this
@@ -258,11 +258,11 @@ so that old assertions are true but no longer work for loads and stores since
 they do not apply to the current heap. Then $\durable(P)$ is defined to say that
 the assertion $P$ is independent of the current generation number.
 
-In practice the way the $\wprw$ assertion is used is by applying it to an $e$
+In practice a user of the logic proves a $\wprw$ assertion about an expression $e$
 that is a server loop that accepts operations, executes them, and replies. The
-same loop $e$ is also $e_{r}$ since it restores its state from disk. Finally, we
-separately prove that $e$ is safe to run from an initial state with an all-zero
-disk.
+same loop $e$ is also $e_{r}$ since it restores its state from disk. Finally,
+the user will separately prove that $e$ is safe to run from an initial state
+with an all-zero disk.
 
 The recovery code sets up the global invariants and appropriate crash locks for
 the whole system and thus cancels all of these assertions from its crash
@@ -273,13 +273,13 @@ idempotence rule.
 
 \section{Soundness}
 
-We gave an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$, but it is
+Above we presented an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$, but it is
 not obvious that the definitions of $\wprw$ and $\wpcw$ imply that this
 intuitive meaning holds up. Interpreting the mechanisms of the logic is
 complicated since it requires relating logical features like ghost state,
 invariants, and ownership to the execution of the program. To address these
 concerns, Perennial comes with a \emph{soundness theorem} that formally connects
-the definitions to a guarantee about $e$ and $e_{r}$ indendently of the details
+the definitions to a guarantee about $e$ and $e_{r}$ independent of the details
 of the logic. The soundness theorem establishes what an end-to-end theorem about
 the system \emph{means} without trusting the interpretation and implementation
 of these features.
@@ -307,16 +307,17 @@ The basic version of the soundness theorem says:
     \item Any forked threads are either a value or are reducible in $\sigma'$.
   \end{enumerate}
 \end{theorem}
-To satisfy the premise of the soundness theorem, we get to assume points-to
-facts for all of the addresses in the initial disk. First, the theorem promises
+To satisfy the premise of the soundness theorem, the user gets to assume points-to
+facts for all of the addresses in the initial disk. In return the theorem has
+several postconditions. First, the theorem promises
 that $e$ runs ``safely'' in the sense of not getting stuck. This immediately
 rules out a number of errors, including any calls to Go's built-in \cc{panic()}
 function and lower-level issues like reading slices out-of-bounds and data
-races.  The first two conclusions state that the normal postcondition and
+races.  Second, the properties (1) and (2) state that the normal postcondition and
 recovery postcondition have the intended meaning for the return value of the
-main thread $e$ or the recovery procedure $e_{r}$, respectively. Finally, the
-third conclusion is a safety statement about other threads in the system, which
-says that forked threads also do not encounter errors.
+main thread $e$ or the recovery procedure $e_{r}$, respectively. Finally,
+property (3) is a safety statement that says forked threads also do not
+encounter errors.
 
 This soundness theorem is machine-checked in the Perennial implementation. Its
 proof hides complexity in the definitions of $\wpcw$ and $\wprw$, and in the
@@ -368,8 +369,9 @@ the Coq proof mode, but extended for reasoning in separation logic. The proof
 mode is highly extensible, and we used these features to integrate support for
 MoSeL with Perennial.
 
-There are two interesting aspects in the Perennial MoSeL support we developed
-while using it. The first is \emph{named predicates}, a general feature for
+There are two interesting aspects in the Perennial MoSeL support that we
+developed.
+The first is \emph{named propositions}, a general feature for
 interactive separation logic proofs that arose out of our experience writing and
 changing large invariants. The second is tactics specific to the crash reasoning
 in Perennial: \emph{proof caching} reduces the burden of crash-safety reasoning
@@ -391,7 +393,7 @@ tedious and error-prone. If we add \cc{* S} to the end, then ``HC'' will now be
 \cc{R * S}; the situation is worse if a conjunct is added to the middle of the
 invariant.
 
-\emph{Named predicates} help solve this problem. With this feature, the
+\emph{Named propositions} help solve this problem. With this feature, the
 invariant is written combining the logical statement with names for each conjunct:
 \begin{verbatim}
 Definition inv := "HA" :: P *
@@ -399,7 +401,7 @@ Definition inv := "HA" :: P *
                   "HC" :: R.
 \end{verbatim}
 The notation \cc{"HA" :: P} means the exact same thing as \cc{P}, logically, but
-we extend the proof mode with the ability to destruct a hypothesis and
+named propositions extend the proof mode with the ability to destruct a hypothesis and
 automatically name its conjuncts. This has two advantages: first, we don't repeat
 the names for the conjuncts throughout the proof, and second, extensions to the
 invariant are minimally invasive to the proof (even if conjuncts are reordered)
@@ -421,7 +423,7 @@ available at \url{https://github.com/tchajed/iris-named-props}.}
 that the crash condition holds at each intermediate point.
 Writing local specifications (by ``framing away'' anything not needed)
 helps reduce this burden, but does not fully eliminate it.
-We implemented a tactic for caching and reusing proofs of the crash condition.
+Perennial includes a tactic for caching and reusing proofs of the crash condition.
 A proof
 engineer proves the crash condition as it stands at some point, using
 as few assumptions as possible for locality, and the caching infrastructure saves
@@ -437,9 +439,9 @@ the caching infrastructure proves the goal automatically.
 % convenient, easy to implement, and more general than what could be implemented
 % within the program logic itself.
 
-\paragraph{Framing:} Recall that we mentioned the \ruleref{wpc-frame} rule for
+\paragraph{Framing:} Recall the \ruleref{wpc-frame} rule for
 proving a $\wpcw$ using a $\wpw$ when no durable resources are required for a
-sub-part of the proof. This is commonly used, so we introduce a \cc{wpc_frame}
+sub-part of the proof. This is commonly used, so Perennial has a \cc{wpc_frame}
 tactic to apply the theorem. The tactic takes a list of hypotheses and applies
 \ruleref{wpc-frame}, leaving the user to prove that the listed assumptions
 together imply the crash condition, with the remaining hypotheses available to

@@ -343,8 +343,8 @@ buffer's crash predicate, along with $P_{\mathrm{rec}}(\sigma)$, from the
 overall crash condition. Thus using \ruleref{cfupd-use} before running the
 system both sets up the circular buffer for use (by establishing
 $\cc{is_circular}(\gamma)$) and guarantees the circular buffer's part of the
-crash condition from now on. We saw a simpler but abstract version of this
-reasoning in the \ruleref{wpc-inv-alloc} rule in \cref{sec:perennial:wpc};
+crash condition from now on. A simpler but abstract version of this
+reasoning appears in the \ruleref{wpc-inv-alloc} rule in \cref{sec:perennial:wpc};
 this theorem is a concrete use case (split into creating the cfupd and later
 using it, rather than in one step as in \ruleref{wpc-inv-alloc}). What Perennial
 makes possible is to take advantage of the invariant for crash reasoning ---
@@ -357,8 +357,8 @@ for the circular buffer changes on crash to a new $\gamma'$; the reason for this
 is that other threads (the logger and installer) have access to some of the
 circular buffer resources associated with $\gamma$. Rather than requiring those
 threads to ``return'' those resources on crash and impose a crash condition on
-that code, we simply create a new instance of the circular buffer and stop using
-the old one. As a result on crash we can produce
+that code, this theorem simply creates a new instance of the circular buffer and stop using
+the old one. As a result on crash the theorem can produce
 $\cc{circ_resources}(\gamma', \sigma)$ and hand out these resources to the
 caller.
 
@@ -466,9 +466,9 @@ is fresh, so we've just allocated all of its associated ghost state and it
 hasn't been used by any threads so far. We can then prove exchange lemmas like
 $a \mapsto^{\gamma}_{d} o \sep \cc{exchange_addr}(a) \proves a \mapsto^{\gamma'}_{d} o \sep \cc{exchange_addr}(a)$.
 The reason this proof works is that $a \mapsto_{d} o$ is \emph{exclusive}, thus
-from the premise we can rule out that $\cc{exchange_addr}(a)$ is proven with the
-left disjunct and learn that the right-hand side holds. We take out this
-right disjunct ($a \mapsto^{\gamma'}_{d} o$) and give up
+from the premise the proof can rule out that $\cc{exchange_addr}(a)$ is proven with the
+left disjunct and learn that the right-hand side holds. The proof takes out this
+right disjunct ($a \mapsto^{\gamma'}_{d} o$) and gives up
 $a \mapsto^{\gamma'}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
 the left disjunct. This all ensures that exchanging is only performed once,
 which is necessary since all the resources involved are exclusive.
