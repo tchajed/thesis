@@ -8,58 +8,110 @@ transaction, then carrying out that sequential reasoning in Dafny for the
 DaisyNFS file-system logic. This section formalizes the theorem statements
 involved in the proof, especially the transaction system's correctness theorem.
 
-% How do we set up and prove the correctness of DaisyNFS?
+\subsection{Simulation transfer}
+
+Program refinement captures how transactions execute. On top of this
+specification, we prove a \emph{simulation transfer} theorem that instead shows
+how transactions enable \emph{sequential reasoning} for a system on top. In
+DaisyNFS we will see how this justifies carrying out those proofs using Dafny, a
+sequential verification system.
+
+The idea behind the simulation transfer specification is to express that a system
+verified using sequential reasoning for each transaction is also correct when
+run concurrently through GoTxn --- intuitively, this follows from the atomicity
+provided by program refinement.
+% , at which point the sequential reasoning
+% applies, but we have a more precise and formal proof in Coq.
+To make this precise, we define formally what we mean by
+``sequential reasoning''. Suppose we have an
+implementation of layer $S$ using operations from $T$. Note that all the proofs
+about the transaction system are for an arbitrary system with operations in $S$. The implementation $i$
+consists of a function $i(op) : \gooselayer{T}$ for each operation $op \in S$. The statement
+$\seqrefinement \targ{T, S}(i)$ says that $i$ is a correct sequential
+implementation of $S$ using $T$. To specify correctness under crashes, this
+definition refers to $\operatorname{crash}(\sigma, \sigma')$, which is a
+layer-specific crash transition that models, for example, clearing the
+contents of memory.
+
+\begin{definition}
+  The implementation $i : S \to \gooselayer{T}$ is a \emph{sequential
+    refinement}, written
+  $\seqrefinement \targ{T, S}(i)$, if there exists an abstraction relation
+  $R : \Sigma_{S} \to \Sigma_{T} \to \textdom{bool}$ such that: \newline
+(1) for every operation
+  $op \in S$, the following sequential Hoare triple holds:
+  \[
+    \hoare{R(\sigma)}{i(op)}{\exists \sigma'.\, R(\sigma') \land \sigma \overset{op}{\leadsto} \sigma'},
+  \]
+(2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ implies
+$R(\sigma_{S}, \sigma_{T})$, and \\
+(3) if $R(\sigma_{T}, \sigma_{S})$ holds and $\operatorname{crash}(\sigma_{T}$, $\sigma_{T}')$,
+then there exists a $\sigma_{S}'$ such that $R(\sigma_{T}', \sigma_{S}')$ and
+$\operatorname{crash}(\sigma_{S}, \sigma_{S}')$.%
+  \label{def:seqrefinement}
+\end{definition}
 %
-The specification for \sys is a state-machine describing the ideal
-version of \sys, namely that it appears to transition and respond
-atomically according to the NFS state machine to all requests. The
-implementation is a binary \cc{daisy-nfsd} that implements the NFS
-protocol, running on top of a
-disk. The \sys correctness
-theorem is a \emph{refinement} property, which intuitively says that
-for any interaction with the
-implementation, the ideal, atomic specification could produce the responses;
-this section shortly gives a more formal definition.
-As a result a client interacting with the server can pretend
-that it is the NFS state machine and ignore the complexities of its
-implementation.
+Conditions (1) and (2) in this definition are standard for sequential
+verification of refinement, while condition (3) is a standard condition for sequential crash-safety~\citep{chajed:argosy}. Though condition (3) requires the
+abstraction relation to be preserved by crashes, the proof engineer does \emph{not} have to reason about crashes in the middle of operations.
+% is a standard condition for sequential crash-safety~\cite{chajed:argosy}
+% for sequential crash safety~\cite{chajed:argosy}.
+The
+diagram in \cref{fig:refinement} depicts the main
+refinement condition (1) diagrammatically. \tej{after moving this will be a
+  reasonable forward reference}
+% For example, it is fairly easy to use them to show
+% that for any sequential program $p : \gooselayer{S}$, the traces of the code
+% $\mathrm{link}(p, i)$ are a subset of the traces of the spec $p$ (we will not
+% use exactly this theorem since we are interested in concurrent code using
+% transactions).
+% \tej{I mentioned this but maybe we don't want/need to say it?}. Such reasoning would be familiar in previous sequential verified
+% systems like FSCQ~\cite{chen:fscq}, IronFleet~\cite{hawblitzel:ironfleet}, and
+% VeriBetrKV~\cite{hance:veribetrkv}.
 
-\begin{figure}[ht]
-\small
-\centering
-\begin{tabular}{@{~}llr@{~}}
-\toprule
-\bf Layer & \bf Operations & \\
-\midrule
-  NFS
-      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:daisy:spec} \\
-  Txn
-      & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
-        \dots & \cref{sec:system:txn} \\
-  Disk
-      & \cc{Read(a)}, \cc{Write(a, b)} & \\
-\bottomrule
-\end{tabular}
-\caption{API layers of \sys.}
-\label{fig:layers}
-\end{figure}
-
-The proof is about the server loop at three layers of abstraction, as outlined
-in \cref{fig:layers}. The Disk layer at the bottom is where the whole server
-runs, while the NFS layer serves as the specification. In addition, there
-is an intermediate layer Txn for the transaction system which is the abstraction
-on which the Dafny code is written and verified.
-
-\tej{need to merge better text about GoTxn spec with the section in the GoTxn
-chapter}
-
-\resume
-
-Now we have enough to state the final DaisyNFS correctness theorem:
-\begin{theorem}[\sys correctness]
-  $\mathrm{link}(\sdfy, \txncode) \refines \snfs$.%
-  \label{thm:correctness}
+The correctness theorem for GoTxn takes a proof of \emph{sequential} refinement
+conditions for a system implemented using transactions and derives a \emph{concurrent and crash-safe} refinement.
+A transaction must satisfy some conditions to ensure atomicity. We write
+$\mathrm{safe}(p)$ to say that $p$ is a valid transaction. The main
+restriction is that $p$ cannot access global state such as the heap, since
+the transaction system does not make such accesses atomic.
+The implementation $i$
+in this theorem gives only the body of each transaction; the theorem is about
+$\atomiccomp i$ where $(\atomiccomp i)(op) = \atomically{i(op)}$ uses
+the macro from the Txn layer to specify that the
+operation is wrapped in a transaction.
+%\begin{verbatim}
+%type txnBody =
+%  func(tx *Txn) (v interface{}, ok bool)
+%func runTxn(f txnBody) (v interface{}, ok bool) {
+%  tx := Begin()
+%  v, ok := f(tx)
+%  if ok {
+%    tx.Commit()
+%  } else {
+%    tx.Abort()
+%  }
+%  return v, ok
+%}
+%\end{verbatim}
+\begin{theorem}[Simulation transfer]
+  Let $\textdom{Sys}$ be a layer implemented using transactions with
+$i : \textdom{Sys} \to \gooselayer{Txn}$, such that
+$\seqrefinement\targ{\gooselayer{Txn}, \textdom{Sys}}(i)$ and
+$\forall op.\, \mathrm{safe}(i(op))$ hold. Then
+\[
+  \forall p : \gooselayer{Sys}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
+\]
+\label{thm:gotxn-transfer}
 \end{theorem}
+%Notice that this theorem assumes simply an implementation of some interface $S$
+% using transactions and a proof of its correctness in terms of standard
+% \emph{sequential} reasoning, while the conclusion says that the combination of
+% the implementation with GoTxn results in a correct \emph{concurrent} refinement.
+%In \cref{sec:txn-proof} we discuss how this theorem
+%is proven using Perennial and Coq.
+
+\subsection{Using simulation transfer with Dafny}
 
 \begin{figure}
   %\includegraphics{fig/refinement-execs}
@@ -78,13 +130,6 @@ Now we have enough to state the final DaisyNFS correctness theorem:
     specification~(in \cref{thm:dafny}).}
   \label{fig:refinement-execs}
 \end{figure}
-
-%
-In this correctness theorem, initialization requires running a Dafny method on
-an empty disk. Subsequently the system boots by first recovering the transaction
-system, then restoring the file system. \Cref{thm:correctness} will follow
-from the correctness of the transaction system combined with the results from
-Dafny.
 
 In order to use the GoTxn simulation transfer theorem, \cref{thm:gotxn-transfer} to obtain \cref{thm:correctness}, we need to
 prove that DaisyNFS's implementation, $i_{NFS}$, satisfies the sequential refinement conditions. To do so, we define

@@ -1,6 +1,23 @@
 \section{Specifying \sys}%
 \label{sec:daisy:spec}
 
+Specifying DaisyNFS takes two steps: first formalizing the NFS protocol, and
+then stating how the implementation relates to this formalization.
+The specification for NFS is a state machine describing an ideal NFS server in
+the form of an abstract state and a transition for each operation. The
+implementation of DaisyNFS is a binary \cc{daisy-nfsd} that implements the NFS
+protocol, running on top of a
+disk. Then the DaisyNFS correctness
+theorem is a \emph{refinement} property, which intuitively says that
+for any interaction with the
+implementation, the ideal, atomic NFS state machine could produce the responses;
+this section shortly gives a more formal definition.
+As a result a client interacting with the server can pretend
+that it is the NFS state machine and ignore the complexities of its
+implementation.
+
+\subsection{Formalizing NFS}
+
 RFC 1813 specifies the NFS protocol, which we make mathematically precise with a
 state-machine representation defined in Dafny.
 The formalization requires first
@@ -94,7 +111,7 @@ if the specification earlier implies \cc{ino in fs}.
 We developed a state-machine model of the regular file and directory operations
 in NFS in this style, including specifying what certain errors
 signify. \Cref{fig:nfs} lists the entire NFS API and what parts are verified in
-DaisyNFS.
+DaisyNFS. \tej{this part is a bit out-of-place in this subsection, consider rearranging}
 
 \renewcommand{\check}{\textcolor{ForestGreen}{\checkmark}}
 \newcommand{\nope}{\textcolor{Maroon}{\ding{55}}}
@@ -141,3 +158,44 @@ specification to accommodate the new file types.
 the link count of every file in the state, the specification for \cc{REMOVE}
 needs to say that the link count is decremented and that the file is deleted if
 its link count drops to zero.
+
+\subsection{Specifying correctness for DaisyNFS}
+
+\begin{figure}[ht]
+\small
+\centering
+\begin{tabular}{@{~}llr@{~}}
+\toprule
+\bf Layer & \bf Operations & \\
+\midrule
+  NFS
+      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:daisy:spec} \\
+  Txn
+      & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
+        \dots & \cref{sec:system:txn} \\
+  Disk
+      & \cc{Read(a)}, \cc{Write(a, b)} & \\
+\bottomrule
+\end{tabular}
+\caption{API layers of \sys.}
+\label{fig:layers}
+\end{figure}
+
+The proof is about the server loop at three layers of abstraction, as outlined
+in \cref{fig:layers}. The Disk layer at the bottom is where the whole server
+runs, while the NFS layer serves as the specification. In addition, there
+is an intermediate layer Txn for the transaction system which is the abstraction
+on which the Dafny code is written and verified.
+
+Now we have enough to state the final DaisyNFS correctness theorem:
+\begin{theorem}[\sys correctness]
+  $\mathrm{link}(\sdfy, \txncode) \refines \snfs$.%
+  \label{thm:correctness}
+\end{theorem}
+
+%
+In this correctness theorem, initialization requires running a Dafny method on
+an empty disk. Subsequently the system boots by first recovering the transaction
+system, then restoring the file system. \Cref{thm:correctness} will follow
+from the correctness of the transaction system combined with the results from
+Dafny.
