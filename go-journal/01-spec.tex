@@ -1,6 +1,16 @@
 \section{GoTxn's specification}%
 \label{sec:gotxn:spec}
 
+\tej{This section should be reframed a bit to set context. The new framing is
+that this section is all about describing GoTxn's top-level and intermediate
+specifications, as it is a big system and is verified in several steps. The
+main areas will be describing program refinement, lifting for GoJournal, and how
+we verify 2PL; then we'll give the write-ahead log abstract state (as in job
+talk) and describe how the object layer handles concurrency within a block
+(invariant) and the lock during commit.}
+
+\resume
+
 At a high level, GoTxn makes transactions atomic. We frame its specification in
 two ways. The first, \emph{program refinement}, formalizes the idea of ``atomic
 transactions''. The second, \emph{simulation transfer}, uses
@@ -139,6 +149,9 @@ system's proof only applies to a safe caller.
 
 \subsection{Simulation transfer}
 
+\tej{decided to move this to DaisyNFS chapter, so that program refinement is the
+conclusion of this chapter}
+
 Program refinement captures how transactions execute. On top of this
 specification, we prove a \emph{simulation transfer} theorem that instead shows
 how transactions enable \emph{sequential reasoning} for a system on top. In
@@ -187,9 +200,8 @@ abstraction relation to be preserved by crashes, the proof engineer does \emph{n
 % for sequential crash safety~\cite{chajed:argosy}.
 The
 diagram in \cref{fig:refinement} depicts the main
-refinement condition (1) diagrammatically. \tej{consider rearranging this, maybe
-move simulation transfer to DaisyNFS chapter, so we immediately connect to Dafny
-there?}
+refinement condition (1) diagrammatically. \tej{after moving this will be a
+  reasonable forward reference}
 % For example, it is fairly easy to use them to show
 % that for any sequential program $p : \gooselayer{S}$, the traces of the code
 % $\mathrm{link}(p, i)$ are a subset of the traces of the spec $p$ (we will not
