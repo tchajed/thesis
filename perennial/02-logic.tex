@@ -65,7 +65,7 @@ crash specifications to the memory wipe and reboot that happens right afterward.
 One rule in Perennial that is often used is the crash frame rule,
 \ruleref{wpc-frame}. Like the traditional frame rule, this is a reasoning
 principle for ignoring some resources while proving part of a program. When
-reasoning about crashes, framing is useful way to dismiss the crash condition
+reasoning about crashes, framing is a useful way to dismiss the crash condition
 when it refers to durable resources that aren't needed for reasoning about some
 part of the code.
 
@@ -73,10 +73,10 @@ The way the rule works is that in analogy to \ruleref{wp-frame}, the premise
 is a proof of $Q$ (the frame) and separately $\wpc{e}{P}{P_{c}}$. However, in
 addition to framing from the postcondition, Perennial also frames from the crash
 condition. A common case is where $P_{c} = \TRUE$, which is useful when $e$ is a
-purely in-memory piece of code. In that case we can combine framing
+purely in-memory piece of code. In that case a proof can combine framing
 and \ruleref{wp-wpc} to reason about part of a crash Hoare quadruple using
 crash-free reasoning, by temporarily ignoring the durable resources $P_d$ in the
-precondition:
+precondition, using a derived rule:
 
 \[
   \infer{\hoare{P}{e_1}{Q} \and \hoareC{Q \sep P_d}{e_2}{R}{Q_c}}%
@@ -95,9 +95,10 @@ $p \mapsto v \proves p \mapsto v \land p \mapsto v$ is trivially true.
 The logical ``and'' makes this spec much more powerful. If at some point at the
 proof we have resources $R$ and want to prove $\wpc{e}{P}{P_{c}}$, the rule says
 it is sufficient to prove two things: $R \proves P_{c}$ and
-$R \proves \wpre{e}{P_{c} \land P}$. Notice that unlike most separation logic
-reasoning, we don't need to split up $R$ to prove these two entailments. Also
-observe that this rule reduces crash reasoning to non-crash reasoning. There are two
+$R \proves \wpre{e}{P_{c} \land P}$.
+Observe that this rule reduces crash reasoning to non-crash reasoning. Also
+notice that unlike most separation logic reasoning, we don't need to split up
+$R$ to prove these two entailments; the full contents of $R$ are available in both.  There are two
 reasons why this reasoning is sound: first, $e$ takes only a single step, and
 the system either crashes or not, but not both, so the proof only needs to show either
 the crash or post condition. If the system crashes before $e$ then
@@ -108,27 +109,25 @@ right after $e$) and $P$ (to show the postcondition).
 
 To reason about concurrency, Perennial needs some more principles for sharing
 ownership between threads. The core mechanism in concurrent separation logic for
-reasoning about concurrency is the \emph{invariant}. A thread can allocate an
-invariant by giving up $R$ to receive $\knowInv{}{R}$, an assertion that says
-$R$ is an invariant --- the precise rule is given in \ruleref{wp-inv-alloc}.
-From this point forward, the proof rules guarantee $R$ holds at every program
-step. Any thread can ``open'' $\knowInv{}{R}$ with \ruleref{inv-atomic}, which
-puts $R$ in the precondition but adds the obligation $R$ to the postcondition.
-Invariants can only be opened across an atomic step since other threads might
-rely on $R$ during the intermediate steps. Unlike a general resource $R$,
+reasoning about concurrency is the \emph{invariant}. The main rules for working
+with invariants in a non-crash setting are \ruleref{wp-inv-alloc} to give up $R$
+in exchange for $\knowInv{}{R}$ and \ruleref{inv-atomic} which ``opens'' an
+invariant for a single atomic step. Unlike a general resource $R$,
 $\knowInv{}{R}$ is duplicable; that is,
 $\knowInv{}{R} \proves \knowInv{}{R} \sep \knowInv{}{R}$ --- this is sound
 because $\knowInv{}{R}$ is not the underlying resources $R$ but merely knowledge
 that $R$ is an invariant.
 
 Invariants have a special role in Perennial. \Cref{fig:wpc-concurrent} lists
-some rules for concurrency reasoning. Perennial extends invariant allocation
+Perennial's rules for concurrency reasoning. Perennial extends invariant allocation
 with a rule \ruleref{wpc-inv-alloc}. The non-crash parts of this rule are
 identical to \ruleref{wp-inv-alloc}, but applying the rule has the additional
 benefit of \emph{removing $R$ from the crash condition}. The intuitive reason
 this is sound is that since threads maintain $R$ at all intermediate steps, it
 must also hold in case the system crashes, and the thread that created the
-invariant can get ``credit'' for this on crash.
+invariant can get ``credit'' for this on crash. After allocating an invariant it
+has no special role for crashes, and proofs can use \ruleref{inv-atomic} as
+usual for opening an invariant across an atomic step.
 
 \begin{figure}
   \begin{mathpar}
@@ -206,12 +205,33 @@ reason why this rule is sound is that when the lock is used with
 the entire critical section (whereas the stronger lock invariant $P$ only needs
 to be restored at the end).
 
-\section{Recovery reasoning}
-\label{sec:perennial:recovery}
+\section{Crash model}
+\label{sec:perennial:crash-model}
+
+\tej{say more in this section about crashes without talking about the logic}
+
+\resume
 
 A practical storage system handles crashes by restoring its in-memory state of
 the system. We call the procedure that runs after a crash on every reboot the
-system's \emph{recovery procedure}. To allow the user to reason about the recovery process, Perennial
+system's \emph{recovery procedure}.
+
+The effect of a crash is to wipe memory. Encoding this in separation logic is a
+bit tricky, since it would appear that assertions about in-memory pointers like
+$\ell \mapsto v$ need to be invalidated. The logic handles this by instead
+parameterizing all heap assertions and weakest preconditions with a
+\emph{generation number}. Across a crash, the generation number is incremented,
+so that old assertions are true but no longer work for loads and stores since
+they do not apply to the current heap. A class of assertions $\durable(P)$ only
+concern durable state, which in the logic means that $P$ is independent of the
+current generation number. These assertions are special in that they can be
+proven as the crash condition of the system and then used in the precondition of
+recovery, as described subsequently in \cref{sec:perennial:recovery}.
+
+\section{Recovery reasoning}
+\label{sec:perennial:recovery}
+
+To allow the user to reason about the recovery process, Perennial
 has a \emph{recovery} weakest precondition $\wpr{e}{e_{r}}{P}{P_{r}}$,
 where $e$ represents the storage system, $e_{r}$ is a recovery procedure that
 will run on restart, $P$ is the postcondition for normal execution, and $P_{r}$
@@ -248,15 +268,6 @@ account the effect of a crash. For example $\wpc{e}{P}{P_{c}}$ proves that
 $P_{c}$ holds just prior to a crash while
 $P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}$ starts reasoning just after the crash.
 Durability is defined so that if $P_{c}$ is durable, it holds across a crash.
-
-The effect of a crash is to wipe memory. Encoding this in separation logic is a
-bit tricky, since it would appear that assertions about in-memory pointers like
-$p \mapsto v$ need to be invalidated. The logic handles this by instead
-parameterizing all heap assertions and weakest preconditions with a
-\emph{generation number}. Across a crash, the generation number is incremented,
-so that old assertions are true but no longer work for loads and stores since
-they do not apply to the current heap. Then $\durable(P)$ is defined to say that
-the assertion $P$ is independent of the current generation number.
 
 In practice a user of the logic proves a $\wprw$ assertion about an expression $e$
 that is a server loop that accepts operations, executes them, and replies. The
