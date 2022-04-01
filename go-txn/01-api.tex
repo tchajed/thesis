@@ -32,13 +32,16 @@ func (a *Allocator) Free(n uint64)
 \label{fig:txn-api}
 \end{figure}
 
-The transaction system gives the caller a way to read and write on-disk
-objects (which can be smaller than the 4KB block size of the underlying disk),
-in such a way that a whole sequence of reads and writes appears atomic. The
-programming interface is listed in \cref{fig:txn-api}. In practice this makes
-it easier to implement a correct storage system by handling the challenges of crash safety
-and concurrency, leaving only correct implementing the data structures and logic
-of the system using disk objects.
+The transaction system exports a transactional API for durable, on-disk objects. The caller can wrap a whole
+sequence of reads and writes in a transaction between a call to \cc{Begin()} and
+\cc{Commit()}, and the transaction system guarantees that all of the operations
+appear to atomically (that is, all at once). The
+programming interface is listed in \cref{fig:txn-api}. Reads and writes can be
+for objects smaller than a full 4KB block, which improves concurrency.
+Transactions make it much easier to implement a correct storage system by
+handling the challenges of crash safety and concurrency, so that the system on
+top only needs to implement its own data structures and operations on top of
+disk objects.
 
 To use GoTxn, a storage system follows a similar pattern for each operation of
 wrapping all of the code for that operation in a single transaction. Operations
