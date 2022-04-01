@@ -79,7 +79,7 @@ from memory to disk.  Finally, multiwrites between \cc{nextDiskEnd}
 and \cc{memEnd} are purely in-memory, and are eligible for absorption.
 
 \begin{figure}[ht]
-    \input{go-journal/fig/log}
+    \input{go-txn/fig/log}
     \vspace{-\baselineskip}
     \caption{The logical write-ahead log.  Vertical arrows indicate
         designated positions in the logical log.  Labels below the arrows
@@ -114,7 +114,7 @@ adds more multiwrites to disk in the background, and thus hides
 this concurrency.
 
 \begin{figure}[ht]
-\input{go-journal/code/walcrashspec}
+\input{go-txn/code/walcrashspec}
 \vspace{-\baselineskip}
 \caption{Parts of the specification for the \scc{wal} interface.}
 \label{fig:wal-spec}
@@ -134,7 +134,7 @@ respectively) without locks.
 
 \begin{figure}
     \centering
-    \input{go-journal/fig/physlog}
+    \input{go-txn/fig/physlog}
     \caption{The physical write-ahead log.}
     \label{fig:physlog}
 \end{figure}
@@ -204,7 +204,7 @@ crash behavior in this callback style, so as to enable a complete
 proof of crash safety across layers.
 
 \begin{figure}
-  \input{go-journal/fig/appendhocap}
+  \input{go-txn/fig/appendhocap}
   \caption{Illustration of how the proof of \cc{Append} executes a logical
 callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)} to \cc{diskEnd}.}
 % $\gamma\ \cc{+=}\ \cc{len(txns)}$.
@@ -364,7 +364,7 @@ before or after the read, but inode 1 will contain A in either case.
 
 \begin{figure}[ht]
 \centering
-\input{go-journal/fig/sub-block-concurrency}
+\input{go-txn/fig/sub-block-concurrency}
 \vspace{-\baselineskip}
 \caption{An example of a concurrent \cc{Read} of inode 1 and \cc{Commit}
   modifying inode 4
@@ -401,7 +401,7 @@ the caller is guaranteed to see the correct object $o$.
 % are accessing different files, as shown in \cref{fig:txn-concur}.
 %
 % \begin{figure}[ht]
-% \input{go-journal/code/walreads}
+% \input{go-txn/code/walreads}
 % \caption{The implementation of \cc{Read} in the \scc{wal} layer.}
 % \label{fig:walread}
 % \end{figure}
@@ -429,7 +429,5 @@ the caller is guaranteed to see the correct object $o$.
 % in Iris~\cite{jung:prophecy} could be used to avoid such a non-atomic
 % specification for the \scc{wal} \cc{Read()}.
 
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "paper.tex"
-%%% End:
+% splice this in from DaisyNFS paper
+\input{go-txn/refinement-proof.tex}

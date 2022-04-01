@@ -15,7 +15,7 @@ proofs in Coq for crashes and Perennial's atomic crash specifications.
 \toprule
 \bf Component & \bf Lines of Coq \\
 \midrule
-  \input{go-journal/tables/perennial-loc.tex}
+  \input{go-txn/tables/perennial-loc.tex}
 \end{tabular}
 \caption{Lines of specs and proofs for Perennial.}
 \label{fig:syslines}
@@ -62,7 +62,7 @@ code is publicly available.\footnote{GoJournal is available at
   & \bf Lines of code & \bf Lines of proof & \bf Ratio \\
   & (Go) & (Coq) & \\
 \midrule
-  \input{go-journal/tables/impl-loc.tex} \\
+  \input{go-txn/tables/impl-loc.tex} \\
 \bottomrule
 \end{tabular}
 \caption{Lines of code and proof for the components of \txn and for
@@ -79,14 +79,14 @@ code is publicly available.\footnote{GoJournal is available at
 % difficult, but the actual code implementing it must use low-level bit
 % operations:
 %
-% \input{go-journal/code/installBit}
+% \input{go-txn/code/installBit}
 %
 % To specify this function, we implemented functions \cc{byte_to_bits} and
 % \cc{bit_to_bytes} to convert back and forth between \cc{u8} (represented
 % as an integer between 0 and $2^8$) and \cc{list bool}. Then, we can
 % write a simple functional specification for \cc{installBit}:
 %
-% \input{go-journal/code/installBit_spec}
+% \input{go-txn/code/installBit_spec}
 %
 % The proof that the code implements this specification is quite difficult
 % using only properties of arithmetic, but since this code operates on
