@@ -1,24 +1,6 @@
 \section{Implementing GoTxn}
 \label{s:gotxn:impl}
 
-\begin{figure}
-  \centering
-  \small
-  \begin{tabular}{ll}
-    \toprule
-    \textbf{Layer} & \textbf{Description} \\
-    \midrule
-    \scc{txn} & Concurrency control using two-phase locking \\
-    \scc{jrnl} & In-memory buffered object operations \\
-    \scc{obj} & Journaling sub-block writes \\
-    \scc{wal} & Whole-block write-ahead logging \\
-    \scc{circ} & On-disk circular log data structure \\
-    \midrule
-  \end{tabular}
-  \caption{The layers in the GoTxn implementation.}
-  \label{fig:gotxn-layers}
-\end{figure}
-
 The transaction system is structured into several layers, as shown in
 \cref{fig:gotxn-layers}. At a high level, three of the abstractions are useful
 to understand the overall structure: the \scc{wal}, the \scc{jrnl}, and finally
@@ -34,6 +16,29 @@ which improves concurrency by making more operations disjoint. Finally, the
 \scc{txn} layer exports the complete transactional interface in
 \cref{fig:txn-api}. This layer implements automatic concurrency control so that
 the caller can freely read and write any addresses.
+
+\begin{figure}[htb]
+  \centering
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Layer} & \textbf{Description} \\
+    \midrule
+    \scc{txn} & Transactions \\
+                   & implements concurrency control using two-phase locking \\
+    \scc{jrnl} & Journaling \\
+                   & implements in-memory buffering \\
+    \scc{obj} & Sub-block objects \\
+                   & implements reads and atomic writes within a block \\
+    \scc{wal} & Atomic whole-block multiwrites \\
+                   & implements whole-block write-ahead logging \\
+    \scc{circ} & On-disk queue with atomic append \\
+                   & implements a durable circular log \\
+    \midrule
+  \end{tabular}
+  \caption{The layers in the GoTxn implementation.}
+  \label{fig:gotxn-layers}
+\end{figure}
 
 The write-ahead log is implemented by organizing the disk into a small,
 fixed-size circular buffer and a remaining data region. Data is first atomically
@@ -96,26 +101,10 @@ crash atomic way but which requires that the caller implement appropriate
 concurrency control. The \scc{txn} layer automatically implements the required
 concurrency control; this isn't much code beyond the journal, but it does
 dramatically change the specification since the caller sees any sequence of
-reads and writes as atomic both with respect to threads and crashes without
-having to implement any locking.
-
-Journaling makes writes atomic on crash. To make transactions appear atomic
-(also known as \emph{serializability}), we use two-phase locking on top of
-journaling. This algorithm acquires a lock on each address the first time it is
-used in a transaction. Writes are buffered locally until commit time, at which
-point they are written atomically using the journaling system. Finally all the
-locks are released, exposing the transaction's effects to subsequent
-transactions.
-
-% The implementation of the write-ahead log and transaction management is
-% complicated primarily because of a highly concurrent implementation. Without
-% concurrency, the implementation and specification
-% would be similar to the logging system of FSCQ, but a file-system built on top
-% would also get little performance benefit from multiple cores. In the evaluation
-% we show this loss of performance in a version of \txn's code with its
-% concurrency disabled \tej{forward reference and maybe some numbers}.
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "paper.tex"
-%%% End:
+reads and writes as atomic both with respect to threads and crashes (also known
+as \emph{serializability}). The \scc{txn} layer ensures transactions don't
+conflict using two-phase locking. This algorithm acquires a lock on each address
+the first time it is used in a transaction. Writes are buffered locally until
+commit time, at which point they are written atomically using the journaling
+system. Finally all the locks are released, exposing the transaction's effects
+to subsequent transactions.

@@ -7,8 +7,8 @@ DEPS := $(wildcard *.tex) \
 	$(wildcard perennial/*.tex) \
 	$(wildcard daisy-nfs/*.tex \
                daisy-nfs/fig/*.tex) \
-	$(wildcard go-journal/*.tex \
-               go-journal/fig/*.tex go-journal/tables/*.tex) \
+	$(wildcard go-txn/*.tex \
+               go-txn/fig/*.tex go-txn/tables/*.tex) \
 	$(wildcard *.bib)
 
 default: thesis.pdf abstract.txt
