@@ -138,6 +138,7 @@
 % use normal (non-italics) for theorem/definition statements
 \theoremstyle{definition}
 \newtheorem{theorem}{Theorem}
+\numberwithin{theorem}{chapter}
 \newtheorem*{definition}{Definition}
 % for \ding
 \usepackage{pifont}
@@ -276,7 +277,7 @@
 \begin{spacing}{1}
 \bibliography{n-str,paper,n,n-conf}{}
 % also consider alpha (more informative citation keys)
-\bibliographystyle{plain}
+\bibliographystyle{plainnat}
 \end{spacing}
 
 \end{document}

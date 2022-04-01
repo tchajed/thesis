@@ -41,7 +41,7 @@ theorem:
   $\sdfy \refines \snfs$. Initialization requires an invariant stated in Dafny,
   which is established by running a separate \cc{Init} procedure verified in
   Dafny starting from an all-zero transactional disk.
-  \label{thm:dafny}
+  \label{thm:dafny-appendix}
 \end{theorem}
 
 The overall correctness theorem says
@@ -72,7 +72,7 @@ Combining the above results, the top-level specification is:
   starting from an empty disk, then running the initialization implemented in
   Dafny. After that, the system boots by first recovering the transaction
   system's state, then running file-system recovery.
-  \label{thm:correctness}
+  \label{thm:correctness-appendix}
 \end{theorem}
 
 Recovery is part of this specification because the semantics of running any
@@ -94,9 +94,9 @@ system. At this level of abstraction, transactions are not represented with the
 usual \cc{Begin}, \cc{Commit}, and \cc{Abort} calls but with a
 specification-only Atomically operation.
 
-In the following two sections we expand on how to apply \cref{thm:txn} to
+In the following two sections we expand on how to apply \cref{thm:txn-appendix} to
 $\sdfy$ and how the initialization and recovery code is incorporated to prove
-\cref{thm:correctness}.
+\cref{thm:correctness-appendix}.
 
 \subsection{Safety}
 
@@ -138,7 +138,7 @@ a simple audit shows that the Dafny code is in a class that has no mutable
 variables other than the transaction system and ghost variables,
 so it is impossible for a transaction to have a non-local effect.
 
-Applying \cref{thm:txn} to this revised Dafny program, we obtain that
+Applying \cref{thm:txn-appendix} to this revised Dafny program, we obtain that
 $\linked{\sdfyAlt} \refines \sdfyAlt$. Given that $\sdfyAlt \progeq \sdfy$, it is
 reasonable that the linked versions are also equivalent, completing the first
 part of the refinement proof:
@@ -199,9 +199,9 @@ file-system state (at minimum, the root inode should be an allocated directory).
 More precisely then, DaisyNFS's specification as stated above requires that the
 caller first run \cc{Init} on an all-zero disk, initially establishing the
 file-system invariant. After that, the system should run the recovery method on
-each reboot to behave like $\sdfy$ according to \cref{thm:txn}.
+each reboot to behave like $\sdfy$ according to \cref{thm:txn-appendix}.
 
-While we can use \cref{thm:txn} to show the code behaves like $\sdfy$, why
+While we can use \cref{thm:txn-appendix} to show the code behaves like $\sdfy$, why
 does $\sdfy$ behave like $\snfs$ across a crash? The specification we prove in
 Dafny about recovery is this:
 

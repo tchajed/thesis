@@ -125,7 +125,7 @@ $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
     context switches.
     The proof shows the bottom execution is equivalent to an atomic execution of
     each thread at
-    the Txn layer~(in \cref{thm:gotxn}),
+    the Txn layer~(in \cref{thm:gotxn-transfer}),
     and sequential reasoning shows each atomic sequence behaves according to the NFS
     specification~(in \cref{thm:dafny}).}
   \label{fig:refinement-execs}
@@ -175,7 +175,7 @@ errors.}
   \label{fig:refinement}
 \end{figure}
 
-From here we can apply \cref{thm:gotxn} to \cref{thm:dafny} and
+From here we can apply \cref{thm:gotxn-transfer} to \cref{thm:dafny} and
 obtain \cref{thm:correctness}. \Cref{fig:refinement-execs} illustrates
 just one execution that the theorem covers: the transaction system proof guarantees an
 atomic execution while the sequential refinement guarantees the transactions

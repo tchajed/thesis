@@ -205,7 +205,7 @@ handle persistence, so the framework does not address crash-safety reasoning.
 
 A specification called the Push/Pull model of
 transactions~\cite{koskinen:pushpull} is similar to the \emph{lifting} technique
-in the journal system's specification~(\cref{s:design:lifting}) --- the core
+in the journal system's specification~(\cref{sec:txn:lifting}) --- the core
 problem addressed is that a journal operation atomically modifies a small number
 of objects, but other objects can change between the start of the operation and when
 it commits. The Push/Pull model also discusses reasoning on top of the

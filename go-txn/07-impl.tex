@@ -35,7 +35,7 @@ Linux NFS client, which translates file-system calls into NFS RPCs.
 \gnfs is sufficiently complete that it can run fsstress and fsx-linux
 tests through the Linux NFS client.
 
-The breakdown of lines of code and proof by layer, as seen in \cref{fig:loc},
+The breakdown of lines of code and proof by layer, as seen in \cref{fig:txn:loc},
 shows a proof-to-code ratio of about $20\times$ for the layers that involve
 tricky crash safety and concurrency reasoning. Notably the \simplenfs proof is
 relatively short due to the \txn implementation and specification largely hiding
@@ -66,7 +66,7 @@ code is publicly available.\footnote{GoTxn is available at
 \end{tabular}
 \caption{Lines of code and proof for the components of \txn and for
 \simplenfs. Ratio is the proof:code ratio, a rough measure of verification overhead.}
-\label{fig:loc}
+\label{fig:txn:loc}
 \end{figure}
 
 

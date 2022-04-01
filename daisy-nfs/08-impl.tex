@@ -32,7 +32,7 @@ end
   & \bf proof & \bf code & \bf spec \\
   \midrule
   GoJournal & \loc{26000} & \loc{1345} & \cite{chajed:gojournal} \\
-  Transaction system & \loc{10000}  & \loc{250} & \loc{564} (Thm~\ref{thm:gotxn}) \\
+  Transaction system & \loc{10000}  & \loc{250} & \loc{564} (Thm~\ref{thm:gotxn-transfer}) \\
   File system & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{261+306}} (Thm~\ref{thm:dafny}) \\
   \cc{daisy-nfsd} & \emph{unverified} & \loc{1015} & --- \\
   \bottomrule
@@ -41,7 +41,7 @@ end
   only for comparison; its specification is subsumed by the transaction system's.
   Not shown are 635 lines of assumptions in Dafny about the
   transaction system and Go primitives.}
-\label{fig:loc}
+\label{fig:daisy:loc}
 \end{figure}
 
 We implemented \sys in a combination of Go and Dafny, with proofs in the
@@ -58,8 +58,8 @@ publicly available.\footnote{
 
 
 The lines of proof, code, and specification for the layers of the system are
-summarized in \cref{fig:loc}. GoJournal is prior work but included for
-comparison purposes. The GoTxn correctness proof, \cref{thm:gotxn}, is
+summarized in \cref{fig:daisy:loc}. GoJournal is prior work but included for
+comparison purposes. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
 relatively large because code executed in atomically blocks can include many Go
 operations modeled by Perennial, and the proof has cases to handle
 each operation. However the result of the proof is a relatively concise
