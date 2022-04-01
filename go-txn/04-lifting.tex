@@ -19,12 +19,14 @@
 A key aspect of verifying GoTxn is to reason about its intermediate
 \emph{journaling} abstraction.
 
-\tej{Bunch of work in this section. Need to explain why this layer supports the
-  refinement proof in GoTxn, with no emphasis on reasoning for the caller.}
+\tej{Some context is needed for this spec, since ultimately its purpose is to
+  connect to the refinement proof described way later in this chapter. Much of
+  the descriptions about sequential reasoning can be omitted since that is no
+  longer the purpose.}
 
-\tej{some of the GoJournal paper's motivation (about the difficulty of capturing
-the crash atomicity of a journal) do apply to this section, and need to be
-introduced locally since the chapter is otherwise about a transaction system}
+\tej{need the motivation from the job talk about how this specification captures
+  concurrent transactions, while being clear about program refinement as the
+  main specification}
 
 The goal of \txn's specification is to support convenient reasoning about atomic
 operations, like the NFS \scc{write} implementation in \cref{fig:nfswrite} and \cref{fig:write}.

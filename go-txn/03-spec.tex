@@ -1,71 +1,51 @@
 \section{Program refinement specification}%
 \label{sec:gotxn:spec}
 
-\tej{This section should be reframed a bit to set context. The new framing is
-that this section is all about describing GoTxn's top-level and intermediate
-specifications, as it is a big system and is verified in several steps. The
-main areas will be describing program refinement, lifting for GoJournal, and how
-we verify 2PL; then we'll give the write-ahead log abstract state (as in job
-talk) and describe how the object layer handles concurrency within a block
-(invariant) and the lock during commit.}
-
-\resume
-
-At a high level, GoTxn makes transactions atomic. We frame its specification in
-two ways. The first, \emph{program refinement}, formalizes the idea of ``atomic
-transactions''. The second, \emph{simulation transfer}, uses
-program refinement to show that a sequential proof of a system's transactions
-implies the concurrent system is correct running on top of GoTxn.
+At a high level, GoTxn makes transactions atomic. This chapter formalizes this
+intuitive definition in the form of \emph{program refinement}. Later in
+\cref{ch:daisy-nfs} we build upon this specification to show how it enables
+sequential reasoning.
 
 Before we can get to defining program refinement, we first set up
-\emph{refinement}, which is the relationship between the code and spec.
+\emph{refinement}, which is a relationship between a code and a specification.
 Abstractly, refinement from a code program to
-a specification program says that the behaviors of the code are a subset of the
+a specification says that the behaviors of the code are a subset of the
 behaviors of the specification.
 
 To define the specification, we need to be more precise about what a program is
 and how it executes to talk about the server loop program. We
 write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
-from layer X, where X is one of Sys, Txn, or Disk.
-Layer operations are always atomic transitions in a state machine. Sys is a
+from layer X.
+Layer operations are always atomic transitions in a state machine. Layers will
+be one of Sys, Txn, or Disk, where Sys is a
 stand-in for an arbitrary system implemented on top of GoTxn. We write this
 generically to emphasize that the GoTxn specification does not fix how the
 caller uses transactions; in practice it will be instantiated with the NFS state
 machine for DaisyNFS.
-The Txn layer is specified both in Coq where it is part of the transaction
-system's correctness theorem and in Dafny where it appears as an assumption. The
-Disk transition system is formalized in Coq as part of the GoJournal proof,
-and assumes reads and writes of 4KB blocks are atomic. Each layer
-includes concurrent threads that interleave layer
+The Txn layer consists of the GoTxn API, with reads and writes over a logical
+disk and the ability to wrap these into an atomic transaction. The
+Disk transition system is formalized in Coq as part of the GoTxn proof,
+and assumes reads and writes of 4KB blocks are atomic. All layers
+include concurrent threads that interleave layer
 operations, basic heap operations on pointers, slices, and maps, and computation
 on primitives like integers and structs.
 
-There are three programs involved in defining and proving the overall
-correctness of some system using GoTxn, each at a different level of abstraction.
-The abstract specification is some system dispatch loop $\ssys : \gooselayer{Sys}$ which
-atomically processes each operation in the Sys interface. The
-next level is $\sdfy : \gooselayer{Txn}$, where each handler is the atomic body of the
-corresponding Dafny method, operating on top of the transaction system. Finally,
-the executable code is written
-$\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, indicating ``linking'' the
-Txn-layer server $\sdfy$ with the transaction system by taking each call to a
-Txn API and plugging in its implementation on top of a disk.
-%\Cref{fig:refinement-execs} illustrates one execution of this dispatch loop for
-%the DaisyNFS server, when clients issue a \cc{LOOKUP} and \cc{CREATE} in
-%parallel; for correctness, the operations should be atomic and follow the NFS
-%specification despite interleaving at the code level (the bottom execution).
-
-In the Txn layer, we write $\atomically{\cc{f}}$ to represent a
-transaction running \cc{f}. This is a macro that expands to a
-sequence like \cc{tx := Begin(); f(tx); tx.Commit()} (some additional code
-handling aborts is omitted in this snippet).
-% At the specification
-% level, an atomically block represents a whole sequence of operations that
-% executes all at once, without crashes or other threads interrupting.
+The correctness for GoTxn relates a \emph{spec program} $p : \gooselayer{Txn}$
+that uses transactions to its implementation. These specification programs can
+invoke transactions, which we write $\atomically{\cc{f}}$ to represent a
+transaction running \cc{f}, which in turn might have calls to Read and Write
+from the GoTxn API. A specification program $p$ has an associated implementation
+program $\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, where we ``link''
+with the GoTxn code. Linking has two effects: first it expands
+$\atomically{\cc{f}}$ to a
+sequence like \cc{tx := Begin(); f(tx); tx.Commit()} (with some additional code
+handling aborts), and second it replaces calls to the Txn abstract Read and
+Write operations with the GoTxn implementations at the Disk abstraction layer.
 
 Refinement relates two programs in terms of their visible behavior, which we
-will use to connect the server loop at the disk layer to the transaction layer
-and finally to the Sys layer. For the purposes of this work, the visible
+will use to connect a program written at the transaction layer to its
+implementation at the disk layer.
+For the purposes of this work, the visible
 behavior is always network I/O, corresponding to receiving requests for the
 system or responding to them (for example, processing NFS requests). Regardless
 of the level of abstraction, each model of the server defines a trace of network
@@ -120,7 +100,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 %         specification only applies to safe programs.
 % \end{enumerate}
 
-The correctness of the transaction system is summarized by the following theorem:
+The correctness of the transaction system is expressed by the following theorem:
 
 \begin{theorem}[Program refinement]
   The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for
@@ -131,8 +111,7 @@ The correctness of the transaction system is summarized by the following theorem
   \label{thm:gotxn-program-refinement}
 \end{theorem}
 
-\Cref{thm:gotxn-program-refinement} is stated in Coq and has a fully mechanized proof in Perennial.
-What it says is that if a program is safe, the program linked with the
+What the theorem says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
 The definition of safety formalized in Coq requires that code within a
@@ -144,3 +123,5 @@ each object with a fixed size. Finally, safe programs can only \cc{Abort} or
 \cc{Commit} a given transaction once. The notion of safe program will be
 important when linking this proof with the Dafny proofs, since the transaction
 system's proof only applies to a safe caller.
+\Cref{thm:gotxn-program-refinement} is stated in Coq and has a fully mechanized
+proof in Perennial.
