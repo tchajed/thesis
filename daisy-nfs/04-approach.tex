@@ -42,7 +42,7 @@ directory is a partial map from file names
 (which are just bytes) to inode numbers. Note that \sys doesn't
 represent the file system as a tree but as a collection of
 links, which is sufficient to model all NFS operations, because
-NFS clients resolve pathnames.
+NFS clients resolve path names.
 
 % \mfk{the rest of this
 %   paragraph is lacking a clear narrative.}
@@ -55,9 +55,9 @@ The NFS state machine models each operation as a non-deterministic transition
 that answers when it is allowed for an operation to change the state from
 \cc{fs} to \cc{fs'} and return \cc{r}. The return value is always wrapped in a
 \cc{Result} type, which can be either \cc{Ok(v)} for a normal return or an error
-code for one of the errors defined in the standard. We systematically guarantee
+code for one of the errors defined in the standard. The file system systematically guarantees
 that the state is unchanged when an operation returns an error (though this is
-stronger than the text of the RFC); the transaction system makes this easy to
+stronger than what the RFC mandates); the transaction system makes this easy to
 achieve by aborting the whole transaction. For example,
 \cref{fig:getsz} shows the
 specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
@@ -86,14 +86,15 @@ There are four clauses in the specification. The first just says that this
 operation is read-only. The second is one possible error: if the server returns
 \cc{ErrBadHandle}, then \cc{ino} is not allocated. The third is a different
 error, which says this operation might return \cc{ErrIsDir} for directories.
-Finally the final case says that if the operation is successful, it returns the
+Finally the fourth clause says that if the operation is successful, it returns the
 length of the data in \cc{fs[ino]}. Dafny checks several consistency properties
-of this specification itself; for example, a use of \cc{fs[ino]} will not even
-compile if the specification does not earlier imply \cc{ino in fs}.
+of this specification itself; for example, a use of \cc{fs[ino]} only compiles
+if the specification earlier implies \cc{ino in fs}.
 
 We developed a state-machine model of the regular file and directory operations
 in NFS in this style, including specifying what certain errors
-signify. \Cref{fig:nfs} lists the entire NFS API and what parts we verified.
+signify. \Cref{fig:nfs} lists the entire NFS API and what parts are verified in
+DaisyNFS.
 
 \renewcommand{\check}{\textcolor{ForestGreen}{\checkmark}}
 \newcommand{\nope}{\textcolor{Maroon}{\ding{55}}}
@@ -132,7 +133,7 @@ specification. \sys also implements \cc{FSSTAT} to report total and free space,
 but it does not have a meaningful specification.
 
 \sys could support some of the remaining operations with some more effort.
-Symlinks are essentially a file that holds a path, which can be read with
+Symbolic links (symlinks) are essentially a file that holds a path, which can be read with
 \cc{READLINK}. \cc{MKNOD} similarly creates a new type of special file.
 Specifying these operations would require mostly mechanical changes to the
 specification to accommodate the new file types.
