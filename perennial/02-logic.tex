@@ -211,7 +211,12 @@ to be restored at the end).
 Perennial has to model a system crash and reboot. A crash is represented as
 another transition for a program to take, one which wipes in-memory state. The
 reboot is modeled by running a dedicated procedure that restores the storage
-system on boot, which we call a \emph{recovery procedure}.
+system on boot, which we call a \emph{recovery procedure}. So far, we have used
+Perennial for reasoning about systems that interact with a disk, a device with
+an interface for reading and writing blocks (assumed to be 4KB in our
+development). These disks might be a block device like \cc{/dev/sda1} in Linux,
+or can be a file hosted in another file system. The latter is useful for testing
+and performance experiments that run on an in-memory file hosted in tmpfs.
 
 A crash transition resets the heap to empty while preserving the disk state.
 Encoding the effect on the heap in separation logic is a bit tricky, since it would appear that
