@@ -1,10 +1,10 @@
-\sys is the first verified file system that has both concurrency and crash
+DaisyNFS is the first verified file system that has both concurrency and crash
 safety, but it adopts many ideas from previous verified storage systems,
 including some with concurrency. Our main contribution is an approach for
 combining verification efforts in different proof systems, which isolates
 concurrency reasoning to the transaction system. Prior work has also explored
 how to compose proofs across layers for modularity, to contain concurrency, or
-to cross between proof systems; we believe \sys advances this work by combining
+to cross between proof systems; we believe DaisyNFS advances this work by combining
 two software stacks of significant size and complexity.
 
 \paragraph{Other verified file systems}
@@ -13,11 +13,11 @@ two software stacks of significant size and complexity.
 %% only lines of proof appearing as intermediate specifications, but the
 %% infrastructure uses SMT solving directly and thus doesn't support
 %% ordinary program verification like Hoare logic, recursive data
-%% structures, and loop invariants, which \sys uses.
+%% structures, and loop invariants, which DaisyNFS uses.
 
 %% \mfk{in eval?} For example, in DFSQ, the file-system implementation on
 %% top of the journal is about 28,000 lines of combined code and
-%% proof. \sys is of comparable complexity in 2,500 lines of imperative
+%% proof. DaisyNFS is of comparable complexity in 2,500 lines of imperative
 %% Dafny code, which is lower-level than the Gallina language used in
 %% DFSCQ\@.
 
@@ -35,13 +35,13 @@ does not have any transaction system and implements the top-level
 file-system operations together with appropriate locking for
 concurrency control.
 
-%\paragraph{GoJournal} \sys's transaction system uses
+%\paragraph{GoJournal} DaisyNFS's transaction system uses
 %GoJournal~\cite{chajed:gojournal}. GoJournal also has a notion of transactions,
 %but the caller is required to use locks appropriately to guarantee concurrent
-%transactions do not access the same data. Instead of doing this manually, \sys extends GoJournal with
+%transactions do not access the same data. Instead of doing this manually, DaisyNFS extends GoJournal with
 %two-phase locking so that the file system code on top is automatically well-synchronized. Although verifying the two-phase locking requires
 %sophisticated reasoning (see~\cref{sec:txn-proof}), this separation
-%allows \sys to use Dafny for sequential reasoning and benefit from
+%allows DaisyNFS to use Dafny for sequential reasoning and benefit from
 %proof automation.
 
 %% The GoJournal paper presents a
@@ -92,13 +92,13 @@ CIVL~\cite{hawblitzel:civl}, CSPEC~\cite{chajed:cspec},
 Armada~\cite{lorch:armada}, Iris~\cite{jung:iris-jfp}, CCAL~\cite{gu:certikos-ccal},
 and FCSL~\cite{sergey:fcsl}, among many others. These frameworks use a range of
 methods, such as movers~\cite{lipton:movers} and concurrent separation
-logic~\cite{brookes:csl}. Here we focus on those that use techniques closely related to \sys:
+logic~\cite{brookes:csl}. Here we focus on those that use techniques closely related to DaisyNFS:
 
 % IronFleet~\cite{hawblitzel:ironfleet}.
 
-%% \sys has a similar idea in proving that code running on the transaction system
+%% DaisyNFS has a similar idea in proving that code running on the transaction system
 %% behaves as if the transactions execute atomically. However, instead of using movers,
-%% \sys uses Perennial's concurrent separation logic to show that the transaction system's
+%% DaisyNFS uses Perennial's concurrent separation logic to show that the transaction system's
 %% two-phase locking scheme ensures concurrent transactions access disjoint objects, and therefore do not interfere.
 %% % However, we do not use the
 %% % reduction proof technique directly, instead obtaining this property with a
@@ -114,7 +114,7 @@ IronFleet~\cite{hawblitzel:ironfleet} uses Dafny to reason about distributed
 system implementations, and VeriBetrKV~\cite{hance:veribetrkv} uses a similar
 approach for a sequential storage system. To justify sequential reasoning for
 each handler, these approaches use a \emph{reduction} argument, which is
-separately formalized in Dafny. The approach in \sys is more general because the
+separately formalized in Dafny. The approach in DaisyNFS is more general because the
 illusion of atomic execution comes from the transaction system implementation,
 rather than the nature of distributed execution. Rather than using only a
 reduction argument, we use a general-purpose program logic, which is important
@@ -127,14 +127,14 @@ their proof techniques to incorporate crash safety.
 
 % One difference is that IronFleet's
 % protocol reasoning does not involve reasoning about additional code, but only
-% the behavior of the lower-level handlers when run together; \sys combines a
+% the behavior of the lower-level handlers when run together; DaisyNFS combines a
 % proof about a library with a proof about a code that uses the library.
 
 % \paragraph{Concurrency and crash-safety reasoning} Two frameworks support a
 % combination of crash-safety and concurrency: fault-tolerant concurrent
 % separation logic (FTCSL)~\cite{ntzik:faults} and
 % Perennial~\cite{chajed:perennial,chajed:gojournal}. FTCSL was
-% only used to verify a transaction system on paper.  \sys uses
+% only used to verify a transaction system on paper.  DaisyNFS uses
 % Perennial to extend GoJournal with two-phase locking, and to verify
 % its correctness.
 
@@ -170,7 +170,7 @@ concurrent, crash-safe program.
 % concurrency between a key-value store and a disk.
 
 % In these approaches, the sequential code that is verified in Dafny is a method
-% that handles a single request from the network or storage system. In \sys in
+% that handles a single request from the network or storage system. In DaisyNFS in
 % contrast, the atomicity of transactions is due to the correctness of the entire
 % transaction system implementation. \tej{haven't figured out how to explain this}
 
@@ -195,7 +195,7 @@ and the expected behavior of NFS operations is well documented in
 RFCs.  FUSE is an alternative for implementing file systems in user
 space, but its operations have a less clear specification.
 
-To be conducive to verification, \sys is implemented differently than
+To be conducive to verification, DaisyNFS is implemented differently than
 many NFS servers; in particular using two-phase locking is not common
 practice.  Other user-level NFS servers are typically implemented on
 top of an existing file system, relying on the underlying file system
@@ -206,7 +206,7 @@ the file system and VFS layers perform locking.  WAFL~\cite{wafl:hitz}
 is NFS appliance that provides snapshots and logs NFS requests to
 NVRAM.  It has evolved its locking plan to obtain good
 parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
-are more complicated and have more features than \sys.
+are more complicated and have more features than DaisyNFS.
 
 % Think Global, Act Local: A Buffer Cache Design for Global Ordering
 % and Parallel Processing in the WAFL File System (ICPP)

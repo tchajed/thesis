@@ -68,12 +68,12 @@ using multiple transactions; a first transaction logically deletes a file, and
 then asynchronously the implementation can run transactions that recover space
 from the file but have no other visible effect.
 
-The verified artifact from this work is \sys, which implements a
+The verified artifact from this work is DaisyNFS, which implements a
 Network File System (NFS) server in Go on top of a bare disk and comes
 with a proof that clients observe that each operation follows the NFS
 specification as laid out in RFC 1813~\cite{RFC:1813}. Operations appear atomic
 despite concurrency and crashes. Clients can use the Linux or macOS
-NFS client to mount \sys like any other file system and interact with
+NFS client to mount DaisyNFS like any other file system and interact with
 it using the usual POSIX API.\@  As an end-to-end check that our
 formalization of NFS is accurate and the implementation is reasonably
 complete, we tested with both Linux and macOS clients running a
@@ -99,20 +99,20 @@ incremental development of DaisyNFS, which we elaborate on in
 % add features incrementally, including triply-indirect blocks, directories, and
 % efficient in-memory data structures. These features were important to get good
 % performance and support a range of applications. As some quantitative evidence
-% for simpler proofs, \sys's \sys's proof is about $2\times$ as many lines as its
+% for simpler proofs, DaisyNFS's DaisyNFS's proof is about $2\times$ as many lines as its
 % implementation, a rough measure of proof complexity. For comparison, this is
 % significantly lower than the overhead in our transaction system (about
 % $18\times$) and comparable to the proof:code ratio for the three prior systems
 % verified in Dafny, IronClad~\cite{hawblitzel:ironclad} with $4.8\times$,
 % IronFleet~\cite{hawblitzel:ironfleet} with $3.6\times$, and VeriBetrKV~\cite{hance:veribetrkv} with
 % $4\times$.\footnote{These numbers exclude refinement proofs in these systems
-% written on top of the implementation specs, since \sys does not have any
+% written on top of the implementation specs, since DaisyNFS does not have any
 % comparable proofs.}
 
 To evaluate DaisyNFS's performance, we compare it to that of the Linux NFS server
-exporting an ext4 file system. \sys achieves almost the same performance as
+exporting an ext4 file system. DaisyNFS achieves almost the same performance as
 Linux with the ext4 \cc{data=journal} option (which gives the same crash-safety
-guarantees as \sys), across a variety of benchmarks run on top of a fast NVMe
+guarantees as DaisyNFS), across a variety of benchmarks run on top of a fast NVMe
 drive. The comparable performance is due to the efficiency of GoJournal and
 adding little overhead in the file-system code (e.g., updating data structures
 in place to avoid copying). We do note that ext4's default \cc{data=ordered}

@@ -323,7 +323,7 @@ also argue how it fits into the forward simulation proof.
 Using the mechanized theorems, we can show that the overall system is correct,
 namely that the running code implements the abstract NFS dispatch loop:
 
-\begin{theorem}[\sys correctness]
+\begin{theorem}[DaisyNFS correctness]
   $\mathrm{link}(\sdfy, \txncode) \refines \snfs$. Initialization requires
   starting from an empty disk, then running the initialization implemented in
   Dafny. After that, the system boots by first recovering the transaction

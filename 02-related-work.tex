@@ -194,7 +194,7 @@ transaction systems.
 transaction concurrency control mechanisms in the PVS theorem prover. Their
 proof formalizes two-phase locking as an abstract protocol consisting of
 sequences of read, write, and locking operations, as opposed to a concrete
-implementation as in \sys. \citet{pollak-2PL} uses a variant of the
+implementation as in GoTxn. \citet{pollak-2PL} uses a variant of the
 CAP separation logic~\citep{dinsdale:cap} to give a pencil-and-paper
 proof of serializability for a two-phase locking implementation.
 
@@ -263,7 +263,7 @@ and the expected behavior of NFS operations is well documented in
 RFCs.  FUSE is an alternative for implementing file systems in user
 space, but its operations have a less clear specification.
 
-To be conducive to verification, \sys is implemented differently than
+To be conducive to verification, DaisyNFS is implemented differently than
 many NFS servers; in particular using two-phase locking is not common
 practice.  Other user-level NFS servers are typically implemented on
 top of an existing file system, relying on the underlying file system
@@ -274,6 +274,6 @@ the file system and VFS layers perform locking.  WAFL~\cite{wafl:hitz}
 is NFS appliance that provides snapshots and logs NFS requests to
 NVRAM.  It has evolved its locking plan to obtain good
 parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
-are more complicated and have more features than \sys.
+are more complicated and have more features than DaisyNFS.
 
 \resume

@@ -1,4 +1,4 @@
-\section{Specifying \sys}%
+\section{Specifying DaisyNFS}%
 \label{sec:daisy:spec}
 
 Specifying DaisyNFS takes two steps: first formalizing the NFS protocol, and
@@ -56,7 +56,7 @@ inode numbers to files, where a file can either be a regular file with
 bytes, or a directory. Both types of files have a number of attributes, storing
 metadata like the file's mode (permission bits) and modification time. A
 directory is a partial map from file names
-(which are just bytes) to inode numbers. Note that \sys doesn't
+(which are just bytes) to inode numbers. Note that DaisyNFS doesn't
 represent the file system as a tree but as a collection of
 links, which is sufficient to model all NFS operations, because
 NFS clients resolve path names.
@@ -65,7 +65,7 @@ NFS clients resolve path names.
 %   paragraph is lacking a clear narrative.}
 % In any case a
 % tree wouldn't be a sufficient state for NFS since modifying one file
-% affects any other hard links to the same file (note though that \sys
+% affects any other hard links to the same file (note though that DaisyNFS
 % does not currently support hard links).
 
 The NFS state machine models each operation as a non-deterministic transition
@@ -139,17 +139,17 @@ DaisyNFS. \tej{this part is a bit out-of-place in this subsection, consider rear
 
   \bottomrule
 \end{tabular}
-\caption{NFS API and which operations \sys supports and verifies.}
+\caption{NFS API and which operations DaisyNFS supports and verifies.}
 \label{fig:nfs}
 \end{figure}
 
-\sys implements \cc{FSINFO} and \cc{PATHCONF}, which give the client static
+DaisyNFS implements \cc{FSINFO} and \cc{PATHCONF}, which give the client static
 configuration information about the file system (for example, the maximum size
 of a write or the maximum path length). These return constants and thus have no
-specification. \sys also implements \cc{FSSTAT} to report total and free space,
+specification. DaisyNFS also implements \cc{FSSTAT} to report total and free space,
 but it does not have a meaningful specification.
 
-\sys could support some of the remaining operations with some more effort.
+DaisyNFS could support some of the remaining operations with some more effort.
 Symbolic links (symlinks) are essentially a file that holds a path, which can be read with
 \cc{READLINK}. \cc{MKNOD} similarly creates a new type of special file.
 Specifying these operations would require mostly mechanical changes to the
@@ -177,7 +177,7 @@ its link count drops to zero.
       & \cc{Read(a)}, \cc{Write(a, b)} & \\
 \bottomrule
 \end{tabular}
-\caption{API layers of \sys.}
+\caption{API layers of DaisyNFS.}
 \label{fig:layers}
 \end{figure}
 
@@ -188,7 +188,7 @@ is an intermediate layer Txn for the transaction system which is the abstraction
 on which the Dafny code is written and verified.
 
 Now we have enough to state the final DaisyNFS correctness theorem:
-\begin{theorem}[\sys correctness]
+\begin{theorem}[DaisyNFS correctness]
   $\mathrm{link}(\sdfy, \txncode) \refines \snfs$.%
   \label{thm:correctness}
 \end{theorem}

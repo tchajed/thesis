@@ -1,13 +1,13 @@
 \section{Evaluation}
 \label{sec:daisy:eval}
 
-In this section we evaluate \sys along the dimensions of performance,
+In this section we evaluate DaisyNFS along the dimensions of performance,
 correctness, and functionality.
 
 \subsection{Performance}
 \label{sec:eval:bench}
 
-To evaluate the performance of \sys, we ran three benchmarks: the LFS smallfile
+To evaluate the performance of DaisyNFS, we ran three benchmarks: the LFS smallfile
 and largefile benchmarks, and a development workload that consists of \cc{git
 clone} from a local repository followed by running \cc{make}. These are the same
 benchmarks used by DFSCQ~\cite{chen:dfscq} (a state-of-the art sequential
@@ -17,7 +17,7 @@ NFS server exporting an ext4 file system mounted with \cc{data=journal} mode.
 The NFS server lets us compare fairly since both go through the Linux NFS client
 and use the same underlying protocol. Using \cc{data=journal} forces all data to
 go through the journal and disables log-bypass writes, which ensures that
-ext4 and \sys both guarantee NFS RPCs are committed durably when they return. In
+ext4 and DaisyNFS both guarantee NFS RPCs are committed durably when they return. In
 \cc{data=ordered} mode Linux achieves better performance but can
 lose recently written data if the system crashes.
 
@@ -56,9 +56,9 @@ syncs it. The Linux NFS client buffers the entire append process until the final
 sync, at which point it issues the writes in many chunks in parallel. This
 benchmark is challenging to support efficiently because the writes at the NFS
 server do not come in order, so some are past the end of the file. The semantics
-of such a write are to fill the gap with zeros, but both \sys and Linux get good
+of such a write are to fill the gap with zeros, but both DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
-allocating a block. \sys gets comparable performance on this benchmark because
+allocating a block. DaisyNFS gets comparable performance on this benchmark because
 GoJournal is good at handling concurrent synchronous writes.
 
 DaisyNFS achieves good performance on the app workload, which consists of running
@@ -84,13 +84,13 @@ journal is committing to disk.
   \includegraphics{daisy-nfs/fig/scale.pdf}
   \caption{Combined throughput of the \cc{smallfile} microbenchmark running on
     an SSD while
-    varying the number of concurrent clients. \sys's performance scales with the
+    varying the number of concurrent clients. DaisyNFS's performance scales with the
     number of cores similar to ext4; both eventually saturate the disk and scale
     sub-linearly.}
   \label{fig:eval:scale}
 \end{figure}
 
-The results are shown in \cref{fig:eval:scale}. The graph shows that \sys
+The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server.
 DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
@@ -189,7 +189,7 @@ compatible.
 \label{fig:features}
 \end{figure}
 
-\sys was implemented and verified over the course of three months by
+DaisyNFS was implemented and verified over the course of three months by
 one of the authors, until it had support for enough of NFS to run. We
 added several features incrementally after the initial prototype
 worked, both to improve performance and to support more

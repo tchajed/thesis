@@ -15,7 +15,7 @@
   \label{fig:system}
 \end{figure}
 
-As shown in \cref{fig:system}, \sys is implemented in three layers:
+As shown in \cref{fig:system}, DaisyNFS is implemented in three layers:
 1) a dispatch loop that speaks the NFS wire protocol and calls the
 appropriate method for each operation; 2) a Dafny class that
 implements each method; and 3) a transaction system that applies the
@@ -28,7 +28,7 @@ third layer is directly written in Go and verified using Coq and
 Perennial.  By implementing the file system on top of the transaction
 system, we can implement each NFS method in Dafny as sequential code
 calling into a concurrent transaction system library. The NFS
-operations supported by \sys are listed in \cref{fig:nfs}.
+operations supported by DaisyNFS are listed in \cref{fig:nfs}.
 
 %% We focus on the
 %% design of the transaction system here, but the file system also has several

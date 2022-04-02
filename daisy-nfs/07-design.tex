@@ -3,7 +3,7 @@
 
 We follow the standard approach for verifying software in Dafny: each
 file-system operation is implemented as a method on a class and its
-specification is given using pre- and post-conditions. In \cref{sec:daisy:proof},
+specification is given using pre- and post-conditions. In \cref{sec:proof},
 we explained how the Dafny proof shows the code is a correct implementation of NFS in terms of sequential refinement. This
 section provides details about the file-system design and proof.
 
@@ -11,7 +11,7 @@ section provides details about the file-system design and proof.
 % updates to ghost state, assertions to assist the automated verification, and
 % calls to lemmas.
 
-\sys is implemented and verified in several layers of abstraction, depicted in
+DaisyNFS is implemented and verified in several layers of abstraction, depicted in
 \cref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
 lower layer as a field. The transaction system is an assumed interface in Dafny,
 while the complete server implements the NFS wire protocol and calls into the
@@ -56,7 +56,7 @@ have been natural even without verification.
 
 \subsection{Implementing the file system using transactions}
 
-The design of \sys is broadly similar to the file system in xv6~\cite{xv6},
+The design of DaisyNFS is broadly similar to the file system in xv6~\cite{xv6},
 as well as Yggdrasil~\cite{sigurbjarnarson:yggdrasil}, a verified sequential
 file system. We also adopt the recursive strategy for implementing and
 verifying indirect blocks from DFSCQ~\cite{akonradi-meng}; recursion simplifies
@@ -173,7 +173,7 @@ have been renamed concurrently.
 Freeing space becomes surprisingly tricky with large files. The problem is that
 a large-enough file may reference too many blocks to be
 freed in a single transaction.
-\sys handles freeing by removing a file from its directory and marking it free in
+DaisyNFS handles freeing by removing a file from its directory and marking it free in
 one transaction, and in separate transactions reclaiming the space it took by deallocating
 its blocks.
 
