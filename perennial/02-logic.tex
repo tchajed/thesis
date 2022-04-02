@@ -208,25 +208,36 @@ to be restored at the end).
 \section{Crash model}
 \label{sec:perennial:crash-model}
 
-\tej{say more in this section about crashes without talking about the logic}
+Perennial has to model a system crash and reboot. A crash is represented as
+another transition for a program to take, one which wipes in-memory state. The
+reboot is modeled by running a dedicated procedure that restores the storage
+system on boot, which we call a \emph{recovery procedure}.
 
-\resume
+A crash transition resets the heap to empty while preserving the disk state.
+Encoding the effect on the heap in separation logic is a bit tricky, since it would appear that
+assertions about in-memory pointers like $\ell \mapsto v$ need to be
+invalidated. The logic handles this by instead parameterizing all heap
+assertions and weakest preconditions with a \emph{generation number}. Across a
+crash, the generation number is incremented, so that old assertions are true but
+no longer work for loads and stores since they do not apply to the current heap.
+A class of assertions $\durable(P)$ only concern durable state like the disk, which in the
+logic means that $P$ is independent of the current generation number. These
+assertions are special in that they can be proven as the crash condition of the
+system and then used in the precondition of recovery, as described subsequently
+in \cref{sec:perennial:recovery}.
 
-A practical storage system handles crashes by restoring its in-memory state of
-the system. We call the procedure that runs after a crash on every reboot the
-system's \emph{recovery procedure}.
-
-The effect of a crash is to wipe memory. Encoding this in separation logic is a
-bit tricky, since it would appear that assertions about in-memory pointers like
-$\ell \mapsto v$ need to be invalidated. The logic handles this by instead
-parameterizing all heap assertions and weakest preconditions with a
-\emph{generation number}. Across a crash, the generation number is incremented,
-so that old assertions are true but no longer work for loads and stores since
-they do not apply to the current heap. A class of assertions $\durable(P)$ only
-concern durable state, which in the logic means that $P$ is independent of the
-current generation number. These assertions are special in that they can be
-proven as the crash condition of the system and then used in the precondition of
-recovery, as described subsequently in \cref{sec:perennial:recovery}.
+The Perennial logic, like the underlying Iris framework, is parameterized over a
+language and its semantics, which defines the crash transition. The
+language we generally work with is GooseLang, described in detail in
+\cref{ch:goose}. Our proofs so far with GooseLang use a simple crash model,
+where the heap is reset to an empty map and the disk is unchanged. This
+corresponds to a synchronous semantics, since it means that disk writes are
+immediately considered durable. Perennial also supports defining an asynchronous
+disk by modeling buffered writes and then non-deterministically choosing which
+buffered write is persistent at crash time, similar to the model in
+FSCQ~\cite{chen:fscq}. Because the crash transition is defined by the user, it
+is not necessary in Perennial to strictly partition the state into ephemeral and
+durable state.
 
 \section{Recovery reasoning}
 \label{sec:perennial:recovery}
