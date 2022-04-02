@@ -4,13 +4,10 @@
 At a high level, GoTxn makes transactions atomic. This chapter formalizes this
 intuitive definition in the form of \emph{program refinement}. Later in
 \cref{ch:daisy-nfs} we build upon this specification to show how it enables
-sequential reasoning.
-
-Before we can get to defining program refinement, we first set up
-\emph{refinement}, which is a relationship between a code and a specification.
-Abstractly, refinement from a code program to
-a specification says that the behaviors of the code are a subset of the
-behaviors of the specification.
+sequential reasoning. Program refinement is defined in terms of
+\emph{refinement}, which relates code to a specification. Abstractly, refinement
+from a code program to a specification says that the behaviors of the code are a
+subset of the behaviors of the specification.
 
 To define the specification, we need to be more precise about what a program is
 and how it executes to talk about the server loop program. We
@@ -44,7 +41,8 @@ Write operations with the GoTxn implementations at the Disk abstraction layer.
 
 Refinement relates two programs in terms of their visible behavior, which we
 will use to connect a program written at the transaction layer to its
-implementation at the disk layer.
+implementation at the disk layer. This notion of refinement also incorporates
+crashes into the outcomes of executing the program and gives it a corresponding specification.
 For the purposes of this work, the visible
 behavior is always network I/O, corresponding to receiving requests for the
 system or responding to them (for example, processing NFS requests). Regardless
