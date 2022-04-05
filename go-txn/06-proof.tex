@@ -1,10 +1,40 @@
 \section{Verifying GoTxn}
 \label{s:proof}
 
-GoTxn consists of multiple layers, as described in \cref{s:gotxn:impl}. This
-section provides some highlights of the complexity involved in GoTxn's
-implementation, along with the proof techniques required to formally
-reason about that complexity.
+This section outlines the proof of GoTxn's correctness, as described in
+\cref{sec:gotxn:spec}. The implementation consists of multiple layers stacked
+together, as described in \cref{sec:gotxn:impl}. The proof follows the same
+structure, and the most interesting aspect is the specifications for each layer.
+
+Recall that program refinement is a statement about an arbitrary program that
+uses transactions. It would be infeasible to directly reason the execution of an
+arbitrary use of GoTxn, including handling concurrently issued transactions and
+crashes at any time. Instead, the first step is to give a specification to the
+individual methods of the GoTxn API, such as \cc{Read}, \cc{Write}, and
+\cc{Commit}.
+
+The high-level strategy of the program refinement proof is to develop an
+invariant that connects the execution of a transaction to a prefix of the spec
+transactions. The idea for how this proof works is to first develop the right
+representation of the intermediate state of a transaction. This representation
+needs to capture buffered writes (which will eventually be durable at commt
+time), the old state of the logical disk (which it will revert to if the system
+crashes or the transaction aborts). It also needs to handle concurrent
+transactions --- the tricky thing here is that the logical disk can change in
+the middle of a transaction due to a concurrent committed transaction, so for
+example the model of aborts cannot be as simple as reverting to the disk at the
+start of the transaction.
+
+The specification for journaling solves these problems using an idea called
+lifting. We introduce a purely logical operation called \emph{lifting} that
+moves ownership
+
+The proof for GoTxn is split into two parts: we first give a spec to the methods
+of the journaling, and then connect this to the program refinement spec.
+
+\subsection{Specifying the journaling system}
+
+\tej{write this and replace lifting, \cref{sec:txn:lifting}}
 
 \subsection{Write-ahead logging (\scc{wal})}
 
