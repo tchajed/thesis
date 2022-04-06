@@ -11,28 +11,30 @@ uses transactions. It would be infeasible to directly reason the execution of an
 arbitrary use of GoTxn, including handling concurrently issued transactions and
 crashes at any time. Instead, the first step is to give a specification to the
 individual methods of the GoTxn API, such as \cc{Read}, \cc{Write}, and
-\cc{Commit}.
+\cc{Commit}. Next, the proof considers an arbitrary transaction, but this part
+of the proof can now invoke the specifications for each method.
 
-The high-level strategy of the program refinement proof is to develop an
-invariant that connects the execution of a transaction to a prefix of the spec
-transactions. The idea for how this proof works is to first develop the right
-representation of the intermediate state of a transaction. This representation
-needs to capture buffered writes (which will eventually be durable at commt
-time), the old state of the logical disk (which it will revert to if the system
-crashes or the transaction aborts). It also needs to handle concurrent
-transactions --- the tricky thing here is that the logical disk can change in
-the middle of a transaction due to a concurrent committed transaction, so for
-example the model of aborts cannot be as simple as reverting to the disk at the
-start of the transaction.
+The first step is to develop the right representation of the intermediate state
+of a transaction. This representation needs to capture buffered writes (which
+will eventually be durable at commit time) and the old values in the logical disk
+(which it will revert to if the system crashes or the transaction aborts). It
+also needs to handle concurrent transactions --- the tricky thing here is that
+the logical disk can change in the middle of a transaction due to a concurrent
+committed transaction, so for example the model of aborts cannot be as simple as
+reverting to the disk at the start of the transaction.
 
-The specification for journaling solves these problems using an idea called
-lifting. We introduce a purely logical operation called \emph{lifting} that
-moves ownership
+A new lifting-based specification for journaling solves these problems. We
+introduce a purely logical operation called \emph{lifting} that moves ownership
+of a subset of the logical, durable disk into each concurrently executing
+transaction. The transaction then operates freely on that part of the disk. This
+works because the proof can only lift disjoint parts of the disk, which is
+physically guaranteed by using a per-address lock in the \scc{txn} layer.
+Eventually the transaction finishes reading and writing, and when it commits any
+buffered changes can be merged into the global disk. Aborts are similarly
+modeled, returning ownership and merging back the old values of just the local
+disk.
 
-The proof for GoTxn is split into two parts: we first give a spec to the methods
-of the journaling, and then connect this to the program refinement spec.
-
-\subsection{Specifying the journaling system}
+\subsection{Lifting specification for journaling}
 
 \tej{write this and replace lifting, \cref{sec:txn:lifting}}
 
