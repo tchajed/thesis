@@ -4,7 +4,7 @@
 This section outlines the proof of GoTxn's correctness, as described in
 \cref{sec:gotxn:spec}. The implementation consists of multiple layers stacked
 together, as described in \cref{s:gotxn:impl}. The proof follows the same
-structure, and the most interesting aspect is the specifications for each layer.
+structure, and the most interesting aspect is the specification for each layer.
 
 Recall that program refinement is a statement about an arbitrary program that
 uses transactions. It would be infeasible to directly reason the execution of an
@@ -14,14 +14,15 @@ individual methods of the GoTxn API, such as \cc{Read}, \cc{Write}, and
 \cc{Commit}. Next, the proof considers an arbitrary transaction, but this part
 of the proof can now invoke the specifications for each method.
 
-The first step is to develop the right representation of the intermediate state
-of a transaction. This representation needs to capture buffered writes (which
-will eventually be durable at commit time) and the old values in the logical disk
-(which it will revert to if the system crashes or the transaction aborts). It
-also needs to handle concurrent transactions --- the tricky thing here is that
-the logical disk can change in the middle of a transaction due to a concurrent
-committed transaction, so for example the model of aborts cannot be as simple as
-reverting to the disk at the start of the transaction.
+In order to give a specification at the method level, we first
+develop the right representation of the intermediate state of a transaction.
+This representation needs to capture buffered writes (which will eventually be
+durable at commit time) and the old values in the logical disk (which it will
+revert to if the system crashes or the transaction aborts). It also needs to
+handle concurrent transactions --- the tricky thing here is that the logical
+disk can change in the middle of a transaction due to a concurrent committed
+transaction, so for example the model of aborts cannot be as simple as reverting
+to the disk at the start of the transaction.
 
 A new lifting-based specification for journaling solves these problems. We
 introduce a purely logical operation called \emph{lifting} that moves ownership
@@ -35,6 +36,38 @@ modeled, returning ownership and merging back the old values of just the local
 disk.
 
 \subsection{Lifting specification for journaling}
+
+Lifting is defined at an intermediate layer, \scc{jrnl} (for journaling), rather
+than for \scc{txn} which is the top-level API of GoTxn. Journaling uses what we
+call ``operations'' to distinguish them from ``transactions'' --- an operation
+supports reads and writes, and like a transaction can be committed atomically to
+disk, but the difference is that the caller is responsible for guaranteeing
+operations manipulate disjoint addresses.
+
+In the lifting specification, there is a global, logical disk representing the
+state of the journaling system, and within each ongoing operation there is a
+durable and operation-local view of the disk. The local views are both
+initialized from the global disk, and the operation-local view is like the disk
+view but also incorporates buffered writes. The durable views are disjoint, so
+that an address is either in the global disk or ``lifted'' into a particular
+operation. Disjointness is what guarantees that the views are really local and
+don't change due to concurrent threads.
+
+The lifting-based specification uses a logical concept of ownership to keep all
+of these views disjoint and consistent. Each view is expressed using ghost state
+in Iris, then the proof uses separation resources to express ownership over that
+ghost state; for a general introduction to the idea of
+ownership in separation logic, see \cref{sec:perennial:concurrency}. The
+journaling proof issues three types of resources, all per-address:
+$a \mapstoDisk o$, $a \mapstoOp o$, and $a \mapstoLftd o$. The first is the most
+straightforward: $a \mapstoDisk o$ asserts that the global durable disk has
+value $o$ at address $a$ (we use the metavariable $o$ since these addresses have
+objects that can be smaller than a block, such as a 128-byte inode value or even
+a single bit). In addition, $a \mapstoDisk o$ expresses ownership over the
+address $a$. The second resource, $a \mapstoOp o$, asserts ownership of the
+operation-local view associated with an in-memory operation $\mathit{op}$; it
+can mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
+buffered write with the value $o$ to address $a$.
 
 \tej{write this and replace lifting, \cref{sec:txn:lifting}}
 

@@ -88,6 +88,7 @@ the resources in the frame $F$.
 \end{figure}
 
 \subsection{Concurrency with Iris}
+\label{sec:perennial:concurrency}
 
 Iris generalizes separation logic to also reason about concurrency. A full
 explanation of the Iris logic is out-of-scope for the thesis; ``Iris from the
@@ -95,6 +96,8 @@ ground up''~\cite{jung:iris-jfp} is a comprehensive introduction while the
 original ``Iris 1.0'' paper~\cite{jung:iris-1} is a shorter introduction for a
 reader already familiar with separation logic. Two features of Iris are most
 relevant since they are used in the GoTxn proof: ghost state and invariants.
+
+\tej{add ownership to this section}
 
 Ghost state is a technique for reasoning about a program by augmenting its
 physical state (local variables and the heap) with some additional \emph{ghost

@@ -231,6 +231,9 @@ specified.
 \subsection{Crash and recovery reasoning}
 \label{sec:perennial:recovery-spec}
 
+\tej{this section is super long, would be good to separate out the exchanging
+  discussion (which is in the context of GoJournal anyway)}
+
 The strategy behind proving crash safety is to prove a theorem about running a
 whole system, restarting after every crash. For example, for DaisyNFS this
 theorem applies to the server's main loop that receives a message from the
@@ -405,36 +408,41 @@ ownership after a crash, associated with $\gamma'$; this ownership can also be
 exclusive, because the process destroys the old ownership and thus can only be
 performed once.
 
+\newcommand{\mapstoDisk}{\mapsto_d}
+\newcommand{\mapstoOp}{\mapsto_{\mathit{op}}}
+\newcommand{\mapstoLftd}{\mapsto_d^{\mathrm{lftd}}}
+\newcommand{\jrnlToken}[1]{\textlog{token}(#1)}
+
 To make this a bit more concrete, let us look at a part of the GoJournal lifting
 specification. GoJournal issues three related resources: the two more important
-ones are $a \mapsto_{d} o$ and $a \mapsto_{op} o$. Both represent exclusive
-access to address $a$. $a \mapsto_{d} o$ is a durable statement about the
-logical disk, while $a \mapsto_{op}$ gives the value at address $a$ from the
+ones are $a \mapstoDisk o$ and $a \mapstoOp o$. Both represent exclusive
+access to address $a$. $a \mapstoDisk o$ is a durable statement about the
+logical disk, while $a \mapstoOp o$ gives the value at address $a$ from the
 perspective of an in-progress operation $op$. The lifting-based specification
-gets its name from a logical ``lift'' operation that trades $a \mapsto_{d} o$
-for $a \mapsto_{op} o \sep a \mapsto_d^{\mathrm{lftd}} o$. This brings us to the
-third type of GoJournal resource, $a \mapsto_{d}^{\mathrm{lftd}} o$, which is
-almost identical to $a \mapsto_{d} o$ except that it has been lifted and thus
+gets its name from a logical ``lift'' operation that trades $a \mapstoDisk o$
+for $a \mapstoOp o \sep a \mapstoLftd o$. This brings us to the
+third type of GoJournal resource, $a \mapstoLftd o$, which is
+almost identical to $a \mapstoDisk o$ except that it has been lifted and thus
 cannot be lifted again.\footnote{In the implementation,
-$a \mapsto_{d}^{\mathrm{lftd}}$ is in the primitive resource. There is a
-resource $\textlog{token}(a)$ that gives the right to lift $a$. Then
-$a \mapsto_{d} o$ is simply defined to be
-$a \mapsto_{d}^{\mathrm{lftd}} o \sep \textlog{token}(a)$.} We can give
+$a \mapstoLftd o$ is the primitive resource. There is a
+resource $\jrnlToken{a}$ that gives the right to lift $a$. Then
+$a \mapstoDisk o$ is simply defined to be
+$a \mapstoLftd o \sep \jrnlToken{a}$.} We can give
 GoJournal's \cc{Commit} operation a
 (highly-simplified) specification like the following:
 %
 \begin{align*}
-  \hoareCV{a \mapsto_{d}^{\mathrm{lftd}} o \sep a \mapsto_{op} o'} %
+  \hoareCV{a \mapstoDisk o \sep a \mapstoOp o'} %
   {\mathit{op}.\cc{Commit}()}%
   {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
-  \mathrm{~then~} a \mapsto_{d} o' \mathrm{~else~} a \mapsto_{d} o}%
-  {a \mapsto_{d} o \lor a \mapsto_{d} o'}
+  \mathrm{~then~} a \mapstoDisk o' \mathrm{~else~} a \mapstoDisk o}%
+  {a \mapstoDisk o \lor a \mapstoDisk o'}
 \end{align*}
 
-In the non-error, non-crash return, the postcondition turns $a \mapsto_{op} o'$
-into a durable fact $a \mapsto_{d} o'$. If the system doesn't crash but the
+In the non-error, non-crash return, the postcondition turns $a \mapstoOp o'$
+into a durable fact $a \mapstoDisk o'$. If the system doesn't crash but the
 transaction fails (which happens if it is too large to fit in the circular
-buffer), then the caller gets back an unlifted disk fact $a \mapsto_{d} o$,
+buffer), then the caller gets back an unlifted disk fact $a \mapstoDisk o$,
 reflecting that the transaction did not affect the disk. In the case of a crash
 the specification promises to give one of these assertions, and which one
 depends on exactly when the crash occurs.
@@ -444,11 +452,11 @@ operation that modifies a single address, when in reality \cc{Commit}'s main pur
 is to atomically commit multiple addresses; a single address is enough to
 understand the proof issues involved. If the system doesn't crash, it is
 relatively straightforward to reverse the lifting process and restore full
-ownership of the disk values. $a \mapsto_{d} o'$ reflects that the commit
-actually succeeded in changing the disk value, while $a \mapsto_{d} o$ results
+ownership of the disk values. $a \mapstoDisk o'$ reflects that the commit
+actually succeeded in changing the disk value, while $a \mapstoDisk o$ results
 from aborting and throwing away buffered writes in $op$.
 
-On crash it is more difficult to show $a \mapsto_{d} o \lor a \mapsto_{d} o'$.
+On crash it is more difficult to show $a \mapstoDisk o \lor a \mapstoDisk o'$.
 The challenge is how to propagate whether or not the writes were made durable
 from the lower-level abstractions up to this proof; indeed the durability of
 this high-level operation depends on whether or not the lowest level of the
@@ -464,7 +472,7 @@ crash. On top of this exchanging, the journaling proof implements a fine-grained
 exchange of ownership over individual addresses.
 
 The actual implementation of exchanging uses a neat separation logic trick. To
-distinguish between $a \mapsto_{d} o$ in two different generations, we'll
+distinguish between $a \mapstoDisk o$ in two different generations, we'll
 annotate the resource with a $\gamma$. The exchanger for the journaling proof is
 defined in terms of facts like:
 \[
