@@ -155,7 +155,9 @@ $v$ (of any fixed type) and asserts ownership over a (positive) fraction $q$ of
 it --- any fraction $q < 1$ represents read-only access to the ghost variable,
 while full ownership $q = 1$ allows writing as well.
 Complete ownership $\ghostvar[1]{v}$ is common enough that we will also write it
-$\ghostvar{v}$, with no fraction. There are several rules for manipulating and
+$\ghostvar{v}$, with no fraction. The dashed box around this assertion emphasizes that this
+assertion is about ghost state and not about the heap, as in the points-to
+assertion $p \mapsto v$.  There are several rules for manipulating and
 using this fractional ghost state:
 
 \begin{mathpar}
@@ -178,9 +180,7 @@ using this fractional ghost state:
 
 The new notation $\upd P$ is an Iris \emph{update modality}. The assertion
 $\upd P$ expresses ownership of resources which could be used to become $P$ with
-some update to ghost state. The dashed box is intended to emphasize that this
-assertion is about ghost state and not about the heap, as in the points-to
-assertion $p \mapsto v$. As an example of proving an update modality,
+some update to ghost state. As an example of proving an update modality,
 \ruleref{frac-alloc} shows that starting with no assertions it is possible to
 allocate a new ghost variable $\gamma$ with value $v$ and complete ownership
 over it; this is analogous to how the Hoare triple for allocation has no

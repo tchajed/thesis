@@ -55,7 +55,7 @@ don't change due to concurrent threads.
 
 The lifting-based specification uses a logical concept of ownership to keep all
 of these views disjoint and consistent. Each view is expressed using ghost state
-in Iris, then the proof uses separation resources to express ownership over that
+in Iris, then the proof uses separation-logic resources to express ownership over that
 ghost state; for a general introduction to the idea of
 ownership in separation logic, see \cref{sec:perennial:concurrency}. The
 journaling proof issues three types of resources, all per-address:
@@ -68,6 +68,81 @@ address $a$. The second resource, $a \mapstoOp o$, asserts ownership of the
 operation-local view associated with an in-memory operation $\mathit{op}$; it
 can mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
 buffered write with the value $o$ to address $a$.
+
+The first step in using the journaling specification is to initialize the whole
+system. Initialization is somewhat complicated by some restrictions GoTxn places
+on how sub-block objects are used. The proof requires the caller to fix ahead of
+time (when the whole journaling system is initialized) what size the objects
+within each block is. Currently our proofs assume that objects are either a single bit, 128
+bytes, or a full block, but supporting an arbitrary power of two should be a
+straightforward extension. To initialize the system, the caller supplies a
+``schema'' which gives the size of every disk address (that is, every 4KB
+aligned address, not the journal's logical sub-block addresses); this enforces
+that all the objects within a block are of the same size, which also simplifies
+the proof.
+
+The journal's initialization is specified by giving the caller a lemma that
+transform ownership over the entire physical disk into the precondition for the
+journal's recovery procedure; from this point forward the usual crash and
+recovery reasoning in Perennial applies. For each offset $i$ and block size $k$, the initial ownership for that disk
+block is just all the objects within that block:
+\[
+  \operatorname{zeroObjects}(i, k) \defeq \bigast_{0 \leq k \times o < 4096} (i, k \times o) \mapstoDisk 0
+\]
+
+
+The initialization lemma creates resources for all of these initial objects,
+starting from an all-zero disk. The lemma takes a schema
+$\mathit{kinds}$ that maps disk addresses to block sizes and a disk size $s$;
+this schema is arbitrary but fixed at initialization time. We use
+$i \mapsto_{\mathrm{disk}} 0$ to denote ownership over a physical disk offset $i$
+(not to be confused by the $a \mapstoDisk o$ issued by the journaling proof).
+\begin{align*}
+  &513 \leq s \land {} \\
+  &\operatorname{dom}(\mathit{kinds}) = \{ i \mid 513 \leq i < s \} \land {} \\
+  &\bigast_{0 \leq i < s} i \mapsto_{\mathrm{disk}} 0 \wand {} \\
+  &\vs \cc{is_txn_crash_condition}(\mathit{kinds}) \sep {} \\
+  &\quad \bigast_{(i,k) \in \mathit{kinds}} \operatorname{zeroObjects}(i, k)
+\end{align*}
+
+Notice that this initialization is just a logical operation; the schema is not
+even required at runtime for the code. It creates \cc{is_txn_crash_condition},
+which is the precondition and crash condition for the transaction system's
+recovery procedure. The journal objects in this lemma's conclusion are initially
+fully owned by recovery, which then shares them with threads. The journaling
+system's proof does not impose how access to these resources is mediated; it
+simply requires exclusive access to an address in the form of a
+$a \mapstoDisk o$ resource. In practice, GoTxn mediates access to
+$a \mapstoDisk o$ by protecting it with a per-address lock. In our paper on the
+journaling system itself we wrote a proof of a simple file system where the
+locks were instead per inode, so that one lock protected more than one journal
+resource; see the GoJournal paper for details on that use
+case~\cite{chajed:gojournal}.
+
+The specification for \cc{Begin()} is straightforward, since the operation has
+not yet interacted with the disk:
+\hypertarget{tgt:begin-spec}{}
+%
+\begin{align*}
+  \hoareV{\TRUE}%
+  {\cc{Begin}()}%
+  {\Ret{op} \cc{is_op}(\mathit{op})}
+   %\tagH{BeginSpec}
+\end{align*}
+
+In order to interact with an address within an operation, the specification
+requires the caller to start with $a \mapstoDisk o$ and then \emph{lift} it to
+obtain an operation-local resource, where lifting is the following purely
+logical operation:
+\[
+  a \mapstoDisk o \vs a \mapstoOp o \sep a \mapstoLftd o
+\]
+
+Notice that the result of lifting is both an operation-local assertion and
+$a \mapstoLftd o$; this latter assertion is much like $a \mapstoDisk o$ in that
+it asserts the on-disk value of address $a$, but it cannot be lifted again. This
+is required for soundness; only one of $a \mapstoDisk o$ and $a \mapstoOp o$ is
+allowed for ownership to actually be exclusive.
 
 \resume
 
