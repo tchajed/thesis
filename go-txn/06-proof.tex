@@ -195,11 +195,54 @@ The wand says that if
 the caller returns ownership of $\cc{buf_obj}(\mathit{buf}, o)$, it can get back
 the $\cc{is_op}(\mathit{op})$ predicate. This allows the caller to use the
 buffer to read the data before continuing to read and write within the
-operation. The complete specification in GoJournal also supported modifying the
-object using the buffer~\cite{chajed:gojournal}, but GoTxn does not expose that
-feature.
+operation. The complete specification in GoJournal also supports modifying the
+object using the buffer returned by \cc{ReadBuf}~\cite{chajed:gojournal}, but
+GoTxn does not expose that feature.
 
-\resume
+The final method in the journaling API is \cc{Commit()}, which atomically
+persists all the writes buffered in the operation. The specification is based on
+two maps $m$ and $m'$ whose domains are the set of all addresses lifted into the
+operation. The first map $m$ gives the on-disk, pre-operation values while $m'$
+has the new values buffered in the operation.
+\begin{align*}
+  \hoareCV{ \begin{aligned}
+              &\dom(m) = \dom(m') \sep {} \\
+  &\left( \bigast_{(a,o) \in m} a \mapstoLftd o \right) \sep %
+  \left( \bigast_{(a,o') \in m'} a \mapstoOp o' \right)
+            \end{aligned}} %
+  {\mathit{op}.\cc{Commit}()}%
+  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
+  \mathrm{~then~} \bigast_{(a,o') \in m'} a \mapstoDisk o' \mathrm{~else~} %
+    \bigast_{(a,o) \in m} a \mapstoDisk o}%
+  {\left( \bigast_{(a,o) \in m} a \mapstoDisk o \right) \lor
+    \left( \bigast_{(a,o') \in m'} a \mapstoDisk o' \right) }
+\end{align*}
+
+The precondition in this specification requires ownership over a subset of the
+logical disk given by $\dom(m) = \dom(m')$, both its durable values and the
+operation-local view. If the system does not crash and returns
+$\mathit{ok} = \goosetrue$, \cc{Commit} returns ownership over the new values
+on disk. It returns full disk points-to assertions $a \mapstoDisk o'$ because
+these addresses are ``lowered'' so that subsequent operation can lift them
+again. If the commit aborts (which only happens if the transaction does not fit
+in memory), then the specification still returns full disk ownership albeit with
+the old values. The crash condition of the \cc{Commit} specification captures
+that even if the system crashes, it still returns ownership over the disk
+resources, with either the old or new values. Whether this disjunction goes to
+the left- or right-hand side depends on exactly when the system crashes; see
+\cref{sec:perennial:recovery-spec} for a discussion of how the proof handles
+this.
+
+It's a little easier to see the overall structure of \cc{Commit}'s specification
+if we specialize it to a single address (although the specification is powerful
+because it captures atomicity across multiple addresses):
+\begin{align*}
+  \hoareCV{a \mapstoLftd o \sep a \mapstoOp o'} %
+  {\mathit{op}.\cc{Commit}()}%
+  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
+  \mathrm{~then~} a \mapstoDisk o' \mathrm{~else~} a \mapstoDisk o}%
+  {a \mapstoDisk o \lor a \mapstoDisk o'}
+\end{align*}
 
 \subsection{Write-ahead logging (\scc{wal})}
 

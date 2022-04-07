@@ -432,7 +432,7 @@ GoJournal's \cc{Commit} operation a
 (highly-simplified) specification like the following:
 %
 \begin{align*}
-  \hoareCV{a \mapstoDisk o \sep a \mapstoOp o'} %
+  \hoareCV{a \mapstoLftd o \sep a \mapstoOp o'} %
   {\mathit{op}.\cc{Commit}()}%
   {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
   \mathrm{~then~} a \mapstoDisk o' \mathrm{~else~} a \mapstoDisk o}%
