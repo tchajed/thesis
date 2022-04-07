@@ -197,7 +197,7 @@ the $\cc{is_op}(\mathit{op})$ predicate. This allows the caller to use the
 buffer to read the data before continuing to read and write within the
 operation. The complete specification in GoJournal also supported modifying the
 object using the buffer~\cite{chajed:gojournal}, but GoTxn does not expose that
-capability.
+feature.
 
 \resume
 
@@ -214,7 +214,7 @@ A background logger thread moves multiwrites from an in-memory buffer to an
 on-disk log. To make this atomic, the logger first writes
 the contents of a multiwrite in a log entry, and then updates a designated header block to indicate
 the entry is complete. If a crash
-happens before the header is updated, none of the multwrite's updates
+happens before the header is updated, none of the multiwrite's updates
 are applied; if a crash happens after the header update, the multiwrite
 will be applied during recovery.
 Meanwhile, an installer thread applies entries in the log to the disk, clearing

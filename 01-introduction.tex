@@ -95,7 +95,7 @@ concurrent file system. Several contributions support this goal:
     way.
   \item GoTxn's \textbf{simulation-transfer theorem} captures how atomic
     transactions enable sequential reasoning for a system implemented on top
-    even though the systme is concurrent. This justifies using sequential proofs
+    even though the system is concurrent. This justifies using sequential proofs
     for the file system.
   \item \textbf{DaisyNFS} is a file system that uses GoTxn's transactions. The
     proof of its correctness uses Dafny, a
@@ -112,7 +112,7 @@ ext4 file system.
 \section{State of the art}
 
 Production file systems are generally validated by testing. While testing is
-indispensible for development, the nature of a file system makes it difficult to
+indispensable for development, the nature of a file system makes it difficult to
 catch all bugs with only testing. The fundamental difficulty is a high degree of
 non-determinism from two sources: crashes in the middle of execution, and
 concurrency in the implementation that is needed for good performance.

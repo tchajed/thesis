@@ -153,7 +153,7 @@ One of the most important features of Go to support is structs. Goose support
 for structs uses a form of \emph{shallow embedding} using a combination of
 Gallina (Coq's functional language) and GooseLang. Goose encodes
 higher-level primitives like field access on top of GooseLang primitives like
-tuples and continguous memory.
+tuples and contiguous memory.
 
 Struct types are represented using a combination of two Gallina types,
 $t \in \textdom{GooseType}$ gives the type of a struct, while
@@ -163,7 +163,7 @@ field names and their types. The definitions of these two types are given in
 but the translation does use the shape of a struct to determine how it is laid
 out in memory and to support pointers to individual fields. As an example of how
 approximate str are, it is sufficient to have a \goosekw{ptrT} type for
-all pointers; if a pointer to a struct is actually deferenced (or a pointer to a
+all pointers; if a pointer to a struct is actually dereferenced (or a pointer to a
 struct field), then the translation uses its type in Go to determine how that
 dereference should be implemented. Using types to represent struct shapes
 also makes the translation simpler, since the Goose implementation has

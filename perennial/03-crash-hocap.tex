@@ -330,7 +330,7 @@ latter two are low-level features of Perennial that we'll now introduce.
 The assertion $\cfupd{R}$ (``crash fancy update'') is similar to a view-shift
 $\TRUE \vs R$ in that it is a single-use update that produces the resources $R$.
 However, the ``crash'' part indicates that this update can only be fired after a
-crash, so it can be used to prove a crash condition but is otherwise unusuable.
+crash, so it can be used to prove a crash condition but is otherwise unusable.
 Practically speaking, having $\cfupd{R}$ in a precondition allows the user to
 \emph{cancel} $R$ from the proof's crash condition, as reflected in the
 following rule:
