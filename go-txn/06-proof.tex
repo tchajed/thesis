@@ -130,6 +130,14 @@ not yet interacted with the disk:
   {\Ret{op} \cc{is_op}(\mathit{op})}
    %\tagH{BeginSpec}
 \end{align*}
+The specification has a trivial precondition of $\TRUE$ and its postcondition
+returns an assertion \cc{is_op}, which says that $\mathit{op}$ is a valid
+\cc{*Op} object that represents a journaling operation.  (This is different from
+the \cc{*Txn} object that represents for a transaction, which has additional
+state to track locking.) The operation starts out with an empty operation-local
+view and ownership over no addresses; the ghost state for this operation's view
+is initialized by the proof of this theorem and represented as part of
+$\cc{is_op}(\mathit{op})$.
 
 In order to interact with an address within an operation, the specification
 requires the caller to start with $a \mapstoDisk o$ and then \emph{lift} it to
@@ -143,7 +151,53 @@ Notice that the result of lifting is both an operation-local assertion and
 $a \mapstoLftd o$; this latter assertion is much like $a \mapstoDisk o$ in that
 it asserts the on-disk value of address $a$, but it cannot be lifted again. This
 is required for soundness; only one of $a \mapstoDisk o$ and $a \mapstoOp o$ is
-allowed for ownership to actually be exclusive.
+allowed for ownership to actually be exclusive. Not shown is that lifting does
+also require $\cc{is_op}(\mathit{op})$ which reflects that the ghost state has
+been set up.
+
+The specification for \cc{OverWrite} describes the effect of writing to the
+local memory of a buffered journal operation:
+%
+\begin{align*}
+  \hoareV{\cc{is_op}(\mathit{op}) \sep a \mapstoOp o \sep \cc{buf_obj}(buf, o')}%
+        {\mathit{op}.\cc{OverWrite}(a, buf)}%
+        {\cc{is_op}(\mathit{op}) \sep a \mapstoOp o'}
+  %\tagH{OverWriteSpec}
+\end{align*}
+
+The precondition includes $\cc{buf_obj}(buf, o')$ to say that the in-memory
+buffer $buf$ encodes the object to be written $o'$.
+The \cc{is_op} predicate is both
+required and returned by the specification, which reflects the fact that
+\cc{OverWrite} operates on the in-memory and ghost state covered by
+this predicate.
+
+The specification for \cc{ReadBuf} is similar. \cc{ReadBuf}
+returns a buffer that points into the \cc{op} struct, so it has a more
+sophisticated spec:
+%
+\begin{align*}
+  \hoareV{\cc{is_op}(\mathit{op}) \sep a \mapsto_{\mathit{op}} o}%
+        {op.\cc{ReadBuf}(a)}%
+        {\Ret{buf}
+  \begin{aligned}
+  &\cc{buf_obj}(\mathit{buf}, o) \sep \phantom{} \\
+  &\quad( \cc{buf_obj}(\mathit{buf}, o) \wand \\
+  &\quad\quad \cc{is_op}(\mathit{op}) \sep a \mapsto_{\mathit{op}} o )
+    \end{aligned}}
+    %\tagH{ReadBufSpec}
+\end{align*}
+
+This states that, when \cc{ReadBuf} finishes, it returns a buffer $\mathit{buf}$
+and two resources: $\cc{buf_obj}(\mathit{buf}, o)$ says the buffer has the old
+object $o$, while the second is a separating implication or \emph{wand} $\wand$.
+The wand says that if
+the caller returns ownership of $\cc{buf_obj}(\mathit{buf}, o)$, it can get back
+the $\cc{is_op}(\mathit{op})$ predicate. This allows the caller to use the
+buffer to read the data before continuing to read and write within the
+operation. The complete specification in GoJournal also supported modifying the
+object using the buffer~\cite{chajed:gojournal}, but GoTxn does not expose that
+capability.
 
 \resume
 
