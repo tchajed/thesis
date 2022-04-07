@@ -336,10 +336,8 @@ GooseLang model of $s$ is a three-tuple, but for clarity this section will refer
 to its elements as $\ptr(s)$, $\len(s)$, and $\cap(s)$. The
 translation of \cc{s[i]} is essentially a (typed) load from
 $\ptr(s) + i$ (or undefined behavior if this offset is out-of-bounds).
-Similarly \cc{s[i] = x} stores to the same location. Goose
-translates Go's \cc{len(s)} directly to $\len(s)$. Go also supports
-accessing a slice's capacity, but this is rarely used and Goose does not
-support it.
+Similarly \cc{s[i] = x} stores to the same location. Goose translates Go's
+\cc{len(s)} directly to $\len(s)$ and $\cc{cap(s)}$ to $\cap(s)$.
 
 The Go \cc{append} operation is the most sophisticated to model. The
 behavior of \cc{append(s, x)} where \cc{s: []T} and
