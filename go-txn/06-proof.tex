@@ -36,6 +36,7 @@ modeled, returning ownership and merging back the old values of just the local
 disk.
 
 \subsection{Lifting specification for journaling}
+\label{sec:txn:lifting}
 
 Lifting is defined at an intermediate layer, \scc{jrnl} (for journaling), rather
 than for \scc{txn} which is the top-level API of GoTxn. Journaling uses what we
