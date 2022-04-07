@@ -70,6 +70,8 @@ operation-local view associated with an in-memory operation $\mathit{op}$; it
 can mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
 buffered write with the value $o$ to address $a$.
 
+\subsubsection{Initialization}
+
 The first step in using the journaling specification is to initialize the whole
 system. Initialization is somewhat complicated by some restrictions GoTxn places
 on how sub-block objects are used. The proof requires the caller to fix ahead of
@@ -119,6 +121,8 @@ journaling system itself we wrote a proof of a simple file system where the
 locks were instead per inode, so that one lock protected more than one journal
 resource; see the GoJournal paper for details on that use
 case~\cite{chajed:gojournal}.
+
+\subsubsection{Preparing operations}
 
 The specification for \cc{Begin()} is straightforward, since the operation has
 not yet interacted with the disk:
@@ -198,6 +202,8 @@ buffer to read the data before continuing to read and write within the
 operation. The complete specification in GoJournal also supports modifying the
 object using the buffer returned by \cc{ReadBuf}~\cite{chajed:gojournal}, but
 GoTxn does not expose that feature.
+
+\subsubsection{Commit}
 
 The final method in the journaling API is \cc{Commit()}, which atomically
 persists all the writes buffered in the operation. The specification is based on
