@@ -9,7 +9,7 @@ TEX_FILES := $(wildcard *.tex) \
                daisy-nfs/fig/*.tex) \
 	$(wildcard go-txn/*.tex \
                go-txn/fig/*.tex go-txn/tables/*.tex)
-DEPS := $(TEX_FILES) $(wildcard *.bib)
+DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard go-txn/code/*.go)
 
 default: thesis.pdf abstract.txt
 
