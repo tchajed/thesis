@@ -33,9 +33,12 @@ describing this ghost state.  For example, for the Txn layer, the assertion $\cc
 transaction system's state. In addition, there are \emph{thread points-to}
 assertions, written $j \thdmapsto \cc{e}$, which says that thread $j$ in the
 specification program is executing program $\cc{e}$. Perennial has rules
-for updating the ghost state by ``executing'' these ghost threads, such as:
-\[ (\cc{a} \txnmapsto b) \sep (j \thdmapsto \cc{Write(a, b')}) \vdash
-\cc{a} \txnmapsto b' \]
+for updating the ghost state by ``executing'' these ghost threads, such as the
+following view shift:
+\[
+  (\cc{a} \txnmapsto b) \sep (j \thdmapsto \cc{Write(a, b')}) \vs
+  \cc{a} \txnmapsto b'
+\]
 which updates the value stored at $\cc{a}$ as a result of a write.
 
 To establish the refinement, the proof engineer first defines a
@@ -46,47 +49,68 @@ and after each step of a program throughout the proof. Next, the proof engineer
 proves a Hoare triple for each operation $o$ of $\gooselayer{S}$ and its
 corresponding implementation $p_o$ in $\gooselayer{I}$:
 \[
-\hoare{(j \thdmapsto o) * \knowInv{}{I}}{p_o}{\lambda v.\, (j \thdmapsto v)}
+\hoare{(j \thdmapsto o) * \knowInv{}{I}}{p_o}{\Ret{v} (j \thdmapsto v)}
  \]
 Such a \emph{refinement triple} says that if a specification thread is executing
 $o$ and an implementation thread is running $p_o$, then the representation
 invariant $I$ is maintained and the value $v$ returned by running $p_o$ is a valid
-return value of operation $o$. Typically, in such proofs, a ghost execution rule
-is used at the linearization point of $p_o$, to mark
+return value of operation $o$. In the proof of this triple, the ghost execution
+rule above is used at the linearization point of $p_o$, to mark
 when the operation logically takes effect by executing $o$ in the ghost code.
 
 These refinement triples imply a refinement between programs in $\gooselayer{S}$
-and $\gooselayer{I}$. We prove refinement in Coq by applying the soundness
-theorem for the Perennial framework.
+and $\gooselayer{I}$. This is formally stated and proven in Coq, using the Perennial
+framework's soundness theorem.
 
 In the particular case of the transaction system, the key refinement triple to
 prove is for a block of code $f$ enclosed in transaction \cc{Begin} and
-\cc{Commit} operations.
-%$\operatorname{Atomically}$:
-%
-%\[
-%\hoareV{j \thdmapsto \operatorname{Atomically}(f) * \knowInv{}{I}}
-%      {C(\operatorname{Atomically}(f))}{v.\, j \thdmapsto v}
-%\]
-%
-%where $C$ is the translation function described in \cref{sec:soundness-thm1}.
+\cc{Commit} operations; for example the triple might look the following (for a
+particular transaction $f$ that copies from address 0 to 1):
+\[
+  \hoareV{ \left( j \thdmapsto %
+      \atomically{v \gets \mathit{Read}(0);\, \mathit{Write}(1, v)} %
+    \right) %
+    \sep \knowInv{}{I}}%
+  {\begin{aligned}
+&\cc{tx := Begin();} \\
+&\cc{v := tx.Read(0); tx.Write(1, v);} \\
+&\cc{tx.Commit()}
+\end{aligned}}%
+    {j \thdmapsto ()}
+\]
 The difficulty in proving this triple is that the linearization point is at the
 very end when the code calls \cc{Commit}, at which point the actual earlier
 execution of $f$ becomes visible to other threads. The proof must show that
-ghost-executing the specification's Atomically block at this point is valid by
+ghost-executing the specification's \cc{atomically} block at this point is valid by
 tracking the behavior of $f$.
 
 \tej{approximately here explain how the lock invariants are set up to protect
   the GoJournal disk resources and their crash invariants}
 
-To show this, our proof maintains a stronger invariant during a transaction's execution. As the transaction executes, we track the
-initial value of any objects accessed in a map $J$. The domain of this map
+To show this, our proof maintains a stronger invariant during a transaction's
+execution. As the transaction executes, we track the initial, on-disk value of any
+objects accessed in a map $J$. The domain of this map
 $\Sigma = \operatorname{dom}(J)$ is the \emph{footprint} of the transaction,
 which two-phase locking keeps locked during the transaction. The intuition
 behind the invariant is that if the transaction only depends on $J$, the
 transaction's execution can be delayed to take place atomically at the call to
 \cc{Commit} and its behavior will be the same since the subset of the journal
 $J$ is the same.
+
+The proof needs to reason about the two-phase locking concurrency control in
+order to use the journaling layer's lifting specification as part of this proof.
+Perennial has a crash-aware specification for locks, described in
+\cref{sec:perennial:wpc}, that allows us to reason about the per-address locks
+while also reasoning about crashes in the middle of a transaction. To use this
+specification, the proof defines a per-address lock invariant and crash
+invariant --- the lock invariant is a property that holds when the lock is
+acquired (and must be shown when it is released), while the crash invariant is a
+guarantee that also holds on crash. In the case of the two-phase locking code,
+both the lock and crash invariants for the lock associated with address $a$
+contain ownership of $\exists o, a \mapstoDisk o$, which gives the transaction
+the ability to lift address $a$ and read and write it with the journaling
+system's interface. The invariant has additional constraints to assert that the
+value $o$ is the same as the one in the transactional disk.
 
 More formally, the proof constructs a second simulation relation during the
 execution of a transaction $\cc{f}$.  Let $J$ be a map giving the values of each
@@ -97,7 +121,9 @@ that after $n$ steps of execution:
 %
 \begin{enumerate}
 
-\item The transaction holds the lock for every address $a \in \Sigma$.
+\item The transaction holds the lock for every address $a \in \Sigma$. The
+transaction also has ownership over $\bigast_{(a,o) \in J} a \mapstoLftd o$
+(which need to be returned on crash) and $\bigast_{(a,o') \in J' a \mapstoOp o'}$.
 
 \item Executing $n$ steps of $\cc{f}$ in \emph{any} starting state that has the same
   values as $J$ for the addresses in $\Sigma$ can lead to a state with values given
@@ -110,14 +136,13 @@ invariant ensures that the durable value of each address still match the values
 in $J$. The second part of the invariant means that even though other
 parts of the state outside of $\Sigma$ may have changed, those changes do not
 affect execution of $\cc{f}$. Thus, the ghost execution of $\cc{f}$ at this point will
-have the same behavior as the implementation. The existing spec from GoJournal
-for \cc{Commit} ensures that the durable values of objects in the footprint are
-atomically updated to match $J'$.
-
-\tej{We should be able to say more precisely now how the Commit spec is enough.
-This will also pull in some explanation of how crashes interact with
-refinement and how we are allowed to do some exchanging, not entirely sure how
-that works.}
+have the same behavior as the implementation. The transaction's invariant
+maintains ownership of the resources to use the journal's \cc{Commit}
+specification. The postcondition and crash condition of that specification
+return new disk points-to assertions consistent with either $J$ or $J'$ as
+appropriate. If the commit is successful, then the second part of the
+transaction system's invariant allows issuing a ghost-execution update to change
+the transactional disk and show that the transaction \cc{f} was correctly simulated.
 
 Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the
