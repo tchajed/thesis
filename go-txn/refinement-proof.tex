@@ -1,23 +1,32 @@
-% this continues the section that starts the GoJournal proof
-
+% subsection of GoTxn proof section
 \subsection{Refinement to atomic language}
-
-\tej{merge any useful changes from the DaisyNFS paper}
+\label{sec:txn:refinement}
 
 \newcommand{\txnmapsto}{\mapsto_{\cc{txn}}}
 \newcommand{\thdmapsto}{\Rightarrow}
 
-Recall that \cref{thm:gotxn-program-refinement} establishes a program refinement
-for programs written the Txn layer and Disk layer. That is, given a program
+Recall that \cref{thm:gotxn-program-refinement} is the overall correctness
+theorem for GoTxn. It says that the GoTxn implementation is a \emph{program
+refinement} between the Txn layer (with programs that use transactions) and the
+Disk layer (with an implementation that interacts with a disk).
+That is, given a program
 $p : \gooselayer{Txn}$, if the transaction operations of $p$ are linked with
 GoTxn (implemented in $\gooselayer{Disk}$), the implementation program's
 observable behaviors (from running on a disk) are a subset of the
-specification's behaviors (with high-level transaction-system operations).
+specification's behaviors (with high-level transaction-system operations, and in
+particular atomicity for transactions). The proof of this theorem leverages the
+journaling specification from \cref{sec:txn:lifting}, extending it to also
+reason about the concurrency control implemented with two-phase locking.
 
 In general, the Perennial framework supports proving refinements between a
 specification layer $\gooselayer{S}$ and an implementation layer $\gooselayer{I}$ by constructing
-a simulation between the specification and its implementation.  Following an
-approach developed by \citet{turon:caresl} and implemented in Perennial 1.0~\cite{chajed:perennial}, the execution of the specification
+a simulation between the specification and its implementation. The simulation is
+expressed in terms of refinement conditions that are written using the usual
+Perennial Hoare triples specifications (with pre- and postconditions),
+so that they can be proven using the full spectrum of techniques in Perennial.
+
+Following an
+approach developed by \citet{turon:caresl}, in a refinement proof in Perennial the execution of the specification
 program is represented by \emph{ghost state}. The logic then has assertions for
 describing this ghost state.  For example, for the Txn layer, the assertion $\cc{a}
 \txnmapsto b$ says that address $a$ contains the value $b$ in the ghost
@@ -67,6 +76,9 @@ execution of $f$ becomes visible to other threads. The proof must show that
 ghost-executing the specification's Atomically block at this point is valid by
 tracking the behavior of $f$.
 
+\tej{approximately here explain how the lock invariants are set up to protect
+  the GoJournal disk resources and their crash invariants}
+
 To show this, our proof maintains a stronger invariant during a transaction's execution. As the transaction executes, we track the
 initial value of any objects accessed in a map $J$. The domain of this map
 $\Sigma = \operatorname{dom}(J)$ is the \emph{footprint} of the transaction,
@@ -101,6 +113,11 @@ affect execution of $\cc{f}$. Thus, the ghost execution of $\cc{f}$ at this poin
 have the same behavior as the implementation. The existing spec from GoJournal
 for \cc{Commit} ensures that the durable values of objects in the footprint are
 atomically updated to match $J'$.
+
+\tej{We should be able to say more precisely now how the Commit spec is enough.
+This will also pull in some explanation of how crashes interact with
+refinement and how we are allowed to do some exchanging, not entirely sure how
+that works.}
 
 Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the

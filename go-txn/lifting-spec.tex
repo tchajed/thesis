@@ -1,3 +1,4 @@
+% subsection of GoTxn proof section
 \subsection{Lifting specification for journaling (\scc{jrnl})}
 \label{sec:txn:lifting}
 
@@ -5,8 +6,9 @@ Lifting is defined at an intermediate layer, \scc{jrnl} (for journaling), rather
 than for \scc{txn} which is the top-level API of GoTxn. Journaling uses what we
 call ``operations'' to distinguish them from ``transactions'' --- an operation
 supports reads and writes, and like a transaction can be committed atomically to
-disk, but the difference is that the caller is responsible for guaranteeing
-operations manipulate disjoint addresses.
+disk, but the difference is that the calling library is responsible for guaranteeing
+operations manipulate disjoint addresses. In the case of GoTxn, that caller is
+the two-phase locking code, whose proof is described in \cref{sec:txn:refinement}.
 
 In the lifting specification, there is a global, logical disk representing the
 state of the journaling system, and within each ongoing operation there is a
