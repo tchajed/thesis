@@ -311,7 +311,7 @@ the caller is guaranteed to see the correct object $o$.
 
 \tej{rewrite this section, need to explain the hard-to-linearize behavior}
 
-\cref{fig:walread} shows the implementation of \cc{Read} in the
+\Cref{fig:walread} shows the implementation of \cc{Read} in the
 \scc{wal} layer.  This implementation does not hold any lock for the
 duration of the read; instead, it uses a lock to check the in-memory state
 (consisting of updates between \cc{memStart} and \cc{memEnd}), and, if
