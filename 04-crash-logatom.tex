@@ -1,6 +1,3 @@
-\section{Specifying crash-safe libraries in Perennial}
-\label{sec:perennial:crash-hocap}
-
 On top of the Perennial logic, we developed a specification pattern to organize proofs
 of libraries and compose them. Of particular interest is a pattern for
 \emph{logically-atomic crash specifications}, which capture that a set of
@@ -11,7 +8,7 @@ buffer, a library used in GoTxn that has interesting crash safety and
 concurrency behavior. This library operates directly on top of the disk, so no
 background on GoTxn is needed to understand it.
 
-\subsection{Circular buffer API}
+\section{Circular buffer API}
 
 The circular buffer (``circ'' for short) is a fixed-size, \emph{on-disk} queue of
 updates, which are pairs of an address and a disk block. It is used to implement
@@ -103,7 +100,7 @@ caller only reads from the circular buffer if the system crashes, at which point
 recovery restores the previous state. During normal operation the caller keeps a
 separate in-memory cache of the entries in the circular buffer.
 
-\subsection{Circular buffer custom resources}
+\section{Circular buffer custom resources}
 
 Perennial, like Iris, has support for user-defined separation-logic resources.
 These are defined using lower-level mechanisms, but this section simply presents the
@@ -144,7 +141,7 @@ following custom separation-logic resources:
   bound.
 \end{itemize}
 
-\subsection[Specification for Append and TrimTill]{Specifications for \cc{Append} and \cc{TrimTill}}
+\section[Specification for Append and TrimTill]{Specifications for \cc{Append} and \cc{TrimTill}}
 
 Formally the way each operation is specified is using a style called
 higher-order concurrent abstract predicates (HOCAP)~\cite{svendsen:hocap,jacobs:modular-lin}. The basic idea is that the
@@ -228,7 +225,7 @@ the \cc{is_circular} predicate. The next
 section,~\ref{sec:perennial:recovery-spec}, details how crashes and recovery are
 specified.
 
-\subsection{Crash and recovery reasoning}
+\section{Crash and recovery reasoning}
 \label{sec:perennial:recovery-spec}
 
 \tej{this section is super long, would be good to separate out the exchanging
@@ -496,7 +493,7 @@ which is necessary since all the resources involved are exclusive.
 % straightforward case (durable values that are now proven to still be durable,
 % exchanger shows old lower bounds are still valid)
 
-\subsection{Summary}
+\section{Summary}
 
 The overall logically-atomic crash specification pattern has four components for
 every layer of the system:

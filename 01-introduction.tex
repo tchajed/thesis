@@ -363,14 +363,16 @@ complete description of Goose (the CoqPL paper~\cite{chajed:goose-coqpl} is both
 short and out-of-date), so this chapter is written to be readable without any of
 the other chapters.
 
-\Cref{ch:perennial} is an overview of Perennial. The examples in
-\cref{sec:perennial:crash-hocap} are taken from GoTxn, so they will also help
-explain how that proof works.
+\Cref{ch:perennial} is an overview of Perennial.
+
+\Cref{ch:crash-logatom} describes how to write logically atomic specifications
+that capture both concurrency and crash atomicity using Perennial. It uses an
+extended example from the GoTxn proof.
 
 \Cref{ch:txn} describes the GoTxn specification and proof. It incorporates the
 GoJournal paper~\cite{chajed:gojournal} and parts of the DaisyNFS
-paper~\cite{chajed:daisy-nfs}. This chapter does not require the understanding
-the Perennial chapter. An important part of GoTxn is its specification, which
+paper~\cite{chajed:daisy-nfs}. This chapter does not require the full
+Perennial or logical atomicity chapter. An important part of GoTxn is its specification, which
 enables the connection to Dafny.
 
 \Cref{ch:daisy-nfs} describes the design and proof of DaisyNFS.\@ This chapter
