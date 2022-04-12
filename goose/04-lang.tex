@@ -1,19 +1,12 @@
 \section{GooseLang syntax and semantics}%
 \label{sec:goose:lang}
 
-\newcommand{\goosedef}[1]{\mathsf{#1}}
-\newcommand{\goosekw}[1]{\ensuremath{\goosedef{\textcolor{blue}{#1}}}}
-% spacing for application
-\newcommand{\app}{\:}
 % any pure binary op
 \newcommand{\binop}{\circledcirc}
 % any pure unary op
 \newcommand{\unop}{\circleddash}
 
 \newcommand{\external}{\mathsf{\textcolor{red}{\langle External \rangle}}}
-
-\newcommand{\goosetrue}{\goosekw{true}}
-\newcommand{\goosefalse}{\goosekw{false}}
 
 \newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
   \goosekw{then} \app #2 \app \goosekw{else} \app #3}
@@ -23,9 +16,6 @@
 
 \newcommand{\reduces}{\rightsquigarrow}
 \newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
-
-\newcommand{\seq}{;\,}
-\newcommand{\defeq}{\triangleq}
 
 GooseLang is an effectful, untyped lambda calculus, with mutable references and
 concurrency. Defining the language involves defining a \emph{syntax} in the form

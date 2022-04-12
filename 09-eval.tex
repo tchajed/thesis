@@ -1,10 +1,7 @@
-\section{Evaluation}
-\label{sec:daisy:eval}
+In this chapter we evaluate DaisyNFS and GoTxn along the dimensions of
+performance, correctness, and functionality.
 
-In this section we evaluate DaisyNFS along the dimensions of performance,
-correctness, and functionality.
-
-\subsection{Performance}
+\section{Performance}
 \label{sec:eval:bench}
 
 To evaluate the performance of DaisyNFS, we ran three benchmarks: the LFS smallfile
@@ -68,7 +65,7 @@ system, so building it requires running the usual development tools---gcc, ld,
 ar---but also running dd to generate a kernel image. Builds take about 3s,
 which are reported as a throughput number so higher is better.
 
-\subsection{Scalability}
+\section{Scalability}
 \label{sec:eval:scale}
 
 DaisyNFS executes NFS operations concurrently to achieve better performance with
@@ -98,7 +95,7 @@ clients, comparable to the scalability of the Linux NFS server.
 DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
 installation of writes into disk blocks at commit time.
 
-\subsection{Testing the trusted code and spec}
+\section{Testing the trusted code and spec}
 
 For the NFS server to satisfy \cref{thm:correctness}, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
@@ -169,7 +166,7 @@ compatible.
 %not find any bugs, but we note that our fuzzing is limited to
 %single-threaded and crash-free behavior. \joe{I think we could cut this para now, or perhaps make it more focused by saying it's about testing the trusted boundary between Dafny and GoTxn. But I'm not quite sure it actually does test that?}
 
-\subsection{Incremental improvements}
+\section{Incremental improvements}
 \label{sec:eval:incremental}
 
 \begin{figure}
