@@ -36,7 +36,8 @@ clarity.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/bench.pdf}
-  \caption{Performance of Linux NFS and DaisyNFS for \cc{smallfile},
+  \caption[Performance for smallfile, largefile, and app benchmarks]%
+  {Performance of Linux NFS and DaisyNFS for \cc{smallfile},
     \cc{largefile}, and \cc{app} workloads, on an NVMe disk.
     DaisyNFS achieves comparable performance to ext4 in \cc{data=journal} mode.}
   \label{fig:eval:bench}
@@ -82,8 +83,9 @@ journal is committing to disk.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/scale.pdf}
-  \caption{Combined throughput of the \cc{smallfile} microbenchmark running on
-    an SSD while
+  \caption[Concurrent smallfile performance]%
+{Combined throughput of the \cc{smallfile} microbenchmark running on
+    an NVMe drive while
     varying the number of concurrent clients. DaisyNFS's performance scales with the
     number of cores similar to ext4; both eventually saturate the disk and scale
     sub-linearly.}

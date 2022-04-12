@@ -119,7 +119,7 @@ $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
   \input{daisy-nfs/fig/refinement-execs.tex}
   \end{center}
   \vspace{-\baselineskip}
-  \caption{One possible execution of DaisyNFS, receiving parallel LOOKUP and
+  \caption[One execution of DaisyNFS at its three abstraction levels]{One possible execution of DaisyNFS, receiving parallel LOOKUP and
     CREATE operations, at its three abstraction levels.
     Within an execution each row is a thread, and dashed arrows indicate
     context switches.
@@ -167,7 +167,8 @@ method CREATE(d_ino: uint64,
   %\caption{Dafny encoding}%
   %\label{fig:refinement:dafny}
 \end{subfigure}
-  \caption{Illustration of $\seqrefinement(i_{NFS})$ (left) and its encoding
+  \caption[Illustration of sequential refinement and its Dafny encoding]%
+  {Illustration of $\seqrefinement(i_{NFS})$ (left) and its encoding
 in Dafny $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ (right), for one particular operation.
 In the diagram, the solid parts are assumed, and the
 dashed parts must be shown to exist. The complete Dafny spec is more precise about
