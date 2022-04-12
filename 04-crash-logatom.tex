@@ -389,6 +389,8 @@ single-threaded.) Once the system starts running the invariant allows multiple
 threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
+\section{Exchanging resources}
+
 The final aspect of the logically-atomic specification pattern is the role of
 the exchanger, one of the conclusions of the post-recovery init theorem. The
 purpose of this predicate is to give the caller a way to, on crash, relate
@@ -398,7 +400,7 @@ are thrown away on crash and re-created during recovery; there are only two of
 them, so it easy enough to reconstruct them globally. In contrast, some
 resources are used locally by a thread and we would like a way to retain
 ownership across a crash, into that thread's crash condition. This is exactly
-what happens with GoJournal's lifting-based specification, explained in greater
+what happens with GoTxn's lifting-based specification for the journaling layer, explained in greater
 detail in \cref{sec:txn:lifting}. Exchanging gives threads a way to ``trade''
 ownership prior to a crash, associated with the old $\gamma$ instance, for
 ownership after a crash, associated with $\gamma'$; this ownership can also be
@@ -410,8 +412,8 @@ performed once.
 \newcommand{\mapstoLftd}{\mapsto_d^{\mathrm{lftd}}}
 \newcommand{\jrnlToken}[1]{\textlog{token}(#1)}
 
-To make this a bit more concrete, let us look at a part of the GoJournal lifting
-specification. GoJournal issues three related resources: the two more important
+To make this a bit more concrete, let us look at a part of the GoTxn lifting
+specification. This specification issues three related resources: the two more important
 ones are $a \mapstoDisk o$ and $a \mapstoOp o$. Both represent exclusive
 access to address $a$. $a \mapstoDisk o$ is a durable statement about the
 logical disk, while $a \mapstoOp o$ gives the value at address $a$ from the
@@ -425,7 +427,7 @@ $a \mapstoLftd o$ is the primitive resource. There is a
 resource $\jrnlToken{a}$ that gives the right to lift $a$. Then
 $a \mapstoDisk o$ is simply defined to be
 $a \mapstoLftd o \sep \jrnlToken{a}$.} We can give
-GoJournal's \cc{Commit} operation a
+the journal's \cc{Commit} operation a
 (highly-simplified) specification like the following:
 %
 \begin{align*}
