@@ -84,9 +84,6 @@ execution of $f$ becomes visible to other threads. The proof must show that
 ghost-executing the specification's \cc{atomically} block at this point is valid by
 tracking the behavior of $f$.
 
-\tej{approximately here explain how the lock invariants are set up to protect
-  the GoJournal disk resources and their crash invariants}
-
 To show this, our proof maintains a stronger invariant during a transaction's
 execution. As the transaction executes, we track the initial, on-disk value of any
 objects accessed in a map $J$. The domain of this map
@@ -122,9 +119,10 @@ that after $n$ steps of execution:
 \begin{enumerate}
 
 \item The transaction holds the lock for every address $a \in \Sigma$. The
-transaction has ownership over $\bigast_{(a,o) \in J} a \mapstoLftd o$ due to
-holding these locks and $\bigast_{(a,o') \in J'} a \mapstoOp o'$ from the
-buffered writes.
+transaction has ownership over $\bigast_{(a,o) \in J} a \mapstoLftd o$ and
+$\bigast_{(a,o') \in J'} a \mapstoOp o'$. These come from lifting the
+$a \mapstoDisk o$ assertion from each lock invariant, and then writing to update
+the operation-local points-to assertion.
 
 \item Executing $n$ steps of $\cc{f}$ in \emph{any} starting state that has the same
   values as $J$ for the addresses in $\Sigma$ can lead to a state with values given
@@ -132,7 +130,7 @@ buffered writes.
 
 \end{enumerate}
 %
-At the start of a commit, the locking described by the first part of the
+When the transaction is about to commit, the locking described by the first part of the
 invariant ensures that the durable value of each address still match the values
 in $J$. The second part of the invariant means that even though other
 parts of the state outside of $\Sigma$ may have changed, those changes do not

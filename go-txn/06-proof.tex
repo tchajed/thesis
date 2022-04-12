@@ -102,7 +102,7 @@ concurrent, synchronous multiwrites.
 
 
 \paragraph{Internal abstract state: logical log.}
-To prove the write-ahead log layer correct, \txn represents the
+To prove the write-ahead log layer correct, the proof represents the
 state of the write-ahead log as a logical list of multiwrites, as
 shown in \cref{fig:log}.  Multiwrites before \cc{memStart} have
 already been installed, and their log entries do not physically exist in memory or on disk.
@@ -121,7 +121,7 @@ and \cc{memEnd} are purely in-memory, and are eligible for absorption.
     \label{fig:log}
 \end{figure}
 
-This representation allows \txn to precisely specify how concurrent
+This representation allows the WAL's proof to precisely specify how concurrent
 operations modify this abstract state, and how the state changes on crash.
 For example, although the installer thread performs many disk writes to
 install multiwrites, its only effect on the abstract state is that it
@@ -155,9 +155,10 @@ this concurrency.
 
 
 \paragraph{Lock-free logging and installation.}
-For performance, \txn has dedicated threads that perform logging and
+For performance, GoTxn has dedicated threads that perform logging and
 installation.  However, these threads do not hold any locks while reading
-or writing to disk.  To allow these threads to run concurrently, \txn
+or writing to disk.  To allow these threads to run concurrently, the write-ahead
+log layer
 uses two separate header blocks, as shown in \cref{fig:physlog}.
 One header block (owned by the installer thread) stores the start of
 the on-disk log, and another header block (owned by the logger thread)
@@ -176,7 +177,7 @@ Although the logger and installer threads can perform lock-free disk
 writes, they must still coordinate with one another.  For example,
 the installer cannot run ahead of the logger thread, and the logger
 thread must coordinate with threads that are appending new multiwrites
-in memory. \txn's proof uses the notion of \emph{monotonic counters} to reason
+in memory. GoTxn's proof uses the notion of \emph{monotonic counters} to reason
 about the safety of the logger and installer's lock-free operations.
 
 The logger thread needs to check that \cc{memStart} is far enough along that the
@@ -195,7 +196,10 @@ logger position, which the proof demonstrates using a lower bound on
 \subsection{Logically atomic crash specifications}
 \label{s:proof:logatom}
 
-Throughout the \txn stack we specify internal layers using a transition-system
+\tej{make some tweaks to refer back to Perennial
+  chapter, which explains this more formally}
+
+Throughout the GoTxn stack we specify internal layers using a transition-system
 specification, such as the examples illustrated in \cref{fig:wal-spec} for
 the \scc{wal} layer. Perennial formalizes what it means for the code in a layer to
 implement a transition using Hoare triples in a style we call
