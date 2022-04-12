@@ -307,20 +307,19 @@ started) must agree on the part of the block storing $o$.  As a result,
 regardless of what block happened to be read,
 the caller is guaranteed to see the correct object $o$.
 
-\subsection{Lock-free reads in \scc{wal}}
-
-\tej{rewrite this section, need to explain the hard-to-linearize behavior}
+\subsection[Lock-free reads in WAL]{Lock-free reads in \scc{wal}}
 
 \Cref{fig:walread} shows the implementation of \cc{Read} in the
-\scc{wal} layer.  This implementation does not hold any lock for the
-duration of the read; instead, it uses a lock to check the in-memory state
-(consisting of updates between \cc{memStart} and \cc{memEnd}), and, if
+\scc{wal} layer.  This implementation is split into two parts. The first checks
+the in-memory state by consulting `l.memLog` under a lock, checking for any
+updates to the address being read between \cc{memStart} and \cc{memEnd}. If
 no in-memory updates match the address being read, \cc{Read} falls back
-to reading from the installed area on disk.  As a result, other threads
+to reading from the installed area on disk.  No lock is held across the whole
+operation, so other threads
 can run between the call to \cc{ReadMem()} and \cc{ReadInstalled()}.
-In particular, a thread running \scc{obj}'s \cc{Commit()} could write
+In particular, a thread could run \cc{Commit()}
 to the same block that another thread is reading, if the two threads
-are accessing different files, as shown in \cref{fig:txn-concur}.
+are accessing different parts of the same block, as shown in \cref{fig:txn-concur}.
 
 \begin{figure}[ht]
 \begin{minted}{go}
@@ -332,7 +331,7 @@ func (l *Wal) Read(a uint64) Block {
 
 func (l *Wal) ReadMem(a) (Block, bool) {
   l.Lock()
-  b, ok := l.memLog[a]
+  b, ok := l.memLog.get(a)
   l.Unlock()
   return b, ok
 }
@@ -345,25 +344,36 @@ func (l *Wal) ReadInstalled(a uint64) Block {
 \label{fig:walread}
 \end{figure}
 
-This poses a challenge in specifying the behavior of \cc{Read}, because
-there are two possible commit points: either during \cc{ReadMem()} or
-during \cc{ReadInstalled()} \tej{this is wrong --- the other commit point is
-part of another thread's commit. Suppose $a$ is written and then $b$, and $a$
-gets installed before the ReadInstalled runs. Then the value read is consistent
-with any point after $a$ was written but before $b$. We simplify the situation
-drastically by allowing ReadInstalled to return a non-deterministic value, so
-its linearization point is within its code.}.  Fortunately, the
-\scc{obj} layer maintains
-a strong invariant about all of the possible blocks that \cc{Read} could
-return (either from \cc{ReadMem()} or \cc{ReadInstalled()}.  As a result,
-\scc{wal}'s \cc{Read()} does not provide a single atomic specification;
-instead, it exposes both \cc{ReadMem()} and \cc{ReadInstalled()}, and
-\scc{obj}'s \cc{Read()} uses its strong invariant to reason about the
-result returned from either of the two read functions.
+There is a challenge in specifying the behavior of \cc{Read} because its commit
+point is not obvious. \tej{add a figure for this explanation} Consider a case
+where address $a$ is not in the in-memory log, so that the \cc{Read} operation
+falls back to \cc{ReadInstalled(a)}. If there is a concurrent write to address
+$a$, then there are two possibilities for the linearization point of the
+\cc{Read} call: it can either appear to occur before the concurrent write, if
+\cc{ReadInstalled(a)} returns the old value, or its linearization point might be
+after the write if the concurrent write is installed before
+\cc{ReadInstalled(a)} runs. Unfortunately the decision to linearize before
+\cc{ReadInstalled(a)} or at the point it runs \emph{depends on the future
+  behavior} of the system (the linearization point is before if there is no
+concurrent write that gets installed, and not otherwise).
 
-Formally, we believe that proving the \scc{wal} \cc{Read()} operation to
-be linearizable requires using \emph{prophecy variables}.  Perennial
+Instead of proving that \cc{Read} is atomic, we instead give atomic specifications to
+\cc{ReadMem()} and \cc{ReadInstalled()} individually. The write-ahead log's
+abstract state includes a lower bound on its installed point in order to
+describe \cc{ReadInstalled()} in isolation. The specification for \cc{ReadMem}
+on missing in the cache
+advances the installed lower bound enough to guarantee that there are no writes
+to that address after the new installed point. The specification for
+\cc{ReadInstalled()} can return any value the address has after the
+installed lower-bound. To reason about the combination of these operations, the
+\scc{obj} layer maintains a strong invariant about all the possible blocks that
+\cc{Read} could return from the installed point onward, and this is enough to
+reason about a block returned from either the cache or the installed data.
+
+Formally, we believe that it is possible to prove that the \scc{wal} \cc{Read()}
+operation is linearizable, but because of the future-dependence this
+will require using \emph{prophecy variables}.  Perennial
 does not support them, which forced us to adopt the non-atomic
 specification described above.  Recent results on prophecy variables
-in Iris~\cite{jung:prophecy} could be used to avoid such a non-atomic
-specification for the \scc{wal} \cc{Read()}.
+in Iris~\cite{jung:prophecy} could be used to avoid specifying
+\cc{ReadInstalled()} separately.
