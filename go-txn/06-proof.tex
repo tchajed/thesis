@@ -314,10 +314,10 @@ the caller is guaranteed to see the correct object $o$.
 \subsection[Lock-free reads in WAL]{Lock-free reads in \scc{wal}}
 
 \Cref{fig:walread} shows the implementation of \cc{Read} in the
-\scc{wal} layer.  This implementation is split into two parts. The first checks
-the in-memory state by consulting `l.memLog` under a lock, checking for any
+\scc{wal} layer.  This implementation is split into two parts. The first part checks
+the in-memory state by consulting \cc{l.memLog} under a lock, checking for any
 updates to the address being read between \cc{memStart} and \cc{memEnd}. If
-no in-memory updates match the address being read, \cc{Read} falls back
+no in-memory updates match the address being read, the second part of \cc{Read} falls back
 to reading from the installed area on disk.  No lock is held across the whole
 operation, so other threads
 can run between the call to \cc{ReadMem()} and \cc{ReadInstalled()}.
