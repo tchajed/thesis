@@ -140,20 +140,19 @@ metadata is corrupted --- for example, if a directory is moved by removing it
 from its original parent and then adding it to the new parent, interrupting this
 process might lose the directory and all of its contents.
 
-Concurrency adds complexity on top of implementing the file system as a
-crash-safe data structure. To get good performance, it is helpful to take
-advantage of multiple CPUs to prepare concurrent operations. One of the slowest
-parts of a file system is actually writing to stable storage, since writing to a
-disk is slower than writing to memory. An efficient file system can take
-advantage of concurrently-issued writes by coalescing them into a single write
-to the disk, improving the throughput of the system.
+To get good performance, it is helpful to take advantage of multiple CPUs to
+prepare concurrent operations. However, this concurrency adds complexity on top
+of implementing the file system as a crash-safe data structure. Concurrency and
+storage also interact, since an efficient file system will improve performance
+by taking advantage of concurrently-issued writes to combine multiple disk
+operations into one.
 
 With both crash safety and concurrency, there is a wide spectrum of guarantees
 the file system might make about what happens with concurrent operations and
-crashes. Informally we would like the system not to lose data, and we don't want
+crashes. The informal goal is for the system to never lose data, and we don't want
 an unlucky interleaving of concurrent threads to have broad consequences like a
-complete deadlock. Since this thesis is about using a proof to establish
-correctness, we need a formal definition of correctness to prove.
+complete deadlock. For the approach of this thesis, we need a more formal
+definition of correctness to prove that the system meets.
 
 Applications and users can have different expectations for what guarantees the
 file system makes. We chose to implement the strongest guarantee for concurrency
@@ -281,7 +280,7 @@ implements the NFS protocol.
 In order to connect the file system's sequential proofs to its concurrent
 execution, we prove a general theorem about the transaction system's
 implementation. The starting point is the idea of a \emph{simulation} proof,
-which shows that a system like the file-system transactions correct implement an
+which shows that a system like the file-system transactions correctly implement an
 abstract specification like the NFS protocol transitions. The GoTxn
 \emph{simulation-transfer theorem} shows that for any system implemented using
 transactions with a sequential simulation proof, the concurrent system running
