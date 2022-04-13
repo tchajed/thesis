@@ -182,8 +182,6 @@ does not appear to have atomically durable writes. If one thread writes, another
 thread can concurrently read the buffered value before it is flushed, but a
 crash immediately afterward will lose the write and revert to the old value.
 
-\tej{add more discussion about bugs?}
-
 \section{Approach}
 
 What does it mean to give a machine checked, formal proof of a system? At a high
