@@ -1,52 +1,27 @@
-DaisyNFS draws on several lines of research. This chapter both explains the
-research DaisyNFS directly builds upon and other work solving similar problems.
+While verifying programs is an old idea, going back at least to Floyd and
+Hoare's work in the late 1960s~\cite{floyd:meanings,hoare:logic}, prior to this
+thesis (in 2015) there was almost no work on reasoning about a program's
+execution in the presence of a crash, let alone the combination of concurrency
+and crashes. The full pipeline of systems verification is also quite new:
+connecting the formal reasoning to executable programs, carrying out the proofs
+on a computer with machine-checked proofs, and scaling up the techniques to
+systems with sizeable implementations.
 
-\section{The Flashix file system}
+The Perennial framework for reasoning about crashes and concurrency draws on two
+lines of research: sequential crash safety verification and concurrency
+verification, described in
+\cref{sec:rel:crashes,sec:rel:concurrency,sec:rel:crashes-concurrency}. DaisyNFS
+draws from two other lines of prior work, on verified transactions and file
+systems, described in \cref{sec:rel:verified-fs,sec:rel:verified-txn}.
 
-The Flashix project deserves special attention since it also develops a verified
-concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
-Flashix targets flash storage, a lower-level storage technology than the drives
-that DaisyNFS targets. The project has different goals around concurrency,
-extending a sequential verified file system with limited concurrency. Flashix
-has an idiosyncratic approach to reasoning about concurrency and crashes
-specific to their file-system design, as opposed to Perennial's general
-reasoning principles. Flashix is implemented using abstract data types in a
-high-level language; a code generator transforms this code into executable C,
-but this process is both not verified and has difficulty producing the most
-efficient code using in-place updates.
+The most closely related work is Flashix, another verified concurrent and
+crash-safe file system. \Cref{sec:rel:flashix} compares the two systems'
+contributions and results. Finally, \cref{sec:rel:txn} discuss some related work
+on using transactions as part of a file system.
 
-While Flashix does have mechanized proofs, the approaches for both concurrency
-and crash safety are layered on top in such a way that the top-level
-specification and proof are not entirely within the proof assistant. Perennial
-on the other hand formalizes the complete specification down to a simple
-semantics for crashes and concurrency. Flashix also effectively has crash
-reasoning throughout the system, whereas DaisyNFS factors out this reasoning to
-GoTxn and then layers sequential proofs on top.
 
-The Flashix project found that components in the stack intertwine due to the
-realism of the system; modularity helped but the interfaces still had many
-dependencies. We had a similar experience within the transaction system, where
-performance constrained the APIs of internal layers and forced us to export
-complicated APIs. GoTxn was perhaps trickier than the components of Flashix
-because we model code at a lower level of abstraction, so even issues like
-concurrency and memory safety show up in each interface. We were inspired to
-develop the DaisyNFS design to get truly sequential reasoning by the pain in
-verifying GoTxn, and found modularity and clean abstractions much easier once
-code ran within a transaction.
-
-Where it lacks in generality, Flashix does make up for in verifying a taller
-storage stack than DaisyNFS. Flash storage has a more limited API than a
-standard drive --- in particular flash blocks must be completely erased before
-being reused. A flash file system works around this limitation with \emph{garbage
-collection}, where occasionally the system identifies a mostly-unused block,
-moves its valid data elsewhere, and then erases it to reclaim space. This is
-implemented by maintaining a logical-to-physical block mapping, similar to
-virtual memory. DaisyNFS does not require any of this code. We do generally run
-on SSDs which internally use flash blocks and themselves implement garbage
-collection and a logical block mapping so that they can support overwriting data
-in-place.
-
-\section{Crash-safety foundations}
+\section{Foundations for verifying sequential crash safety}
+\label{sec:rel:crashes}
 
 There are a variety of foundational tools for reasoning about crash safety,
 largely for sequential systems.
@@ -108,9 +83,11 @@ carry out a refinement proof in the style of Argosy, which is similar to the
 specification style in VeriBetrKV and Yggdrasil, but because it is connected to
 concurrent reasoning the proof techniques are more sophisticated.
 
-\section{Concurrency foundations}
+\section{Foundations for verifying concurrent programs}
+\label{sec:rel:concurrency}
 
-There are a number of approaches proposed to verifying concurrent programs. It
+There are a number of approaches proposed to verifying concurrent programs, and
+Iris in particular is the basis for Perennial. It
 would be hard to do justice to the historical development of concurrency
 reasoning. Looking at approaches that are actively used in research and
 connected to executable implementation, two broad strategies are commonly used:
@@ -167,23 +144,31 @@ Iris had not typically been used for reasoning about executable code (though
 projects like RefinedC~\cite{sammler:refinedc} and our own work on Goose are
 changing that).
 
-\section{Crash safety and concurrency}
+\section{Reasoning about crashes and concurrency}
+\label{sec:rel:crashes-concurrency}
 
-Program logics other than Perennial
-have been developed for formal reasoning about concurrent, crash-safe systems.
-Fault-Tolerant Concurrent Separation Logic (FTCSL)~\cite{ntzik:faults} extends
-the Views~\cite{dinsdale:views} concurrency logic to incorporate crash-safety.
-POG~\cite{raad:pog} is a program logic for reasoning about the interaction of
-x86-TSO weak-memory consistency and non-volatile memory.  Neither logic has a
-mechanism for modular proofs of layers, which we found essential to scale
-verification to a file system. Both are restricted to pen-and-paper proofs,
-whereas Perennial has machine-checked proofs. In the case of x86-TSO with
-persistence, merely defining the semantics at the ISA level was a line of
-research work leading up to POG~\cite{raad:px86,raad:px86-extended}. A similar
-semantics effort defines the semantics of ext4 under crashes, but without an
-accompanying program logic~\cite{kokologiannakis:persevere}.
+Program logics other than Perennial have been developed for formal reasoning
+about concurrent, crash-safe systems. Fault-Tolerant Concurrent Separation Logic
+(FTCSL)~\cite{ntzik:faults} extends the Views~\cite{dinsdale:views} concurrency
+logic to incorporate crash-safety. POG~\cite{raad:pog} is a program logic for
+reasoning about the interaction of x86-TSO weak-memory consistency and
+non-volatile memory. Both of these logics are only defined on paper, and do not
+support mechanized proof. Perennial goes beyond their reasoning principles: it
+includes ownership reasoning and its interaction with crashes, and a style of
+logically atomic crash specifications for modularly specifying libraries and
+composing their proofs. FTCSL and POG have no mechanism of modular proofs of
+layers, which we found essential to scale verification to a file system.
 
-\section{Transaction systems}
+In the case of x86-TSO with persistence, merely defining the semantics at the
+ISA level was a line of research work leading up to
+POG~\cite{raad:px86,raad:px86-extended}. A similar semantics effort defines the
+semantics of ext4 under crashes, but without an accompanying program
+logic~\cite{kokologiannakis:persevere}. It would be an interesting direction for
+future work to combine the persistency semantics of x86 with Perennial, to
+verify libraries that use non-volatile memory.
+
+\section{Verified transaction systems}
+\label{sec:rel:verified-txn}
 
 As far as we know, GoTxn is the first transaction system that makes data durable
 and has a verified implementation. There is much related work on verifying
@@ -221,33 +206,28 @@ write-ahead logging protocol that was verified (with a pen-and-paper proof) in
 FTCSL~\cite{ntzik:faults}; it is more sophisticated than GoTxn's write-ahead log
 in that it can both undo and redo operations.
 
-\tej{talk about jbd2}
+An important but unverified journaling system is jbd2, the ``journaling block
+device'' that underpins ext3 and ext4 in Linux. The design of jbd2 is broadly
+similar to that of GoTxn's journaling layer; GoTxn goes one step further and
+also has automatic locking for transactions. One difference in the interfaces of
+GoTxn and jbd2 is that in jbd2, transactions can reserve space ahead of time.
+This has the benefit that a transaction can start writing to the journal on disk
+while it is being prepared, potentially improving performance, but it also means
+that a concurrent transaction must wait for all previously started transactions
+to finish before becoming persistent, since a journaled operation can only be
+logically completed when all prior operations are finished. This is a reasonable
+tradeoff for a file system since transactions are generally short-lived, but it
+sacrifices a bit of tail latency when an operation must be persisted, for
+example when an application issues an \cc{fsync()}.
 
-\section{Related to DaisyNFS}
+\section{Verified file systems}
+\label{sec:rel:verified-fs}
 
 The Dafny side of DaisyNFS is a new implementation but its design and aspects of
 the proof strategy were inspired by other verified file systems like
 DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
 in Konradi's master's thesis~\cite{akonradi-meng}) and
 Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
-
-Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
-in its API, but without formal verification. Its logging design is based on
-multi-version concurrency control (MVCC) rather than our use of pessimistic
-locking. The Isotope paper develops a file system called IsoFS and two
-persistent key-value stores; GoTxn is in principle also suitable to implement a
-key-value store, but we have only used it in combination with DaisyNFS.\@ Isotope
-is similar to DaisyNFS: it factors out isolation and atomicity to a transaction
-system, making it simpler to implement a correct file system. Unlike GoTxn and
-DaisyNFS, Isotope is still prone to subtle concurrency bugs in the transaction
-system and bugs in the IsoFS code, whereas we use this split design to verify
-both the transaction system and file-system code. One value of GoTxn is to
-simply be more precise about what the transaction API does; Isotope has two
-additional APIs to help tune the system, a \cc{mark_accessed} call to enable
-sub-block concurrency and a \cc{please_cache} call that improves performance. It
-seems the calling code must call \cc{mark_accessed} correctly for safety,
-whereas the latter is only an optimization, but the precise requirements and
-guarantees of Isotope are not clearly laid out.
 
 AtomFS~\cite{zou:atomfs} is a verified, concurrent file system, but its
 implementation does not store data durably. The proof structure is quite
@@ -258,10 +238,62 @@ reasoning; unlike separation logic, the basic specification in this logic is a
 refinement statement that relates an implementation to a (simpler) specification
 program.
 
-We chose to verify an NFS server because it is widely used in practice
-and the expected behavior of NFS operations is well documented in
-RFCs.  FUSE is an alternative for implementing file systems in user
-space, but its operations have a less clear specification.
+We chose to verify an NFS server because it is widely used in practice and the
+expected behavior of NFS operations is well documented in RFCs. FUSE is an
+alternative for implementing file systems in user space that was used for the
+verified file systems mentioned above, but its operations have a less clear
+specification. FUSE also increases the trusted code to include both the FUSE
+kernel component and the user-space library that connects the implementation to
+the kernel.
+
+\section{The Flashix file system}
+\label{sec:rel:flashix}
+
+The Flashix project deserves special attention since it also develops a verified
+concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
+Flashix targets flash storage, a lower-level storage technology than the drives
+that DaisyNFS targets. The project has different goals around concurrency,
+extending a sequential verified file system with limited concurrency. Flashix
+has an idiosyncratic approach to reasoning about concurrency and crashes
+specific to their file-system design, as opposed to Perennial's general
+reasoning principles. Flashix is implemented using abstract data types in a
+high-level language; a code generator transforms this code into executable C,
+but this process is both not verified and has difficulty producing the most
+efficient code using in-place updates.
+
+While Flashix does have mechanized proofs, the approaches for both concurrency
+and crash safety are layered on top in such a way that the top-level
+specification and proof are not entirely within the proof assistant. Perennial
+on the other hand formalizes the complete specification down to a simple
+semantics for crashes and concurrency. Flashix also effectively has crash
+reasoning throughout the system, whereas DaisyNFS factors out this reasoning to
+GoTxn and then layers sequential proofs on top.
+
+The Flashix project found that components in the stack intertwine due to the
+realism of the system; modularity helped but the interfaces still had many
+dependencies. We had a similar experience within the transaction system, where
+performance constrained the APIs of internal layers and forced us to export
+complicated APIs. GoTxn was perhaps trickier than the components of Flashix
+because we model code at a lower level of abstraction, so even issues like
+concurrency and memory safety show up in each interface. We were inspired to
+develop the DaisyNFS design to get truly sequential reasoning from the
+experience of working in Perennial compared to automated verification in \fstar
+and Dafny, and found modularity and clean abstractions much easier once
+code ran within a transaction.
+
+Where it lacks in generality, Flashix does make up for in verifying a taller
+storage stack than DaisyNFS. Flash storage has a more limited API than a
+standard drive --- in particular flash blocks must be completely erased before
+being reused. A flash file system works around this limitation with \emph{garbage
+collection}, where occasionally the system identifies a mostly-unused block,
+moves its valid data elsewhere, and then erases it to reclaim space. This is
+implemented by maintaining a logical-to-physical block mapping, similar to
+virtual memory. DaisyNFS does not require any of this code, since we run on
+devices that internally implement these features.
+
+
+\section{Transactions to simplify system design}
+\label{sec:rel:txn}
 
 To be conducive to verification, DaisyNFS is implemented differently than
 many NFS servers; in particular using two-phase locking is not common
@@ -276,4 +308,23 @@ NVRAM.  It has evolved its locking plan to obtain good
 parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
 are more complicated and have more features than DaisyNFS.
 
-\resume
+Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
+in its API, but without formal verification, which was used to implement a file
+system called IsoFS. Its logging design is based on
+multi-version concurrency control (MVCC) rather than our use of pessimistic
+locking. The Isotope paper uses Isotope not only for the IsoFS file system but
+also two persistent key-value stores. While GoTxn is in principle also suitable to implement a
+key-value store, we have so far only used it in combination with DaisyNFS.\@
+
+IsoFS has a similar design to DaisyNFS: it factors out isolation and atomicity to the transaction
+system, making it easy to handle crashes and concurrency. Unlike GoTxn and
+DaisyNFS, Isotope is still prone to subtle concurrency bugs in the transaction
+system and bugs in the IsoFS code, whereas we use this split design to verify
+both the transaction system and file-system code. One value of GoTxn is to
+simply be more precise about what the transaction API does; Isotope has two
+additional APIs to help tune the system, a \cc{mark_accessed} call to enable
+sub-block concurrency and a \cc{please_cache} call that improves performance.
+From its description, it appears
+that the calling code must call \cc{mark_accessed} correctly for safety,
+whereas the latter is only an optimization, but the precise requirements and
+guarantees of Isotope are not clearly laid out.
