@@ -171,30 +171,22 @@
 % https://tex.stackexchange.com/questions/52697/automated-lists-for-todos-in-latex-document
 \newcounter{todo}
 \newcommand\todo[1]{\refstepcounter{todo}\textcolor{red}{#1}\addcontentsline{tod}{subsection}{\thetodo.~#1}}%
-\newcommand{\tej}[1]{\textcolor{red}{\textbf{Tej:}} \todo{#1}}
-
 \makeatletter
-\newcommand\todoname{todo}
-\newcommand\listtodoname{List of TODOs}
 \newcommand\listoftodos{%
-  \section*{\listtodoname}\@starttoc{tod}}
+  \section*{List of TODOs}\@starttoc{tod}}
 \makeatother
+
+\newcommand{\tej}[1]{\textcolor{red}{\textbf{Tej:}} \todo{#1}}
 
 % a command to indicate current editing progress
 \newcommand{\resume}{
   \begin{center}
     \color{set2}
-    \hrule
-    \vspace{1pt}
-    \hrule
-    \hrule
+    \hrule \vspace{1pt} \hrule \hrule
     \vspace{10pt}
     \textbf{This section is not yet complete.}
     \vspace{10pt}
-    \hrule
-    \hrule
-    \vspace{1pt}
-    \hrule
+    \hrule \hrule \vspace{1pt} \hrule
   \end{center}
 }
 

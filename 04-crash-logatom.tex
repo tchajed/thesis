@@ -228,9 +228,6 @@ specified.
 \section{Crash and recovery reasoning}
 \label{sec:perennial:recovery-spec}
 
-\tej{this section is super long, would be good to separate out the exchanging
-  discussion (which is in the context of GoJournal anyway)}
-
 The strategy behind proving crash safety is to prove a theorem about running a
 whole system, restarting after every crash. For example, for DaisyNFS this
 theorem applies to the server's main loop that receives a message from the

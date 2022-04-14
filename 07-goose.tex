@@ -44,7 +44,7 @@ Named return values are recommended to document return parameters, and sometimes
 simplify and clarify the body of a function.\footnote{See the description in
 \href{https://go.dev/doc/effective_go\#named-results}{Effective Go}.} However, in
 general they are quite subtle, due to interaction with \cc{defer} statements and
-concurrency \tej{cite PLDI 2022 paper}. One source of difficulty is that the
+concurrency~\cite{chabbi:golang-races}. One source of difficulty is that the
 return values are treated like local variables declared at the top of the
 function, and it is easy to accidentally have races on these variables if they
 are accessed concurrently.
