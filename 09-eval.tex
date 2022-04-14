@@ -137,6 +137,7 @@ that RENAME should only overwrite when the source and destination are
 compatible.
 
 \begin{figure}
+  \begin{center}
   \begin{tabular}{@{}p{8cm}p{2.7cm}@{}}
     \toprule
     \textbf{Bug} & \textbf{Why?} \\
@@ -153,6 +154,7 @@ compatible.
     RENAME allows overwrite where spec does not & Specification \\
     \bottomrule
   \end{tabular}
+  \end{center}
   \caption{Bugs found by testing at the NFS protocol level.}
   \label{fig:daisynfs-bugs}
 \end{figure}
@@ -169,6 +171,7 @@ compatible.
 \label{sec:eval:incremental}
 
 \begin{figure}
+\begin{center}
 \begin{tabular}{lrr}
   \toprule
   \textbf{Feature} & \textbf{Time} & \textbf{Lines} \\
@@ -179,6 +182,7 @@ compatible.
   Freeing space (\cref{sec:dafny:freeing}) & 3 days & 1400\\
   \bottomrule
 \end{tabular}
+\end{center}
 \caption{Incremental improvements were implemented quickly and without much
   code (which includes both implementation and proof).}
 \label{fig:features}
