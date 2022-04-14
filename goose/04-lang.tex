@@ -208,7 +208,11 @@ $\goosekw{AllocN}$ which more generally allocates $n$ contiguous pointers. The
 initial value of 0 is the ``zero value'' of the \cc{uint64} type, a promise made
 by Go.
 
-\tej{add an example involving CmpXchg, or forward reference locks}
+The $\goosekw{CmpXchg}$ operation in GooseLang is special in that it is not
+directly exposed by the translator. It is used to model locks, since it is the
+only way to safely coordinate threads in GooseLang. \Cref{sec:goose:locks}
+explains how locks are modeled, including the implementation of the lock model
+that uses $\goosekw{CmpXchg}$.
 
 The Goose syntax includes an $\external$ alternative. The language, both syntax
 and semantics, are parameterized over an external interface of operations, for
@@ -279,7 +283,19 @@ the second context). Once both are values, the pure reduction for binary
 operators will apply. The result is a left-to-right evaluation order for binary
 operators.
 
-\tej{describe concurrency and atomicity here}
+The relation $\reduces$, both the head-step reduction and threadpool reduction,
+define what is assumed to be atomic in GooseLang. The semantics allows any of
+the concurrent threads in the threadpool $\mathcal{E}$ to execute (due to
+\ruleref{context-reduce}), but when that thread takes a step, it executes an
+entire head-step reduction atomically. For example, this is what makes
+$\goosekw{CmpXchg}(\ell, v_1, v_2)$ an atomic compare and exchange; in the same
+reduction step it can both read \emph{and} set single location $h(\ell)$, which
+other operations do not do.
+
+Atomicity is also important for the disk. The fact that $\goosekw{DiskWrite}$
+take a single transition in the semantics is what makes the disk atomic on
+crash, since a crash also stops the system only between the reduction steps of
+the semantics.
 
 \begin{figure}[ht]
   \textbf{Disk operations}
