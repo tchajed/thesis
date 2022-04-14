@@ -24,8 +24,9 @@ in separation logic are those for the load and store operations:
 
   \hoare{\ell \mapsto v_0}{\ell \gets v}{\ell \mapsto v}
 \end{mathpar}
-
 The specification for load uses $\Ret{v}$ to specify what the return value is.
+Stores also execute to a value, but since it is the GooseLang unit value we omit
+it in the specification.
 
 The specifications in this section can be appreciated with only basic
 familiarity with sequential separation logic. The model of pointers does handle
@@ -34,6 +35,17 @@ some subtleties related to concurrency, but as explained in
 None of the reasoning principles for Goose are specific to crash safety. All of these
 specifications are actually proven in the Perennial logic and thus can be used
 as part of concurrency and crash safety proofs, as we did for GoTxn.
+
+The Goose translator converts each function in the Go source to a Coq definition
+of an analogous function in GooseLang. A call to a function \cc{foo} in the Go
+code is translated to the \cc{foo} Coq declaration in GooseLang. As mentioned in
+later in \cref{sec:goose:limitations}, this does have some limitations,
+especially that it does not attempt to model recursion.
+
+Each struct declaration in Go is translated to a Coq definition that declares
+the struct fields, which is used by the GooseLang struct model (described in
+detail in \cref{sec:goose:structs}). Top-level constants are translated in a
+similar way to a Go function.
 
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
@@ -92,12 +104,13 @@ share memory with an invariant and must mediate access with a lock,
 which transfers ownership of the $\ell \mapsto v$ for multiple execution
 steps.
 
-\subsection{Locks}
+\subsection{Locks and condition variables}%
+\label{sec:goose:locks}
 
 \newcommand{\Acquire}{\goosedef{Acquire}}
 \newcommand{\CAS}{\goosedef{CAS}}
 
-As is typical in Goose, locks are not built-in to GooseLang but modeled
+As is typical in Goose, locks (Go's \cc{(*sync.Mutex)} type) are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
 only synchronization primitive, implementing them requires shared
 concurrent access, which ordinary pointers do not have in GooseLang.
@@ -141,7 +154,26 @@ lock mediates access to this ownership, handing it out when the lock is acquired
 and requiring it back when the lock is released. GooseLang has a proof that this
 specification holds for the spin-lock implementation given above.
 
+Goose also supports Go's condition variables. As is standard, the idea is that
+there is some ``condition'' associated with each condition variable; one thread
+calls \cc{Signal()} or \cc{Broadcast()} when that condition is true, and another
+thread calls \cc{Wait()} to wait for the condition to become true. The condition
+variable is associated with a mutex in Go, which must be held to call
+\cc{Wait()}. It will be released and then re-acquired when the thread is
+signalled, but before the waiting thread wakes up other threads can wake up and
+potentially invalidate the condition (the code must therefore call \cc{Wait()}
+in a loop, waiting for the condition to be true afterward).
+
+Because condition variables provide few guarantees, the GooseLang model is
+simply that \cc{Wait()} release and then acquires the lock associated with the
+condition variable. \cc{Signal()} in reality affects the scheduling of
+\cc{Wait()} calls. Go condition variables actually do provide a stronger
+guarantee than in some other systems that \cc{Wait()} will only return if
+\emph{some} thread has issued a \cc{Signal()}, but we did not attempt to model
+or use this for reasoning purposes.
+
 \subsection{Structs}
+\label{sec:goose:structs}
 
 \newidentmacro{LoadTyped}
 \newidentmacro{StoreTyped}
@@ -162,7 +194,7 @@ field names and their types. The definitions of these two types are given in
 \cref{fig:goose:types}. The exact types are not important in the semantics,
 but the translation does use the shape of a struct to determine how it is laid
 out in memory and to support pointers to individual fields. As an example of how
-approximate str are, it is sufficient to have a \goosekw{ptrT} type for
+approximate these types are, it is sufficient to have a \goosekw{ptrT} type for
 all pointers; if a pointer to a struct is actually dereferenced (or a pointer to a
 struct field), then the translation uses its type in Go to determine how that
 dereference should be implemented. Using types to represent struct shapes
@@ -189,7 +221,7 @@ the Go type checker.
 \label{fig:goose:types}
 \end{figure}
 
-First Goose needs to model handle struct values. A struct value is represented as a tuple
+First Goose needs to model struct values. A struct value is represented as a tuple
 of its fields. The definition of the struct gives an ordering of the fields.
 This is enough to construct a struct from its fields and to access a field by
 name. Here the shallow embedding comes in: struct declarations are translated to

@@ -17,7 +17,6 @@ relate to the specifics of Go.
 \input{goose/02-related.tex}
 \input{goose/03-overview.tex}
 \input{goose/04-lang.tex}
-\input{goose/05-features.tex}
 \input{goose/06-reasoning.tex}
 \input{goose/07-testing.tex}
 
@@ -30,6 +29,17 @@ were not necessary for our implementation, and rather than channels the code
 verified in this thesis
 use mutexes and condition variables for more low-level control over
 synchronization.
+
+Control flow is slightly tricky since a Go function is translated
+to a single GooseLang expression that should evaluate to the function's
+return value. Goose supports many specific patterns, especially common
+cases like early returns inside \cc{if} statements and loops with
+\cc{break} and \cc{continue}, but more complex control flow ---
+particularly returning from within a loop --- is not supported. It would be
+easiest to express general control flow in continuation-passing style (in which
+every GooseLang takes a continuation, and calling this continuation corresponds
+to returning from the function in Go), but this
+would complicate every specification and the translation of function calls.
 
 Goose do not support Go's \cc{defer} statement. It would be nice to support some
 common and simple patterns, particularly for unlocking, by translating
