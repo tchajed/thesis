@@ -1,4 +1,4 @@
-personal_ws-1.1 en 440 
+personal_ws-1.1 en 451 
 APIs
 AST
 Addr
@@ -75,6 +75,7 @@ HC
 HOCAP
 HOL
 Hoare
+Hoare's
 ISA
 InitCircular
 IronFleet
@@ -127,6 +128,8 @@ RPC
 RPCs
 ReadBit
 ReadBuf
+ReadInstalled
+ReadMem
 RecoverCircular
 RefinedC
 RunSystem
@@ -162,6 +165,7 @@ VST
 Vec
 VeriBetrKV
 WAFL
+WAL's
 WPs
 WebAssembly
 WriteBit
@@ -277,6 +281,7 @@ invariants
 isCrashLock
 isLock
 jbd
+journaled
 journaling
 jrnl
 lang
@@ -286,7 +291,9 @@ ld
 lemma's
 len
 lftd
+linearizable
 linearization
+linearize
 linkcolor
 linux
 liveness
@@ -318,11 +325,13 @@ metavariable
 microbenchmark
 mkdir
 modularity
+modularly
 mohsen
 monotonicity
 multiwrite
 multiwrite's
 multiwrites
+mutex
 mutexes
 namespaces
 nativeType
@@ -344,6 +353,7 @@ parameterization
 parameterizing
 pdftitle
 performant
+persistency
 physlog
 plainnat
 pollak
@@ -407,6 +417,7 @@ threadpool
 threadpools
 tmp
 tmpfs
+tod
 todo
 toolchain
 trFS

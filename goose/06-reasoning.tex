@@ -160,7 +160,7 @@ calls \cc{Signal()} or \cc{Broadcast()} when that condition is true, and another
 thread calls \cc{Wait()} to wait for the condition to become true. The condition
 variable is associated with a mutex in Go, which must be held to call
 \cc{Wait()}. It will be released and then re-acquired when the thread is
-signalled, but before the waiting thread wakes up other threads can wake up and
+signaled, but before the waiting thread wakes up other threads can wake up and
 potentially invalidate the condition (the code must therefore call \cc{Wait()}
 in a loop, waiting for the condition to be true afterward).
 
