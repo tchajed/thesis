@@ -1,17 +1,15 @@
 \section{Conclusion}
 \label{sec:gotxn:concl}
 
-\txn is the first concurrent crash-safe journaling
-system with a machine-checked proof, built on top of the Perennial 2.0 framework.
-\txn uses Perennial's techniques, including lifting and crash framing, to
-carry over the atomic benefits of journaling to its formal specification.
-This enables storage applications to use mostly crash-free reasoning in
-their proofs.  For example, in the verified \simplenfs server, only \simplenfsCrashLOC{}
-lines of code, out of \simplenfsLOC{}, required crash reasoning.  \txn is sophisticated
-enough to implement a functional (but unverified) NFSv3 server, \gnfs, that achieves
-90\% of the performance of a Linux ext4 NFSv3 server on a development workload, far higher than
-any previous verified file systems, and \txn's concurrency enables \gnfs
-to scale with concurrent client requests.  To simplify \txn's proofs,
-Perennial provides logically atomic crash specifications, which capture the
-crash properties of internal interfaces as single logical transitions,
-enabling modular proofs for \txn's internal layers.
+GoTxn is a concurrent, crash-safe transaction system with a machine-checked
+proof. The caller wraps a sequence of reads and writes in a transaction, which
+the transaction system promises to make atomic. We formalized the system's
+atomicity guarantee in the form of a \emph{program refinement} specification,
+which says that when the caller issues an arbitrary sequence of transactions,
+they appear to execute atomically, even if transactions are issued concurrently
+and if the system crashes. GoTxn is verified against its program refinement
+specification using Perennial. The proof is modular, using Perennial's logically
+atomic crash specifications to verify each layer separately and compose the
+proofs together. Of particular note in the proof is the \emph{lifting-based
+specification} specification of the journaling layer that captures what
+concurrent transactions do.
