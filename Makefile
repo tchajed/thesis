@@ -1,6 +1,6 @@
 MD_FILES:=$(wildcard *.md)
 
-PDFS:=$(MD_FILES:.md=.pdf) thesis.pdf proposal.pdf
+PDFS:=$(MD_FILES:.md=.pdf) thesis.pdf
 
 TEX_FILES := $(wildcard *.tex) \
 	$(wildcard goose/*.tex) \
@@ -38,14 +38,6 @@ spell:
 					  --add-tex-command="renewcommand pp" \
 					  -p ./aspell.words -c $$i; \
 	done
-
-PROPOSAL_DEPS := proposal-abstract.tex \
-	01-introduction.tex \
-	proposal-timeline.tex \
-	$(wildcard *.tex)
-
-proposal.pdf: proposal.tex $(PROPOSAL_DEPS)
-	./latexrun --latex-args='-shell-escape' $<
 
 %.pdf: %.md
 	pandoc $< -o $@
