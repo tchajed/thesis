@@ -11,24 +11,21 @@
 {}{\propc \land [\val/\var]\prop \proves \wpc{\val}{\Ret\var \prop}{\propc}}
 
 \inferH{wpc-mono}
-{\propc \proves \propcB \and \forall \val.\,\left([\val/\var]\prop \proves [\val/\var]\propB\right)}
+{\forall \val.\,\left([\val/\var]\prop \proves [\val/\var]\propB\right) \and
+\propc \proves \propcB}
 {\wpc\expr{\Ret\var \prop}{\propc} \proves \wpc\expr{\Ret\var \propB}{\propcB}}
 
 %\inferH{wpc-bind}
 %{\text{$\lctx$ is an evaluation context}}
 %{\wpc\expr{\Ret\var  \wpc{\lctx[\var]}{\Ret\varB \propB}{\propcB}}{\propcB} \proves \wpc{\lctx[\expr]}{\Ret\varB \propB}{\propcB}}
 
-\inferH{wpc-frame}
-{}{\propB * \wpc\expr{\prop}{\propc} \proves \wpc\expr{\propB*\prop}{\propB*\propc}}
+\inferH{wpc-let}
+{}
+{\wpc{e_1}{ %
+    \Ret{v} \wpc{\subst{e_2}{x}{v}}{\prop}{\propc} % nested postcondition
+}{\propc} \proves
+\wpc{\gooselet{x}{e_1}{e_2}}{\prop}{\propc}}
 
-\inferH{wp-wpc}
-{}{\wpre\expr{\Ret\var \prop} \dashv\proves \wpc\expr{\Ret\var \prop}{\TRUE}}
-
-
-\inferH{wpc-atomic}
-{\atomic(\expr)}
-{\propc \land \wpre\expr{\Ret\var  \propc \land \prop}
- \proves \wpc\expr{\Ret\var \prop}{\propc}}
 \end{mathpar}
 }
 
@@ -56,13 +53,42 @@ conditions}, but the original FSCQ paper used ``crash conditions'' and the term 
 stuck since then.} In \cref{sec:perennial:recovery} we'll connect these
 crash specifications to the memory wipe and reboot that happens right afterward.
 
+Some basic structural rules for these crash weakest preconditions are given in
+\cref{fig:wpc-structural}. These largely mirror structural rules from Iris and do not
+say anything crash-specific. The rule \ruleref{wpc-mono} allows weakening a
+WPC by replacing the postcondition $Q$ with a weaker assertion $P$ and replacing
+the crash condition $Q_{c}$ with a weaker assertion $P_{c}$. The rule
+\ruleref{wpc-let} is a bit long, but it expresses formally sequentially
+reasoning about $e_{1}$ followed by $e_{2}$. What it expresses is that to verify
+$\gooselet{x}{e_1}{e_2}$, a proof can verify $e_{1}$ first, then in its post-condition
+reason about $e_{2}$ with the return value $v$ from $e_{1}$ substituted for the
+bound variable $x$. The crash condition $P_{c}$  is carried throughout, since
+both $e_{1}$ and $e_{2}$ must maintain it.  Perennial has a similar but more
+general rule for arbitrary \emph{evaluation contexts} (of which $\goosekw{let}$
+is just an example), to reason about sequencing between a sub-expression and its
+context.
+
 \begin{figure}[ht]
   \wpcseqfig
 \caption{Basic structural rules for crash weakest preconditions.}%
+\label{fig:wpc-structural}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{mathpar}
+    \inferH{wpc-frame}
+    {}{\propB * \wpc\expr{\prop}{\propc} \proves \wpc\expr{\propB*\prop}{\propB*\propc}}
+
+    \inferH{wp-wpc}
+    {}{\wpre\expr{\Ret\var \prop} \dashv\proves \wpc\expr{\Ret\var \prop}{\TRUE}}
+  \end{mathpar}
+  \caption{Interesting crash-related structural rules for crash weakest
+    preconditions.}%
 \label{fig:wpc-seq}
 \end{figure}
 
-One rule in Perennial that is often used is the crash frame rule,
+Some more interesting structural rules for WPCs with sequential code are listed in \cref{fig:wpc-seq}.
+One such rule that is often used in Perennial is the crash frame rule,
 \ruleref{wpc-frame}. Like the traditional frame rule, this is a reasoning
 principle for ignoring some resources while proving part of a program. When
 reasoning about crashes, framing is a useful way to dismiss the crash condition
@@ -107,16 +133,29 @@ resources $R$ are still available to prove $\wpre{e}{P_{c} \land P}$. That proof
 shows that the post-crash resources satisfy both $P_{c}$ (if the system crashes
 right after $e$) and $P$ (to show the postcondition).
 
+\begin{figure}
+  \begin{mathpar}
+    \inferH{wpc-inv-alloc}%
+    {P \sep \knowInv{}{R} \proves \wpc{e}{Q}{Q_c}}%
+    {P \sep R \proves \wpc{e}{Q}{Q_c \sep R}}
+
+    \inferH{wpc-atomic}
+    {\atomic(\expr)}
+    {\propc \land \wpre\expr{\Ret\var  \propc \land \prop}
+    \proves \wpc\expr{\Ret\var \prop}{\propc}}
+  \end{mathpar}
+  \caption{Rules for reasoning about concurrency and crashes.}
+  \label{fig:wpc-concurrent}
+\end{figure}
+
 To reason about concurrency, Perennial needs some more principles for sharing
 ownership between threads. The core mechanism in concurrent separation logic for
-reasoning about concurrency is the \emph{invariant}. The main rules for working
-with invariants in a non-crash setting are \ruleref{wp-inv-alloc} to give up $R$
-in exchange for $\knowInv{}{R}$ and \ruleref{inv-atomic} which ``opens'' an
-invariant for a single atomic step. Unlike a general resource $R$,
-$\knowInv{}{R}$ is duplicable; that is,
-$\knowInv{}{R} \proves \knowInv{}{R} \sep \knowInv{}{R}$ --- this is sound
-because $\knowInv{}{R}$ is not the underlying resources $R$ but merely knowledge
-that $R$ is an invariant.
+reasoning about concurrency is the \emph{invariant}. The rules for working
+with invariants in a non-crash setting are given in \cref{fig:invariants}: \ruleref{wp-inv-alloc} gives up $R$
+in exchange for $\knowInv{}{R}$, and \ruleref{inv-atomic} ``opens'' an
+invariant for a single atomic step.
+$\knowInv{}{R}$ is duplicable --- that is,
+$\knowInv{}{R} \proves \knowInv{}{R} \sep \knowInv{}{R}$.
 
 Invariants have a special role in Perennial. \Cref{fig:wpc-concurrent} lists
 Perennial's rules for concurrency reasoning. Perennial extends invariant allocation
@@ -128,29 +167,6 @@ must also hold in case the system crashes, and the thread that created the
 invariant can get ``credit'' for this on crash. After allocating an invariant it
 has no special role for crashes, and proofs can use \ruleref{inv-atomic} as
 usual for opening an invariant across an atomic step.
-
-\begin{figure}
-  \begin{mathpar}
-    \inferH{wp-inv-alloc}%
-    {P \sep \knowInv{}{R} \proves \wpre{e}{Q}}%
-    {P \sep R \proves \wpre{e}{Q}}
-
-    \inferH{wpc-inv-alloc}%
-    {P \sep \knowInv{}{R} \proves \wpc{e}{Q}{Q_c}}%
-    {P \sep R \proves \wpc{e}{Q}{Q_c \sep R}}
-
-    \inferH{wp-fork}%
-    {P \proves \wpre{e}{\TRUE} \and Q \proves \wpre{e'}{R}}%
-    {P \sep Q \proves \wpre{(\operatorname{fork} \{e\}; \, e')}{R}}
-
-    \inferH{inv-atomic}%
-    {\atomic(e) \and R \sep P \proves \wpre{e}{R \sep Q}}%
-    {\knowInv{}{R} \sep P \proves \wpre{e}{Q}}
-  \end{mathpar}
-  \caption{Rules for reasoning about concurrency and ownership transfer with
-    invariants.}
-  \label{fig:wpc-concurrent}
-\end{figure}
 
 Invariants are especially useful for lock-free reasoning, but concurrent code
 commonly coordinates between threads using locks. A lock guarantees that no two

@@ -69,7 +69,7 @@ the resources in the frame $F$.
 {F * \wpre{e}{Q} \proves \wpre{e}{F * Q}}
 
 \inferH{wp-mono}%
-{P \proves P' \and \forall v. ([v/x] Q' \proves [v/x] Q) \and \hoare{P'}{e}{Q'}}%
+{P \proves P' \and \forall v.\, ([v/x] Q' \proves [v/x] Q) \and \hoare{P'}{e}{Q'}}%
 {\hoare{P}{e}{Q}}
 
 \inferH{wp-seq}%
@@ -118,7 +118,26 @@ bubble sort example in
 
 Ghost variables can also be used to give abstract specifications to a piece of
 code. For example, consider a ``statistics database'' that maintains the running
-mean of a sequence of numbers. The code might only track the number of elements and
+mean of a sequence of numbers (written in Go for readability):
+%
+\begin{minted}{go}
+type StatDB struct {
+  count int
+  sum   float64
+}
+
+func (db *StatDB) Add(n float64) {
+  db.count++
+  db.sum += n
+}
+
+func (db *StatDB) Mean() float64 {
+  if db.count == 0 { panic("empty db") }
+  return db.sum/db.count
+}
+\end{minted}
+
+The code only tracks the count of elements and
 their sum, but the behavior of the library is easiest to state in terms of the list of all
 numbers added. Thus in Dafny such a library can use a ghost variable to track
 the full database, relate this ghost variable to the physical variables
@@ -205,7 +224,7 @@ assertions for the same ghost variable must be for equal values since the
 underlying variable has only one value.
 
 This thesis describes a few constructions for ghost state to carry out parts of
-the proof, including fractional ghost state described above. In reality all
+the proof, such as the example of fractional ghost state described above. In reality all
 ghost state in Iris is defined using a single, general mechanism. Ghost state
 can come from any instance of an algebraic structure $M$ called
 a ``resource algebra'', where ownership really means
@@ -218,8 +237,26 @@ updates are ``sound'', enforcing a global property that updates to a resource in
 one part of the proof never invalidate resources owned by concurrent threads at
 the same time.
 
+\begin{figure}[ht]
+  \begin{mathpar}
+    \inferH{wp-inv-alloc}%
+    {P \sep \knowInv{}{R} \proves \wpre{e}{Q}}%
+    {P \sep R \proves \wpre{e}{Q}}
+
+    \inferH{inv-atomic}%
+    {\atomic(e) \and R \sep P \proves \wpre{e}{R \sep Q}}%
+    {\knowInv{}{R} \sep P \proves \wpre{e}{Q}}
+
+    \inferH{wp-fork}%
+    {P \proves \wpre{e}{\TRUE} \and Q \proves \wpre{e'}{R}}%
+    {P \sep Q \proves \wpre{(\operatorname{fork} \{e\}; \, e')}{R}}
+  \end{mathpar}
+  \caption{Key concurrency rules in Iris for invariants and forking}
+  \label{fig:invariants}
+\end{figure}
+
 A fundamental reasoning principle for concurrency is the notion of an
-\emph{invariant}. Threads will eventually need to share state, and invariants
+\emph{invariant}. Threads eventually do share state, and invariants
 are the main way to reason about how threads coordinate on that shared state.
 Invariants in Iris are another resource: we write $\knowInv{}{I}$ for the
 assertion that says $I$ is an invariant. Once this invariant is established, the
@@ -231,6 +268,28 @@ invariants are freely \emph{duplicable} --- that is,
 $\knowInv{}{I} \proves \knowInv{}{I} \sep \knowInv{}{I}$ --- reflecting that
 knowledge of an invariant, once it is established, is an assertion that all
 threads agree on which cannot be invalidated.
+
+The formal rules for using invariants in Iris (which are all valid rules in
+Perennial) are given in \cref{fig:invariants}. To create an invariant
+$\knowInv{}{R}$, a thread gives up $R$, as given in \ruleref{wp-inv-alloc}. The
+rule for using an invariant is \ruleref{inv-atomic}, which can only be used over
+an atomic instruction $e$. Perennial is defined for a general language, as in
+Iris, and the semantics of the language defines what is modeled to be atomic.
+Formally $\atomic(e)$ says that the expression $e$ reduces to a value in a
+single reduction step, so that other threads cannot run in between. See
+\cref{sec:goose:semantics} for the details on the specifics of what GooseLang
+makes atomic.
+
+Ownership transfer is reflected in the rule for forking new threads,
+\ruleref{wp-fork}. If a thread has $P \sep Q$ in its precondition, it can pass
+some of those resources $P$ to a newly-forked thread and retain the remainder
+$Q$ for the subsequent code. Note that due to the separating conjunction these
+resources must be separate, so that the rules of the separation logic guarantee
+$e$ cannot invalidate $Q$ using its resources $P$. However, invariants give a
+way for the two threads to safely share resources: both can have access to
+$\knowInv{}{I}$ because the knowledge of the invariant can be duplicated, which
+is sound because each thread only uses $I$ for an atomic step and then
+guarantees $I$ holds for concurrent threads.
 
 % \tej{Look at Perennial 1.0 paper and Later Credits paper for some inspiration on
 % introducing Iris}
