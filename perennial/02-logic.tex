@@ -49,7 +49,7 @@ predicate and terminates, the resulting state will satisfy $Q$. However, in
 addition if the system halts at any time $Q_{c}$ is guaranteed to hold. We also
 sometimes write a \emph{crash Hoare quadruple} $\hoareC{P}{e}{Q}{Q_{c}}$ that is
 defined to be $P \proves \wpc{e}{Q}{Q_{c}}$. There is one subtlety in the
-terminology that while we use the term ``crash'' these postconditions hold
+terminology: though we use the term ``crash,'' these postconditions hold
 \emph{just prior} to the system actually shutting down, so that the contents of
 memory is unchanged.\footnote{They might more properly be called \emph{halt
 conditions}, but the original FSCQ paper used ``crash conditions'' and the term has

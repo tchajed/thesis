@@ -87,7 +87,7 @@ the resources in the frame $F$.
 \label{fig:wp-rules}
 \end{figure}
 
-\subsection{Concurrency with Iris}
+\subsection{Ghost state and concurrency in Iris}
 \label{sec:perennial:concurrency}
 
 Iris generalizes separation logic to also reason about concurrency. A full
@@ -97,31 +97,37 @@ original ``Iris 1.0'' paper~\cite{jung:iris-1} is a shorter introduction for a
 reader already familiar with separation logic. Two features of Iris are most
 relevant since they are used in the GoTxn proof: ghost state and invariants.
 
-\tej{add ownership to this section}
-
 Ghost state is a technique for reasoning about a program by augmenting its
 physical state (local variables and the heap) with some additional \emph{ghost
-state} which is maintained only for the sake of the proof and has no affect on
+state} which is maintained only for the sake of the proof and has no effect on
 the program's execution (hence the term ``ghost''). It is easier to understand
-ghost state as a programming language feature, as in Dafny, than in Iris, so let
+ghost state via its API in Dafny as a programming-language feature, so let
 us first see how they help there and then return to Iris.
 
 In Dafny, a variable can be marked \cc{ghost}. Ghost variables can be written
 and read in the proof, but Dafny enforces that the ghost variables' values never
 influences execution; they can only be used to inform uses of lemmas,
-assertions, and other proof annotations. Then at runtime ghost variables and all
+assertions, and other proof annotations. Then at run time ghost variables and all
 uses of them are \emph{erased} before running the program. Why would adding a
 ghost variable to a program help with its proof? The simplest examples are code
 where a ghost variable holds the old value of some variable, say prior to a
 loop; this lets the proof refer to the old value while clarifying that the
-regular execution does not need it.
+regular execution does not need it.\footnote{For a concrete example, see the
+bubble sort example in
+\url{https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf}.}
 
-%% for a concrete example see bubble sort in
-%% https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf
+Ghost variables can also be used to give abstract specifications to a piece of
+code. For example, consider a ``statistics database'' that maintains the running
+mean of a sequence of numbers. The code might only track the number of elements and
+their sum, but the behavior of the library is easiest to state in terms of the list of all
+numbers added. Thus in Dafny such a library can use a ghost variable to track
+the full database, relate this ghost variable to the physical variables
+of the code, and then prove that the code returns the correct running mean in
+terms of the ghost state.
 
 One intuition for the technique of ghost variables is that it augments the
 execution of the program with additional information, which is used only for the proof
-and thus not tracked at runtime. For every actual execution, there is a
+and thus not tracked at run time. For every actual execution, there is a
 corresponding execution where the ghost variables are maintained and updated.
 The proof is carried out on this augmented execution,
 but the proofs apply to the normal execution because by design they have the
@@ -154,7 +160,8 @@ variables. The assertion $\ghostvar[q]{v}$ says that $\gamma$ has value
 $v$ (of any fixed type) and asserts ownership over a (positive) fraction $q$ of
 it --- any fraction $q < 1$ represents read-only access to the ghost variable,
 while full ownership $q = 1$ allows writing as well.
-Complete ownership $\ghostvar[1]{v}$ is common enough that we will also write it
+Complete ownership $\ghostvar[1]{v}$ is common enough that it is often
+abbreviated to
 $\ghostvar{v}$, with no fraction. The dashed box around this assertion emphasizes that this
 assertion is about ghost state and not about the heap, as in the points-to
 assertion $p \mapsto v$.  There are several rules for manipulating and
@@ -162,10 +169,10 @@ using this fractional ghost state:
 
 \begin{mathpar}
   \inferH{frac-alloc}{}%
-  {\proves \upd \exists \gamma.\, \ghostvar{v}}
+  {\proves \upd \exists \gamma.\, \ghostvar[1]{v}}
 
   \inferH{frac-update}{}%
-  {\ghostvar{v} \proves \upd \ghostvar{v'}}
+  {\ghostvar[1]{v} \proves \upd \ghostvar[1]{v'}}
 
   \inferH{frac-split}{}%
   {\ghostvar[q_1 + q_2]{v} \provesIff \ghostvar[q_1]{v} \sep \ghostvar[q_2]{v}}
