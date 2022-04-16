@@ -16,7 +16,7 @@ default: thesis.pdf abstract.txt
 thesis.pdf: $(DEPS)
 	./latexrun --latex-args='-shell-escape' --bibtex-args=-min-crossrefs=100 -W no-overfull thesis.tex
 
-abstract.txt: abstract.tex
+abstract.txt: frontmatter/abstract.tex
 	cat $< | \
 		pandoc -o $@ -f latex -t plain --wrap=none
 
