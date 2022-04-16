@@ -148,16 +148,28 @@ higher-order concurrent abstract predicates (HOCAP)~\cite{svendsen:hocap,jacobs:
 library maintains an invariant $P(\sigma)$, where $\sigma$ is the current
 abstract state; a key idea in the HOCAP specification is that this predicate $P$
 is chosen by \emph{the client} (that is, the code calling the library).
+
 For each operation, the client passes in a
 \emph{view-shift assertion} written $P(\sigma) \vs P(\sigma') * Q$, for any
 transition from $\sigma$ to $\sigma'$ that is a valid transition for the operation.
 This view shift represents a kind of once-usable ``callback'' which transforms
-$P(\sigma)$ into $P(\sigma')$, typically by updating the caller's ghost state in
+$P(\sigma)$ into $P(\sigma')$, by updating the caller's ghost state in
 $P$. At the end of the operation, the client receives $Q$ as a kind of
 certificate that the callback ran. The intuition here is that the library's proof must
 ``fire'' or ``call'' the view shift in order to preserve $P$ and produce $Q$,
 but the proof gets to pick the exact moment when it should fire the view shift,
 which is the linearization point of the operation.
+
+The predicates in HOCAP specifications express ownership over ghost state. This
+aspect of Perennial is inherited from Iris and described in more detail in
+\cref{sec:perennial:concurrency}. In this chapter we use the view-shift
+assertion $P \vs Q$ to express ghost updates, which are a slight notational
+difference from the use of the update modality in the Perennial chapter. In the
+implementation of Iris, the view shift is implemented in terms of the update
+modality, which is a basic primitive of the logic; the view shift can be encoded
+as $P \wand \upd Q$. The intuition for $P \vs Q$ is that the caller can take
+$P \sep (P \vs Q)$ and ``fire'' the view shift and update the ghost variables in
+the proof to obtain $Q$.
 
 We can see both the HOCAP pattern and the circular buffer resources in action in
 the specification for Append:
@@ -175,7 +187,7 @@ the specification for Append:
 There are several aspects to the specification, mostly in the precondition. The
 first line is the most straightforward: we need the circular buffer's invariant
 to hold, for a particular ghost name $\gamma$. The second line is part of the
-general HOCAP pattern. The view-shift updates $P(\sigma)$ to the appropriate new
+general HOCAP pattern. The view shift updates $P(\sigma)$ to the appropriate new
 state, denoted with $\sigma \lappend \cc{upds}$ as shorthand for $\sigma$ with \cc{upds}
 appended to the updates field (and the same \cc{start}). The proof of this
 specification executes the view shift at the linearization point of the \cc{Append}
