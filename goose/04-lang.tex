@@ -8,9 +8,6 @@
 
 \newcommand{\external}{\mathsf{\textcolor{red}{\langle External \rangle}}}
 
-\newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
-  \goosekw{then} \app #2 \app \goosekw{else} \app #3}
-
 \newcommand{\recfx}{\mbox{\goosekw{rec} \, f(x) = e}}
 \newcommand{\gooselambda}[1]{\goosekw{\lambda}#1.\,}
 
@@ -141,9 +138,9 @@ func Arith(a uint64,
 \begin{translategooselang}
 \begin{flalign*}
   &\goosedef{Arith} \defeq \gooselambda{a, b} & \\
-  &\quad\goosekw{let} \app sum = a + b \app\goosekw{in}\app & \\
-  &\quad\goosekw{if} \app sum = 7 \app\goosekw{then}\app a \app\goosekw{else} & \\
-  &\quad\quad \goosekw{let} \app mid = \goosedef{Midpoint}\app a \app b \app\goosekw{in} &\\
+  &\quad\gooselet{sum}{a + b}{let}{} & \\
+  &\quad\gooseif{sum = 7}{a}{} & \\
+  &\quad\quad \gooselet{mid}{\goosedef{Midpoint} \app a \app b}{} &\\
   &\quad\quad mid &
 \end{flalign*}
 \end{translategooselang}
@@ -176,9 +173,7 @@ func Swap(x *uint64,
 \begin{translategooselang}
 \begin{flalign*}
   &\goosedef{Swap} \defeq \gooselambda{x, y} & \\
-  % these {} are needed so LaTeX spaces the ! correctly, rather than putting it
-  % next to the = or \gets
-  &\quad\goosekw{let} \app tmp = {} !x \app\goosekw{in}\app \\
+  &\quad\gooselet{tmp}{!x}{} \\
   &\quad x \gets {} !y \\
   &\quad y \gets tmp
 \end{flalign*}

@@ -168,3 +168,12 @@
 \newcommand{\goosekw}[1]{\ensuremath{\goosedef{\textcolor{blue}{#1}}}}
 \newcommand{\goosetrue}{\goosekw{true}}
 \newcommand{\goosefalse}{\goosekw{false}}
+
+% \gooseif{c}{e1}{e2} -> if c then e1 else e2
+\newcommand{\gooseif}[3]{\goosekw{if} \app #1 \app%
+  \goosekw{then} \app #2 \app \goosekw{else} \app #3}
+
+% \gooselet{x}{e1}{e2} -> let x = e1 in e2
+% the random extra {}'s around the = are so that LaTeX doesn't group anything
+% with it (eg, let tmp = !x)
+\newcommand{\gooselet}[3]{\goosekw{let} \app #1 {} = {} #2 \app \goosekw{in} \app #3}
