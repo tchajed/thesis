@@ -26,9 +26,10 @@ on using transactions as part of a file system.
 There are a variety of foundational tools for reasoning about crash safety,
 largely for sequential systems.
 
-FSCQ~\cite{chen:fscq,chen:dfscq,hchen-phd} is a verified sequential file
-system that features Crash Hoare Logic (CHL). CHL extends the basic Hoare triple
-with a \emph{crash condition} that holds at all intermediate points in the
+FSCQ~\cite{chen:fscq,chen:dfscq,hchen-phd} is a sequential file
+system verified with Crash Hoare Logic (CHL). CHL's basic specifications have
+the form $\hoareC{P}{e}{Q}{Q_{c}}$, extending the Hoare triple $\hoare{P}{e}{Q}$
+with a \emph{crash condition} $Q_{c}$ that holds at all intermediate points in the
 function's execution. Crash conditions handle a core difficulty of crashes,
 namely that they stop the system at some intermediate step. There are two
 remaining challenges: a crash wipes in-memory state, and the system might crash again
@@ -159,9 +160,10 @@ logically atomic crash specifications for modularly specifying libraries and
 composing their proofs. FTCSL and POG have no mechanism of modular proofs of
 layers, which we found essential to scale verification to a file system.
 
-In the case of x86-TSO with persistence, merely defining the semantics at the
-ISA level was a line of research work leading up to
-POG~\cite{raad:px86,raad:px86-extended}. A similar semantics effort defines the
+In the case of x86-TSO with persistence, POG required a line of research to
+define the semantics at the
+ISA level, validating this semantics against the hardware and in conversations
+with Intel engineers~\cite{raad:px86,raad:px86-extended}. A similar semantics effort defines the
 semantics of ext4 under crashes, but without an accompanying program
 logic~\cite{kokologiannakis:persevere}. It would be an interesting direction for
 future work to combine the persistency semantics of x86 with Perennial, to
@@ -180,8 +182,10 @@ transaction concurrency control mechanisms in the PVS theorem prover. Their
 proof formalizes two-phase locking as an abstract protocol consisting of
 sequences of read, write, and locking operations, as opposed to a concrete
 implementation as in GoTxn. \citet{pollak-2PL} uses a variant of the
-CAP separation logic~\citep{dinsdale:cap} to give a pencil-and-paper
-proof of serializability for a two-phase locking implementation.
+CAP separation logic~\citep{dinsdale:cap} to give a pen-and-paper
+proof of serializability for an abstract, protocol-level description of
+two-phase locking, connecting the protocol to atomic reasoning about
+transactions.
 
 \citet{mohsen:stm} developed a framework for verifying software transactional memory algorithms, modeled
 as I/O automata. They applied their framework to sophisticated STM algorithms, such as
@@ -197,7 +201,7 @@ it commits. The Push/Pull model also discusses reasoning on top of the
 specification, using Lipton's reduction~\cite{lipton:movers} rather than
 separation-logic ownership to handle concurrency. However that work is about
 on-paper specifications and proofs, while we also prove an implementation meets
-our specification and proved \simplenfs on top.
+our specification and proved DaisyNFS on top.
 
 DFSCQ~\cite{chen:dfscq} verifies a high-performance file system built on top of
 a logging system with asynchronous disks and log-bypass writes, which are
@@ -226,12 +230,12 @@ example when an application issues an \cc{fsync()}.
 The Dafny side of DaisyNFS is a new implementation but its design and aspects of
 the proof strategy were inspired by other verified file systems like
 DFSCQ~\cite{chen:dfscq} (especially its indirect block implementation described
-in Konradi's master's thesis~\cite{akonradi-meng}) and
+in Alex Konradi's master's thesis~\cite{akonradi-meng}) and
 Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
 
 AtomFS~\cite{zou:atomfs} is a verified, concurrent file system, but its
 implementation does not store data durably. The proof structure is quite
-different from DaisyNFS all of the concurrency reasoning is part of the
+different from DaisyNFS in that all of the concurrency reasoning is part of the
 file-system operations and there is no interaction between persistence and
 concurrency. AtomFS is verified using a relational logic with rely-guarantee
 reasoning; unlike separation logic, the basic specification in this logic is a
@@ -299,14 +303,13 @@ To be conducive to verification, DaisyNFS is implemented differently than
 many NFS servers; in particular using two-phase locking is not common
 practice.  Other user-level NFS servers are typically implemented on
 top of an existing file system, relying on the underlying file system
-for logging and locking. The Linux NFS server is implemented inside
-the kernel using VFS and the ext3/ext4 file systems (if exporting an
-ext3/ext4 file system).  Ext3 and ext4 use a journaling system, but
-the file system and VFS layers perform locking.  WAFL~\cite{wafl:hitz}
-is NFS appliance that provides snapshots and logs NFS requests to
-NVRAM.  It has evolved its locking plan to obtain good
+for logging and locking. Ext3 and ext4 use a journaling system underneath, but
+the file system and VFS layers perform locking. This locking is inherited when
+these file systems are exported with the Linux NFS server. WAFL~\cite{wafl:hitz}
+is an NFS appliance that provides snapshots and logs NFS requests to
+NVRAM.\@  It has evolved its locking plan to obtain good
 parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
-are more complicated and have more features than DaisyNFS.
+are more complicated and have more features than DaisyNFS.\@
 
 Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
 in its API, but without formal verification, which was used to implement a file
@@ -320,11 +323,8 @@ IsoFS has a similar design to DaisyNFS: it factors out isolation and atomicity t
 system, making it easy to handle crashes and concurrency. Unlike GoTxn and
 DaisyNFS, Isotope is still prone to subtle concurrency bugs in the transaction
 system and bugs in the IsoFS code, whereas we use this split design to verify
-both the transaction system and file-system code. One value of GoTxn is to
-simply be more precise about what the transaction API does; Isotope has two
-additional APIs to help tune the system, a \cc{mark_accessed} call to enable
-sub-block concurrency and a \cc{please_cache} call that improves performance.
-From its description, it appears
-that the calling code must call \cc{mark_accessed} correctly for safety,
-whereas the latter is only an optimization, but the precise requirements and
-guarantees of Isotope are not clearly laid out.
+both the transaction system and file-system code. The transaction API provided
+by Isotope has an interesting performance optimization that GoTxn could support:
+the API includes a \cc{please_cache} call that keeps an address in the
+transaction system's cache, used for small but frequently-accessed metadata like
+the allocator state in the file system.
