@@ -341,11 +341,11 @@ Practically speaking, having $\cfupd{R}$ in a precondition allows the user to
 \emph{cancel} $R$ from the proof's crash condition, as reflected in the
 following rule:
 
-\[
+\begin{mathpar}
   \inferH{cfupd-use}
   {P \proves \wpc{e}{Q}{Q_{c}}}%
   {P \sep \cfupd{R} \proves \wpc{e}{Q}{Q_{c} \sep R}}
-\]
+\end{mathpar}
 
 In the context of the circular buffer, what the $\cfupdw$ sets up for the caller
 is that if the system crashes, the recovery proof can dismiss the circular
@@ -406,7 +406,7 @@ purpose of this predicate is to give the caller a way to, on crash, relate
 resources issued by the library before a crash to those after a crash. In the
 circular buffer, the $\startIs(\cc{start})$ and $\diskendIs(\cc{end})$ resources
 are thrown away on crash and re-created during recovery; there are only two of
-them, so it easy enough to reconstruct them globally. In contrast, some
+them, so it is easy enough to reconstruct them globally. In contrast, some
 resources are used locally by a thread and we would like a way to retain
 ownership across a crash, into that thread's crash condition. This is exactly
 what happens with GoTxn's lifting-based specification for the journaling layer, explained in greater

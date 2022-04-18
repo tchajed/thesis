@@ -276,11 +276,11 @@ Perennial has only one rule to prove a $\wprw$, which reduces it to proving a
 $\wpcw$ about $e$ and an \emph{idempotent} specification for
 $e_{r}$~\cite{chen:fscq}:
 
-\[
+\begin{mathpar}
   \inferH{wpr-idempotence}%
 {\operatorname{durable}(P_{c}) \and P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}}%
 {\wpc{e}{P}{P_{c}} \proves \wpr{e}{e_{r}}{P}{P_{r}}}
-\]
+\end{mathpar}
 
 At a high level, the user proves $\wpr{e}{e_{r}}{P}{P_{r}}$ in two steps:
 \begin{enumerate}
