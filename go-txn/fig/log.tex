@@ -1,18 +1,18 @@
 \begin{tikzpicture}[>=latex]
 
-  \tikzstyle{log}=[thick,rectangle, draw, minimum width=1.8cm,minimum
+  \tikzstyle{log}=[thick,rectangle, draw, minimum width=3cm,minimum
     height=1.5cm, align=center,fill=blue!10];
 
   \node[log] (installed) {Installed \\ writes};
   \node[log,right=0cm of installed] (logged) {Logged \\ writes};
-  \node[log,right=0cm of logged] (logging) {Writes \\ being \\ logged};
-  \node[log,right=0cm of logging, minimum width=2.2cm] (unstable) {Unstable \\ writes};
+  \node[log,right=0cm of logged] (logging) {Writes being \\ logged};
+  \node[log,right=0cm of logging] (unstable) {Unstable \\ writes};
 
-  \node[] at (-0.8cm,-1cm) {$\uparrow$ 0};
-  \node[] (memstart) at (1.5cm, -1cm) {$\uparrow$ \cc{memStart}};
-  \node[] (diskend) at (3.3cm, -1cm) {$\uparrow$ \cc{diskEnd}};
-  \node[] (nextdiskend) at (5.4cm, -1cm) {$\uparrow$ \cc{nextDiskEnd}};
-  \node[] (memend) at (7.2cm, -1cm) {$\uparrow$ \cc{memEnd}};
+  \node[] at (-1.3cm, -1cm) {$\uparrow$ 0};
+  \node[] (memstart) at (2.2cm, -1cm) {$\uparrow$ \cc{memStart}};
+  \node[] (diskend) at (5.2cm, -1cm) {$\uparrow$ \cc{diskEnd}};
+  \node[] (nextdiskend) at (8.55cm, -1cm) {$\uparrow$ \cc{nextDiskEnd}};
+  \node[] (memend) at (11.1cm, -1cm) {$\uparrow$ \cc{memEnd}};
 
   \node[font=\footnotesize, below=0cm of memstart, align=center, xshift=-0.6cm] {Advanced by \\ installer};
   \node[font=\footnotesize, below=0cm of diskend, align=center, xshift=-0.5cm] {Advanced by \\ logger};
