@@ -155,12 +155,13 @@ The allocator creates another subtlety related to the second part of this
 invariant. Allocations do not hold the allocator lock throughout the remainder
 of a transaction. This seems to violate the two-phase locking pattern, since
 allocations could be implicitly observed by other concurrent transactions from
-the fact that an allocated address is no longer free. Correspondingly, in the
-proof, the footprint $J$ of a transaction does not describe the allocator state.
-Thus, at the ghost-execution linearization point, the addresses returned by the
-allocator may no longer be free. However, because the specification for the
-allocator does not guarantee that returned addresses are actually free, the
-second part of the invariant above still holds.
+the fact that an allocated address is no longer free. As described in
+\cref{sec:gotxn:safe}, GoTxn under-specifies the allocator's behavior so that it
+atomically follows its (non-deterministic) specification even though it is not
+protected by the 2PL locking discipline. Correspondingly, in the
+proof, the footprint $J$ of a transaction does not describe the allocator state
+and at the ghost-execution linearization point the addresses returned by the
+allocator may no longer be free.
 
 % Suppose the transaction being simulated is $\operatorname{Atomically}{f}$, and the implementation
 % has executed $n$ steps of $f$, accessing addresses in the set $\sigma$.
