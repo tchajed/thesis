@@ -146,7 +146,7 @@ guarantees that this correctly simulates \cc{f}.
 
 Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the
-transaction system, as mentioned in \cref{sec:proof:linking}. Accesses to such global state
+transaction system, as mentioned in \cref{sec:gotxn:safe}. Accesses to such global state
 would violate the invariant because their behavior would then depend upon
 things outside of the footprint $\Sigma$. Because those global values could change
 by the time the transaction commits, the above argument would no longer work if they were allowed.
