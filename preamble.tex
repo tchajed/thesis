@@ -157,14 +157,9 @@
 %  \setcounter{page}{\p+1+(\p-\p/2*2)}%
 % }
 
-% an environment for todos
-\newenvironment{inprogress}
-  {\vspace{.5em} \color{set2} \noindent \textbf{TODO}}
-  {\vspace{.5em}}
+% adding TODOs
 \newcommand{\insertnote}[3]{\noindent\textcolor{#1}{\textbf{#2:} #3}}
 \newcommand{\note}[1]{\insertnote{blue}{NOTE}{#1}}
-%\newcommand{\todo}[1]{\insertnote{red}{TODO}{#1}}
-%\newcommand{\tej}[1]{\insertnote{red}{Tej}{#1}}
 \newcommand{\todocite}[1]{\textcolor{red}{[cite #1]}}
 
 % https://tex.stackexchange.com/questions/52697/automated-lists-for-todos-in-latex-document
@@ -175,6 +170,8 @@
   \section*{List of TODOs}\@starttoc{tod}}
 \makeatother
 
+% out of habit this macro is called \tej, even though all TODOs are written by
+% and assigned to me
 \newcommand{\tej}[1]{\textcolor{red}{\textbf{Tej:}} \todo{#1}}
 
 % a command to indicate current editing progress
