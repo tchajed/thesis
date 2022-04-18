@@ -20,7 +20,7 @@ This representation needs to capture buffered writes (which will eventually be
 durable at commit time) and the old values in the logical disk (which it will
 revert to if the system crashes or the transaction aborts). It also needs to
 handle concurrent transactions --- the tricky thing here is that the logical
-disk can change in the middle of a transaction due to a concurrent committed
+disk can change in the middle of a transaction due to a concurrently committed
 transaction, so for example the model of aborts cannot be as simple as reverting
 to the disk at the start of the transaction.
 
@@ -36,7 +36,6 @@ modeled, returning ownership and merging back the old values of just the local
 disk.
 
 \input{go-txn/lifting-spec.tex}
-% splice this in from DaisyNFS paper
 \input{go-txn/refinement-proof.tex}
 
 \subsection[Write-ahead logging (WAL)]{Write-ahead logging (\scc{wal})}

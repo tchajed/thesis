@@ -20,8 +20,8 @@ operation. Disjointness is what guarantees that the views are really local and
 don't change due to concurrent threads.
 
 The lifting-based specification uses a logical concept of ownership to keep all
-of these views disjoint and consistent. Each view is expressed using ghost state
-in Iris, then the proof uses separation-logic resources to express ownership over that
+of these views disjoint and consistent. The state of each view is defined using ghost state
+in Iris, and the proof uses separation-logic resources to express ownership over that
 ghost state; for a general introduction to the idea of
 ownership in separation logic, see \cref{sec:perennial:concurrency}. The
 journaling proof issues three types of resources, all per-address:
@@ -32,8 +32,11 @@ objects that can be smaller than a block, such as a 128-byte inode value or even
 a single bit). In addition, $a \mapstoDisk o$ expresses ownership over the
 address $a$. The second resource, $a \mapstoOp o$, asserts ownership of the
 operation-local view associated with an in-memory operation $\mathit{op}$; it
-can mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
-buffered write with the value $o$ to address $a$.
+mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
+buffered write with the value $o$ to address $a$. The last resource,
+$a \mapstoLftd o$ is similar to $a \mapstoDisk o$, but the details are related
+to lifting and explained below.
+
 
 \subsubsection{Initialization}
 
