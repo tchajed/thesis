@@ -156,7 +156,7 @@ Record State :=
 
 Definition mem_append (ws: list update) :
     transition State unit :=
-  modify (set multwrites (fun l => l ++ [ws]));
+  modify (set multiwrites (fun l => l ++ [ws]));
   ret tt.
 
 (* non-deterministically pick how many
