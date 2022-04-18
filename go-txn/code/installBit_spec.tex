@@ -1,7 +1,0 @@
-\begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small]
-\PY{k+kn}{Definition} \PY{n}{install\PYZus{}one\PYZus{}bit} \PY{o}{(}\PY{n}{src} \PY{n}{dst}\PY{o}{:} \PY{n}{u8}\PY{o}{)} \PY{o}{(}\PY{n}{bit}\PY{o}{:} \PY{n}{nat}\PY{o}{)} \PY{o}{:} \PY{n}{u8} \PY{o}{:=}
-  \PY{k}{let} \PY{n}{b} \PY{o}{:=} \PY{n}{byte\PYZus{}to\PYZus{}bits} \PY{n}{src} \PY{o}{!!}\PY{o}{!} \PY{n}{bit} \PY{k}{in}
-  \PY{k}{let} \PY{n}{dst\PYZsq{}\PYZus{}bits} \PY{o}{:=} \PY{o}{\PYZlt{}}\PY{o}{[}\PY{n}{bit} \PY{o}{:=} \PY{n}{new\PYZus{}bit}\PY{o}{]}\PY{o}{\PYZgt{}} \PY{n}{byte\PYZus{}to\PYZus{}bits} \PY{n}{dst} \PY{k}{in}
-  \PY{k}{let} \PY{n}{dst\PYZsq{}} \PY{o}{:=} \PY{n}{bits\PYZus{}to\PYZus{}byte} \PY{n}{dst\PYZsq{}\PYZus{}bits} \PY{k}{in}
-  \PY{n}{dst\PYZsq{}}\PY{o}{.}
-\end{Verbatim}

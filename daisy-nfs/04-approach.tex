@@ -46,7 +46,6 @@ datatype File =
 type FilesysData = map<Ino, File>
 \end{verbatim}
 \end{small}
-\vspace{-\baselineskip}
 \caption{Dafny definition of the NFS server state (simplified).}
 \label{fig:dafny-state}
 \end{figure}
@@ -93,7 +92,6 @@ predicate GETSZ_spec(ino: Ino, fs: FilesysData,
              r.v == |fs[ino].data|)
 }
 \end{verbatim}
-\vspace{-\baselineskip}
 \caption{Specification of a hypothetical \cc{GETSZ} operation, a simplification
   of the real \cc{GETATTR} operation.}
 \label{fig:getsz}

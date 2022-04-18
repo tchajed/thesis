@@ -147,8 +147,26 @@ adds more multiwrites to disk in the background, and thus hides
 this concurrency.
 
 \begin{figure}[ht]
-\input{go-txn/code/walcrashspec}
-\vspace{-\baselineskip}
+  \begin{minted}{coq}
+Record update := { addr: u64; data: Block; }.
+Record State :=
+  { multiwrites: list (list update);
+    (* at least durable_lb elements are durable *)
+    durable_lb: nat; }.
+
+Definition mem_append (ws: list update) :
+    transition State unit :=
+  modify (set multwrites (fun l => l ++ [ws]));
+  ret tt.
+
+(* non-deterministically pick how many
+   multiwrites survive the crash. *)
+Definition crash : transition State unit :=
+  durable <- suchThat (fun s i => durable_lb s ≤ i);
+  modify (set multiwrites (fun l => l[:durable]));
+  modify (set durable_lb (fun _ => durable));
+  ret tt.
+  \end{minted}
 \caption{Parts of the specification for the \scc{wal} interface.}
 \label{fig:wal-spec}
 \end{figure}
@@ -292,7 +310,6 @@ before or after the read, but inode 1 will contain A in either case.
 \begin{figure}[ht]
 \centering
 \input{go-txn/fig/sub-block-concurrency}
-\vspace{-\baselineskip}
 \caption{An example of a concurrent \cc{Read} of inode 1 and \cc{Commit}
   modifying inode 4
   in the \scc{obj} layer.}
