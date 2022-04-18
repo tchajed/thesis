@@ -196,16 +196,14 @@ logger position, which the proof demonstrates using a lower bound on
 \subsection{Logically atomic crash specifications}
 \label{s:proof:logatom}
 
-\tej{make some tweaks to refer back to Perennial
-  chapter, which explains this more formally}
-
 Throughout the GoTxn stack we specify internal layers using a transition-system
 specification, such as the examples illustrated in \cref{fig:wal-spec} for
 the \scc{wal} layer. Perennial formalizes what it means for the code in a layer to
-implement a transition using Hoare triples in a style we call
-\emph{logically atomic crash specifications}. While the precise encoding
-involves some technical details of Iris, we explain here the intuition behind these
-specifications as well as why they are useful.
+implement a transition system in terms of Perennial's crash triples in a style we call
+\emph{logically atomic crash specifications}. \Cref{ch:crash-logatom} gives a
+more complete description of this encoding. This section gives the high-level
+intuition for how these specifications are used in the context of the GoTxn
+layers.
 
 As a motivating example, consider the moment when the logger thread commits a
 new batch of multiwrites to the physical log in order to advance the durable
@@ -219,8 +217,11 @@ while still executing the right update in the logger proof?
 
 Logically atomic specifications achieve this separation by having the precondition to \cc{Append}
 take a logical \emph{callback}~\cite{jacobs:logatom}, which the proof promises to ``execute'' at the commit point.
-This callback is a Hoare triple of the form $\hoare{P}{\SKIP}{Q}$, where $P$ and $Q$ are later selected
-by the logger proof to update the \cc{diskEnd} ghost state of the logical log, as shown in \cref{fig:circ-callback}.
+This callback is a view-shift assertion of the form $P \vs Q$, a feature in Iris
+which expresses an update to ghost state that takes the assertion $P$ as input
+and produces $Q$ as output. The exact update is selected by the logger proof to
+update the \cc{diskEnd} ghost state of the logical log, as shown in
+\cref{fig:circ-callback}.
 % The logger proof maintains a
 % ghost variable $\gamma \mapsto \cc{diskEnd}$, much like other points-to predicates,
 % but variable $\gamma$ exists only in the proof. It passes an update to this
@@ -236,14 +237,15 @@ This
 specification for \cc{Append} provides modularity in that the \cc{Append} proof
 does not need to know about the logical log and its \cc{diskEnd}, and the logger
 proof does not need to worry about why \cc{Append} is atomic.  A key
-advance of Perennial's logically atomic crash specs lies in additionally capturing the
+feature of Perennial's logically atomic crash specs lies in that they capture the
 crash behavior in this callback style, so as to enable a complete
 proof of crash safety across layers.
 
 \begin{figure}
   \input{go-txn/fig/appendhocap}
   \caption{Illustration of how the proof of \cc{Append} executes a logical
-callback $\{P\}\SKIP\{Q\}$. The logger passes a callback that adds \cc{len(txns)} to \cc{diskEnd}.}
+callback $P \vs Q$, an assertion in Perennial which updates ghost state. The
+logger passes a callback that adds \cc{len(txns)} to the \cc{diskEnd} ghost variable.}
 % $\gamma\ \cc{+=}\ \cc{len(txns)}$.
 % Note that the proof of
 % \cc{Append} does not need to know the details of what \textcolor[rgb]{0.35,

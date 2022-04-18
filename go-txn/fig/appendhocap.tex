@@ -31,7 +31,7 @@
   \draw node (append) [label=above:{Append proof in \scc{circular}}]{
     \begin{minipage}{0.3\textwidth}
    \begin{Verbatim}[commandchars=\\\{\},codes={\catcode`\$=3\catcode`\^=7\catcode`\_=8},fontsize=\small,numbersep=6pt,xleftmargin=0in]
-\PY{k+kd}{func} \PY{n+nx}{Append}\PY{p}{(}\PY{n+nx}{txns, }\PY{pf}{$\{P\}\SKIP\{Q\}$}\PY{p}{)} \PY{p}{\PYZob{}}
+\PY{k+kd}{func} \PY{n+nx}{Append}\PY{p}{(}\PY{n+nx}{txns, }\PY{pf}{$P \vs Q$}\PY{p}{)} \PY{p}{\PYZob{}}
  \PY{c+c1}{... // write data}
  \PY{n+nx}{hdr} \PY{o}{:=} \PY{o}{...}\PY{c+c1}{}
  \PY{n+nx}{disk}\PY{p}{.}\PY{n+nx}{Write}\PY{p}{(}\PY{n+nx}{LOGHDR}\PY{p}{,} \PY{n+nx}{hdr}\PY{p}{)}\tikzmark{write2}
@@ -42,9 +42,10 @@
 
   \coordinate (pt) at (pic cs:write2) {};
   \draw node (logger) [right=4.25cm of append.north, label=above:{Logger proof in \scc{wal}}, anchor=north] {};
-  \draw node (cbcall) [right=-.1cm of pt, yshift=.5ex,text width=1.5cm,align=center] {use \\ $\textcolor[rgb]{0.35,0.35,0.35}{\{P\}\SKIP\{Q\}}$};
+  \draw node (cbcall) [right=-.1cm of pt, yshift=.5ex,text
+  width=1.5cm,align=center] {use $\textcolor[rgb]{0.35,0.35,0.35}{P \vs Q}$};
   \draw node (cbcode) [right=1.75cm of pt, yshift=.5ex] {%
-\textcolor[rgb]{0.35,0.35,0.35}{$\cc{diskEnd} \cc{+=}\ \cc{len(txns)}$}
+\textcolor[rgb]{0.35,0.35,0.35}{$\cc{diskEnd}\ \cc{+=}\ \cc{len(txns)}$}
 % \draw node (cbcode) [right=1.95cm of pt, yshift=-0ex, align=left] {%
 %   \textcolor[rgb]{0.35,0.35,0.35}{$\begin{aligned}P :=&  \gamma \mapsto \cc{diskEnd} \\
 %   Q :=& \gamma \mapsto \cc{diskEnd} \\ &\ \ \ \phantom{} + \cc{len}(\cc{txns})
