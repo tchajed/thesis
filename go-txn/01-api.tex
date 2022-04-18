@@ -1,5 +1,5 @@
 \section{Programming with GoTxn}
-\label{s:gotxn-api}
+\label{sec:txn:api}
 
 \begin{figure}
 \begin{minted}{go}
@@ -64,7 +64,7 @@ insofar as its operations are allowed within a transaction. In contrast using
 other shared memory within a transaction is not permitted since it would
 compromise the atomicity guarantees --- the transaction system acquires locks to
 make reads and writes seem atomic, but it doesn't have any locking discipline
-for other state. \Cref{sec:gotxn:safe} explains these restrictions and an
+for other state. \Cref{sec:txn:safe} explains these restrictions and an
 \emph{under-specification} technique for fitting the
 in-memory allocator API into GoTxn's atomicity guarantee.
 
@@ -81,7 +81,7 @@ in-memory allocator API into GoTxn's atomicity guarantee.
 % file-system statically allocates regions for the inodes, allocator bitmaps,
 % and data blocks, so that object sizes never change.
 
-As described in \cref{s:gotxn:impl}, GoTxn is implemented using two-phase
+As described in \cref{sec:txn:impl}, GoTxn is implemented using two-phase
 locking. As a result, a transaction acquires a per-address lock on every address
 it reads or writes along the way. Acquiring multiple locks during a transaction
 creates the possibility for deadlocks, if two threads acquire a pair of locks in

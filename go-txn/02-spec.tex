@@ -1,5 +1,5 @@
 \section{Specifying GoTxn using refinement}%
-\label{sec:gotxn:spec}
+\label{sec:txn:spec}
 
 At a high level, GoTxn makes transactions atomic. This chapter formalizes this
 intuitive definition in the form of \emph{program refinement}. Later in
@@ -69,7 +69,7 @@ implementation, and this must correspond to a crash in the specification
 program.
 
 \subsection{Program refinement}
-\label{sec:gotxn:program-refinement}
+\label{sec:txn:program-refinement}
 
 The specification we give to GoTxn uses \emph{program refinement},
 which formalizes serializability (sometimes known as atomicity and isolation)
@@ -120,7 +120,7 @@ accessing a transactional disk logically maintained by the transaction system.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.
 
 \subsection{Safe transactions}
-\label{sec:gotxn:safe}
+\label{sec:txn:safe}
 
 The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code
 within a transaction not access any shared memory outside of the transaction

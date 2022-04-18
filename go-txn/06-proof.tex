@@ -1,9 +1,9 @@
 \section{Verifying GoTxn}
-\label{s:proof}
+\label{sec:txn:proof}
 
 This section outlines the proof of GoTxn's correctness, as described in
-\cref{sec:gotxn:spec}. The implementation consists of multiple layers stacked
-together, as described in \cref{s:gotxn:impl}. The proof follows the same
+\cref{sec:txn:spec}. The implementation consists of multiple layers stacked
+together, as described in \cref{sec:txn:impl}. The proof follows the same
 structure, and the most interesting aspect is the specification for each layer.
 
 Recall that program refinement is a statement about an arbitrary program that
@@ -212,7 +212,7 @@ logger position, which the proof demonstrates using a lower bound on
 \cc{diskEnd} from when the logger initially started.
 
 \subsection{Logically atomic crash specifications}
-\label{s:proof:logatom}
+\label{sec:txn:logatom}
 
 Throughout the GoTxn stack we specify internal layers using a transition-system
 specification, such as the examples illustrated in \cref{fig:wal-spec} for
