@@ -8,16 +8,39 @@ enable sequential reasoning for a concurrent file system (described in
 This chapter describes GoTxn's implementation, top-level specification, and
 several aspects of the proof. The implementation is composed of a software stack
 with several layers; each layer implements a new interface on top of one
-below. The proof follows the same structure, with much of the contributions
-lying in describing intermediate abstractions. Of particular note are the
+below. The proof follows the same structure, with several new specifications for
+intermediate layers. Of particular note are the
 program-refinement specification for the transaction system, the lifting
 specification for the journaling layer, and the abstraction for the write-ahead
 log layer.
 
 While as part of this thesis we only used GoTxn to implement and verify a file
-system, in principle the system and its specification are generic for any
+system, the system and its specification are generic for any
 storage system implemented on top, as long as its operations are implemented
 using transactions.
+
+GoTxn faces three key challenges in its specification, design, and proof.
+First, GoTxn's specification is stated in terms of programs using the
+transaction system, and not all programs will observe atomic transactions ---
+for example, accessing global variables or the network in the middle of a
+transaction is not atomic. To state a provable specification for GoTxn we needed
+a formalization of \emph{safe transactions}, described in \cref{sec:gotxn:safe},
+which obey some restrictions that the specification assumes the caller follows.
+
+The second challenge is supporting an in-memory allocator, which is necessary
+for the file system to get good performance but would be illegal according to
+GoTxn's restrictions on shared memory. To address this challenge we include an
+allocator in the GoTxn API and proof. A non-deterministic,
+\emph{under-specification} of the allocator makes its behavior serializable, and
+\cref{ch:daisy-nfs} demonstrates that this allocator is usable by using it in
+the DaisyNFS verified file system.
+
+Finaly, this specification is related to a concrete implementation, and thus
+requires a proof using a program logic. The proof manages the complexity of
+GoTxn's implementation by combining a \emph{lifting-based specification} that
+captures the journaling layer's crash atomicity (\cref{sec:txn:lifting}) with a
+simulation proof that captures how two-phase locking's concurrency control works
+(\cref{sec:txn:refinement}).
 
 \input{go-txn/01-api}
 \input{go-txn/02-spec}

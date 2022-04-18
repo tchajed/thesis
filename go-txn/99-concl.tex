@@ -3,13 +3,25 @@
 
 GoTxn is a concurrent, crash-safe transaction system with a machine-checked
 proof. The caller wraps a sequence of reads and writes in a transaction, which
-the transaction system promises to make atomic. We formalized the system's
-atomicity guarantee in the form of a \emph{program refinement} specification,
-which says that when the caller issues an arbitrary sequence of transactions,
-they appear to execute atomically, even if transactions are issued concurrently
-and if the system crashes. GoTxn is verified against its program refinement
-specification using Perennial. The proof is modular, using Perennial's logically
-atomic crash specifications to verify each layer separately and compose the
-proofs together. Of particular note in the proof is the \emph{lifting-based
-specification} specification of the journaling layer that captures what
-concurrent transactions do.
+the transaction system promises to make atomic. GoTxn has a relatively
+sophisticated implementation. The write-ahead log supports buffering new writes,
+logging for durability, and installation concurrently since the logger and
+installer threads access disk without locks. The object layer implements
+safe concurrent access to objects within the same block. Two-phase locking
+ensures transactions do not conflict, guaranteeing isolation.
+
+We formalized the system's atomicity guarantee in the form of a \emph{program
+refinement} specification, which says that when the caller issues an arbitrary
+sequence of transactions, they appear to execute atomically, even if
+transactions are issued concurrently and if the system crashes. A key challenge
+in this specification is formalizing ``safe'' transactions which GoTxn can make
+atomic, forbidding arbitrary access to shared memory that would fall outside the
+two-phase locking discipline. To make GoTxn practical with this restriction it
+includes an in-memory allocator with a specification that uses non-determinism
+to fit the allocator into GoTxn's atomicity specification.
+
+GoTxn is verified against its program refinement specification using Perennial.
+The proof is modular, using Perennial's logically atomic crash specifications to
+verify each layer separately and compose the proofs together. Of particular note
+in the proof is the \emph{lifting-based specification} specification of the
+journaling layer that captures what concurrent transactions do.
