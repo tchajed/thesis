@@ -5,12 +5,14 @@ The GoTxn specification formalizes this property, which we use in DaisyNFS to
 enable sequential reasoning for a concurrent file system (described in
 \cref{ch:daisy-nfs}).
 
-This chapter describes GoTxn's implementation, top-level specification, then
+This chapter describes GoTxn's implementation, top-level specification, and
 several aspects of the proof. The implementation is composed of a software stack
 with several layers; each layer implements a new interface on top of one
-below. The proof follows the same structure, with much of the contribution being
-in describing the abstraction of each interface, including the specification for
-the whole transaction system.
+below. The proof follows the same structure, with much of the contributions
+lying in describing intermediate abstractions. Of particular note are the
+program-refinement specification for the transaction system, the lifting
+specification for the journaling layer, and the abstraction for the write-ahead
+log layer.
 
 While as part of this thesis we only used GoTxn to implement and verify a file
 system, in principle the system and its specification are generic for any
@@ -20,8 +22,6 @@ using transactions.
 \input{go-txn/01-api}
 \input{go-txn/02-spec}
 \input{go-txn/03-system}
-% part of the proof section now
-%\input{go-txn/04-lifting}
 
 \section{Verification overview}%
 \label{sec:gotxn:overview}

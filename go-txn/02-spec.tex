@@ -39,16 +39,14 @@ sequence like \cc{tx := Begin(); f(tx); tx.Commit()} (with some additional code
 handling aborts), and second it replaces calls to the Txn abstract Read and
 Write operations with the GoTxn implementations at the Disk abstraction layer.
 
-Refinement relates two programs in terms of their visible behavior, which we
-will use to connect a program written at the transaction layer to its
+Refinement relates two programs in terms of their visible behavior, which is
+used in the specification
+to connect a program written at the transaction layer to its
 implementation at the disk layer. This notion of refinement also incorporates
 crashes into the outcomes of executing the program and gives it a corresponding specification.
 For the purposes of this work, the visible
 behavior is always network I/O, corresponding to receiving requests for the
-system or responding to them (for example, processing NFS requests). Regardless
-of the level of abstraction, each model of the server defines a trace of network
-I/O consisting of requests and responses, and this is the behavior refinement
-talks about:
+system or responding to them (for example, processing NFS requests).
 
 \begin{definition}[Refinement]
   An implementation program $p_{c}$ refines a specification program $p_{s}$,
@@ -65,10 +63,14 @@ The intuition behind the notation $p_{c} \refines p_{s}$ is that the set of
 behaviors of $p_{c}$ (the set of traces of network I/O $\textit{tr}$) is a subset of the
 behaviors of $p_{s}$. Whenever we state $p_{c} \refines p_{s}$ we leave implicit
 a definition of initial states $\mathrm{init}(\sigma_{s}, \sigma_{c})$, which
-will generally say both states are all zeros and of the same size.
+will generally say both states are all zeros and of the same size. This notion
+of refinement is standard, except that we allow crashing in the execution of the
+implementation, and this must correspond to a crash in the specification
+program.
 
 The specification we give to GoTxn uses \emph{program refinement},
-which formalizes serializability (sometimes known as atomicity and isolation) for transactions.
+which formalizes serializability (sometimes known as atomicity and isolation)
+for transactions running on top of GoTxn.
 To set up this specification, consider a program $p : \gooselayer{Txn}$ that
 uses transactions.
 To run $p$, it is combined with the transaction-system implementation, producing
@@ -99,7 +101,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 % \end{enumerate}
 
 The correctness of the transaction system is expressed by the following theorem:
-
+%
 \begin{theorem}[Program refinement]
   The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for
   all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
@@ -108,18 +110,27 @@ The correctness of the transaction system is expressed by the following theorem:
   disk to an all-zero transactional disk of the same size.
   \label{thm:gotxn-program-refinement}
 \end{theorem}
-
+%
 What the theorem says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
-The definition of safety formalized in Coq requires that code within a
+The theorem is stated in Coq and has a fully mechanized proof in Perennial.
+
+\paragraph{Safe transactions}
+The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code within a
 transaction not access any shared memory outside of the transaction layer; other
-than that, transactions are permitted to issue reads, writes, and do other
-computation. Safety also requires that transactions follow the preconditions of
+than that, transactions can use GoTxn's \cc{Read} and \cc{Write} operations to
+interact with the logical disk, and do any computation in between. For example
+it is safe for transaction to issue data-dependent operations, where the
+addresses in a transaction depend on earlier reads. The restriction to not use
+other shared state is a natural one for the system's correctness; for example,
+reads and writes to global variables would clearly be non-atomic since the
+transaction system does not have any concurrency control or protection over such
+variables.
+
+Safety also requires that transactions follow the preconditions of
 the \cc{Read} and \cc{Write} operations, which require a discipline of accessing
 each object with a fixed size. Finally, safe programs can only \cc{Abort} or
 \cc{Commit} a given transaction once. The notion of safe program will be
 important when linking this proof with the Dafny proofs, since the transaction
 system's proof only applies to a safe caller.
-\Cref{thm:gotxn-program-refinement} is stated in Coq and has a fully mechanized
-proof in Perennial.
