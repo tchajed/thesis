@@ -1,4 +1,4 @@
-\section{Program refinement specification}%
+\section{Specifying GoTxn using refinement}%
 \label{sec:gotxn:spec}
 
 At a high level, GoTxn makes transactions atomic. This chapter formalizes this
@@ -68,6 +68,9 @@ of refinement is standard, except that we allow crashing in the execution of the
 implementation, and this must correspond to a crash in the specification
 program.
 
+\subsection{Program refinement}
+\label{sec:gotxn:program-refinement}
+
 The specification we give to GoTxn uses \emph{program refinement},
 which formalizes serializability (sometimes known as atomicity and isolation)
 for transactions running on top of GoTxn.
@@ -116,21 +119,49 @@ transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.
 
-\paragraph{Safe transactions}
-The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code within a
-transaction not access any shared memory outside of the transaction layer; other
-than that, transactions can use GoTxn's \cc{Read} and \cc{Write} operations to
-interact with the logical disk, and do any computation in between. For example
-it is safe for transaction to issue data-dependent operations, where the
-addresses in a transaction depend on earlier reads. The restriction to not use
-other shared state is a natural one for the system's correctness; for example,
-reads and writes to global variables would clearly be non-atomic since the
-transaction system does not have any concurrency control or protection over such
-variables.
+\subsection{Safe transactions}
+\label{sec:gotxn:safe}
 
-Safety also requires that transactions follow the preconditions of
-the \cc{Read} and \cc{Write} operations, which require a discipline of accessing
-each object with a fixed size. Finally, safe programs can only \cc{Abort} or
-\cc{Commit} a given transaction once. The notion of safe program will be
-important when linking this proof with the Dafny proofs, since the transaction
-system's proof only applies to a safe caller.
+The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code
+within a transaction not access any shared memory outside of the transaction
+layer; other than that, transactions can use the GoTxn operations to interact
+with the logical disk and the allocator, and do any computation in between these
+operations. For example it is safe for transaction to issue data-dependent
+operations, where the addresses in a transaction depend on earlier reads. The
+restriction to not use other shared state is a natural one for the system's
+correctness; for example, reads and writes to global variables would clearly be
+non-atomic since the transaction system does not have any concurrency control or
+protection over such variables.
+
+Safety also requires that transactions follow the preconditions of the \cc{Read}
+and \cc{Write} operations, which require a discipline of accessing each object
+with a fixed size. Finally, safe programs can only \cc{Abort} or \cc{Commit} a
+given transaction once. The notion of safe program will be important when
+linking this proof with the Dafny proofs, since the transaction system's proof
+only applies to a safe caller.
+
+The allocator is part of the transaction API so that safe transactions have
+access to this important in-memory data structure. However, the allocator
+operations \cc{Alloc} and \cc{Free} do not hold a lock throughout the
+transaction, and thus they would appear to have an affect on concurrent
+transactions before \cc{Commit}. The reason why transactions are serializable
+despite this behavior is that we under-specify the allocator's behavior to cover
+possible concurrent interference. In particular the specification for \cc{Alloc}
+merely promises to return an in-bounds address, and GoTxn's specification does
+not even track the set of allocated/free addresses for each in-memory allocator.
+
+In practice the way the caller uses this specification is to store the
+ground-truth allocator state in the transaction system and then to use the
+in-memory allocator as an efficient way to find a free bit (without an in-memory
+allocator searching for a free bit would be difficult to do in an efficient
+way). The return value of \cc{Alloc} must be checked against the durable bitmap
+(this is efficient because GoTxn supports accessing an individual bit with
+\cc{ReadBit}). There is a chance the allocator returns a used address, if it was
+freed in memory but not on disk by a concurrent transaction, but the allocator
+is designed not to return recently freed addresses to avoid this issue.
+Similarly \cc{Free} is used as a hint but the caller also issues
+$\cc{WriteBit}(a, \goosefalse)$ to mark the correct bit free on disk. During
+recovery, for the in-memory allocator to be useful it must know what numbers
+have already been allocated. The caller reads the on-disk allocator state and
+uses \cc{MarkUsed(n)} to initialize the in-memory allocator to the same state as
+the on-disk allocator.

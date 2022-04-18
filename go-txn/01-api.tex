@@ -23,6 +23,7 @@ func (tx *Txn) WriteBit(a Addr, d bool)
 func NewAllocator(max uint64) *Allocator
 func (a *Allocator) Alloc() uint64
 func (a *Allocator) Free(n uint64)
+func (a *Allocator) MarkUsed(n uint64)
 \end{minted}
   \caption{The API for the transaction system and allocator. Reads and writes
     between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
@@ -57,16 +58,15 @@ method requires an explicit size argument while the size of a
 out the bit-sized operations to \cc{ReadBit} and \cc{WriteBit} (rather
 than using a single-element byte slice) to simplify the specification.
 
-\Cref{fig:txn-api} also includes an API for allocation alongside the
-transaction API.\@ \Cref{ch:daisy-nfs} will explain in more detail why this
-API must be part of the transaction system, since it is relevant to the
-file-system design. \tej{should not forward reference DaisyNFS, explain this
-somewhere in this chapter} The allocator should be considered part of the transaction
-system API insofar as its operations are allowed within a transaction.
-In contrast using other shared memory within a transaction is not permitted since it
-would compromise the atomicity guarantees --- the transaction system acquires
-locks to make reads and writes seem atomic, but it doesn't have any locking
-discipline for other state.
+\Cref{fig:txn-api} also includes an API for allocation alongside the transaction
+API.\@ The allocator should be considered part of the transaction system API
+insofar as its operations are allowed within a transaction. In contrast using
+other shared memory within a transaction is not permitted since it would
+compromise the atomicity guarantees --- the transaction system acquires locks to
+make reads and writes seem atomic, but it doesn't have any locking discipline
+for other state. \Cref{sec:gotxn:safe} explains these restrictions and an
+\emph{under-specification} technique for fitting the
+in-memory allocator API into GoTxn's atomicity guarantee.
 
 %% The state of the transaction system (the transactional disk transactions
 %% manipulate) looks much like a flat array of bytes.
@@ -81,7 +81,7 @@ discipline for other state.
 % file-system statically allocates regions for the inodes, allocator bitmaps,
 % and data blocks, so that object sizes never change.
 
-As described next in \cref{s:gotxn:impl}, GoTxn is implemented using two-phase
+As described in \cref{s:gotxn:impl}, GoTxn is implemented using two-phase
 locking. As a result, a transaction acquires a per-address lock on every address
 it reads or writes along the way. Acquiring multiple locks during a transaction
 creates the possibility for deadlocks, if two threads acquire a pair of locks in
