@@ -14,7 +14,7 @@ DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard go-txn/code/*.go)
 default: thesis.pdf abstract.txt
 
 thesis.pdf: $(DEPS)
-	./latexrun --latex-args='-shell-escape' --bibtex-args=-min-crossrefs=100 -W no-overfull thesis.tex
+	./latexrun --latex-args='-shell-escape' --bibtex-args=-min-crossrefs=100 -W no-overfull -W no-tabfigures thesis.tex
 
 abstract.txt: frontmatter/abstract.tex
 	cat $< | \
