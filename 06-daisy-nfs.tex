@@ -1,7 +1,45 @@
-This chapter describes the interface, specification, implementation, and
-proof of DaisyNFS.\@ When giving the implementation and proof, we will not go into
-the details of the transaction system, taking its specification as a given; see
-\cref{ch:txn} for that part of the proof.
+DaisyNFS is a verified, concurrent, and crash-safe file system, built on top of
+GoTxn. This chapter describes its specification, implementation, and proof. A
+key aspect of DaisyNFS is that the proofs of the file-system code use \emph{sequential
+reasoning}, even though DaisyNFS is a concurrent file system --- this is possible
+due to a \emph{simulation-transfer theorem}. The theorem uses the strong
+guarantee of GoTxn to enable verifying a system written with transactions using
+entirely different techniques, so that the file-system proofs are carried out in
+Dafny, a sequential verification-oriented programming language.
+
+\section{Motivation and goals}%
+\label{sec:daisy-nfs:motivation}
+
+DaisyNFS is an implementation of the Network File System (NFS) API.\@ This is a
+standard file-system interface, specified in RFC 1813~\cite{RFC:1813}
+(specifically this is the standard for NFS version 3, which is what DaisyNFS
+implements). NFS is widely used, generally to export a file system across a
+network to multiple clients, and widely supported by operating systems ---
+Windows Server, macOS, and Linux each include an implementation of both an NFS
+server and client.\footnote{Windows 10 and 11 can act as NFS clients but do not
+include an NFS server.}
+
+In order to verify DaisyNFS, we first need a specification. A natural starting
+point is RFC 1813, which is supposed to prescribe what a valid NFSv3 server
+does. However, the RFC is a prose document with about 130 pages of English text,
+which is unsuitable for a mathematical proof. Thus the first step is
+to turn the RFC into something more precise. Our NFS specification uses a
+transition system defined in Dafny for this purpose, with an abstract state that
+can capture the state of the server at all times, and transitions that define
+for each NFS operation how the state evolves and what the return value is. The
+transition system allows non-determinism in the specification to give the
+implementation some flexibility.
+
+The transition system describes the abstraction of an NFS server, but what does
+it mean for the \cc{daisy-nfsd} binary to implement this protocol? To formalize
+DaisyNFS's correctness we use \emph{refinement}, as used in the GoTxn
+specification as well. The server binary is a refinement of the NFS transition
+system (the specification transition system) if every execution of the code has
+user-visible behavior that the specification could also produce (also phrased as
+a behavior that the specification allows). In our specification the visible
+behavior of both systems is defined to be network requests and responses.
+
+Proving refinement for DaisyNFS's implementation directly would be quite challenging.
 
 \tej{still say ``this paper'' in several places}
 
