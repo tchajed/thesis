@@ -1,5 +1,7 @@
-\section{Verifying DaisyNFS}
+\section{Verifying DaisyNFS using Dafny}
 \label{sec:daisy:proof}
+
+\tej{connect this back to GoTxn better}
 
 A key contribution of DaisyNFS is a proof structure that isolates concurrency and crash
 reasoning to the transaction system. This is done by giving GoTxn a specification
@@ -10,11 +12,12 @@ involved in the proof, especially the transaction system's correctness theorem.
 
 \subsection{Simulation transfer}
 
-Program refinement captures how transactions execute. On top of this
-specification, we prove a \emph{simulation transfer} theorem that instead shows
-how transactions enable \emph{sequential reasoning} for a system on top. In
-DaisyNFS we will see how this justifies carrying out those proofs using Dafny, a
-sequential verification system.
+The GoTxn specification from \cref{sec:txn:spec} uses program refinement to
+capture that transactions are atomic. On top of this
+specification for the purpose of this chapter, we prove a \emph{simulation
+transfer} theorem that further shows how transactions enable \emph{sequential
+reasoning} for a system on top. In DaisyNFS we will see how this justifies
+carrying out those proofs using Dafny, a sequential verification system.
 
 The idea behind the simulation transfer specification is to express that a system
 verified using sequential reasoning for each transaction is also correct when
@@ -58,8 +61,7 @@ abstraction relation to be preserved by crashes, the proof engineer does \emph{n
 % for sequential crash safety~\cite{chajed:argosy}.
 The
 diagram in \cref{fig:refinement} depicts the main
-refinement condition (1) diagrammatically. \tej{after moving this will be a
-  reasonable forward reference}
+refinement condition (1) diagrammatically.
 % For example, it is fairly easy to use them to show
 % that for any sequential program $p : \gooselayer{S}$, the traces of the code
 % $\mathrm{link}(p, i)$ are a subset of the traces of the spec $p$ (we will not

@@ -109,7 +109,13 @@ if the specification earlier implies \cc{ino in fs}.
 We developed a state-machine model of the regular file and directory operations
 in NFS in this style, including specifying what certain errors
 signify. \Cref{fig:nfs} lists the entire NFS API and what parts are verified in
-DaisyNFS. \tej{this part is a bit out-of-place in this subsection, consider rearranging}
+DaisyNFS.
+The file system has unverified implementations \cc{FSINFO} and \cc{PATHCONF}, which give the client static
+configuration information about the file system (for example, the maximum supported
+write size or the maximum path length). These return constants and thus have no
+associated proof. DaisyNFS also implements \cc{FSSTAT} to report total and free space,
+but it does not have a meaningful specification.
+
 
 \renewcommand{\check}{\textcolor{ForestGreen}{\checkmark}}
 \newcommand{\nope}{\textcolor{Maroon}{\ding{55}}}
@@ -140,12 +146,6 @@ DaisyNFS. \tej{this part is a bit out-of-place in this subsection, consider rear
 \caption{NFS API and which operations DaisyNFS supports and verifies.}
 \label{fig:nfs}
 \end{figure}
-
-DaisyNFS implements \cc{FSINFO} and \cc{PATHCONF}, which give the client static
-configuration information about the file system (for example, the maximum size
-of a write or the maximum path length). These return constants and thus have no
-specification. DaisyNFS also implements \cc{FSSTAT} to report total and free space,
-but it does not have a meaningful specification.
 
 DaisyNFS could support some of the remaining operations with some more effort.
 Symbolic links (symlinks) are essentially a file that holds a path, which can be read with
@@ -178,6 +178,8 @@ its link count drops to zero.
 \caption{API layers of DaisyNFS.}
 \label{fig:layers}
 \end{figure}
+
+\tej{starting here the text is out-of-place}
 
 The proof is about the server loop at three layers of abstraction, as outlined
 in \cref{fig:layers}. The Disk layer at the bottom is where the whole server
