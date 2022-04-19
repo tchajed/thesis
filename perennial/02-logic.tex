@@ -49,7 +49,7 @@ defined to be $P \proves \wpc{e}{Q}{Q_{c}}$. There is one subtlety in the
 terminology: though we use the term ``crash,'' these postconditions hold
 \emph{just prior} to the system actually shutting down, so that the contents of
 memory is unchanged.\footnote{They might more properly be called \emph{halt
-conditions}, but the original FSCQ paper used ``crash conditions'' and the term has
+conditions}, but the original FSCQ paper~\cite{chen:fscq} used ``crash conditions'' and the term has
 stuck since then.} In \cref{sec:perennial:recovery} we'll connect these
 crash specifications to the memory wipe and reboot that happens right afterward.
 
@@ -87,7 +87,7 @@ context.
 \label{fig:wpc-seq}
 \end{figure}
 
-Some more interesting structural rules for WPCs with sequential code are listed in \cref{fig:wpc-seq}.
+Some more interesting structural rules for \wpcw with sequential code are listed in \cref{fig:wpc-seq}.
 One such rule that is often used in Perennial is the crash frame rule,
 \ruleref{wpc-frame}. Like the traditional frame rule, this is a reasoning
 principle for ignoring some resources while proving part of a program. When
@@ -109,22 +109,25 @@ precondition, using a derived rule:
   {\hoareC{P \sep P_d}{e_1;\, e_2}{R}{Q_c}}
 \]
 
-Another example of combining WPC and WP (crash and crash-free) reasoning is in
+Another example of combining crash and crash-free reasoning with both \wpcw and \wpw is in
 the \ruleref{wpc-atomic} rule. The precondition $\atomic(e)$ says this rule only
 applies to atomic expressions, which take a single step, and the conclusion is a
-WPC for this expression. The premise involves a connective $P \land Q$. This is
+\wpcw for this expression. The premise involves a connective $P \land Q$. This is
 a \emph{non-separating conjunction} or ``logical and''. $P \land Q$ holds in
 some state when $P$ and $Q$ both hold, but unlike $P \sep Q$ they do not have to
 be over disjoint parts of the state, so for example
 $p \mapsto v \proves p \mapsto v \land p \mapsto v$ is trivially true.
 
-The logical ``and'' makes this spec much more powerful. If at some point at the
+The logical ``and'' is important in this rule. If at some point at the
 proof we have resources $R$ and want to prove $\wpc{e}{P}{P_{c}}$, the rule says
 it is sufficient to prove two things: $R \proves P_{c}$ and
 $R \proves \wpre{e}{P_{c} \land P}$.
 Observe that this rule reduces crash reasoning to non-crash reasoning. Also
 notice that unlike most separation logic reasoning, we don't need to split up
-$R$ to prove these two entailments; the full contents of $R$ are available in both.  There are two
+$R$ to prove these two entailments; the full contents of $R$ are available in
+both, which would not be the case if the rule had a separating conjunction.
+
+There are two
 reasons why this reasoning is sound: first, $e$ takes only a single step, and
 the system either crashes or not, but not both, so the proof only needs to show either
 the crash or post condition. If the system crashes before $e$ then
@@ -150,7 +153,7 @@ right after $e$) and $P$ (to show the postcondition).
 
 To reason about concurrency, Perennial needs some more principles for sharing
 ownership between threads. The core mechanism in concurrent separation logic for
-reasoning about concurrency is the \emph{invariant}. The rules for working
+reasoning about concurrency is the invariant, as explained earlier. The rules for working
 with invariants in a non-crash setting are given in \cref{fig:invariants}: \ruleref{wp-inv-alloc} gives up $R$
 in exchange for $\knowInv{}{R}$, and \ruleref{inv-atomic} ``opens'' an
 invariant for a single atomic step.
@@ -231,8 +234,8 @@ system on boot, which we call a \emph{recovery procedure}. So far, we have used
 Perennial for reasoning about systems that interact with a disk, a device with
 an interface for reading and writing blocks (assumed to be 4KB in our
 development). These disks might be a block device like \cc{/dev/sda1} in Linux,
-or can be a file hosted in another file system. The latter is useful for testing
-and performance experiments that run on an in-memory file hosted in tmpfs.
+or can be a file hosted in another file system (such as tmpfs for an in-memory
+disk).
 
 A crash transition resets the heap to empty while preserving the disk state.
 Encoding the effect on the heap in separation logic is a bit tricky, since it would appear that
@@ -251,9 +254,9 @@ The Perennial logic, like the underlying Iris framework, is parameterized over a
 language and its semantics, which defines the crash transition. The
 language we generally work with is GooseLang, described in detail in
 \cref{ch:goose}. Our proofs so far with GooseLang use a simple crash model,
-where the heap is reset to an empty map and the disk is unchanged. This
-corresponds to a synchronous semantics, since it means that disk writes are
-immediately considered durable. Perennial also supports defining an asynchronous
+with the disk unchanged on crash. This
+corresponds to a synchronous semantics, since it means that a disk write is
+immediately considered durable when it returns. Perennial also supports defining an asynchronous
 disk by modeling buffered writes and then non-deterministically choosing which
 buffered write is persistent at crash time, similar to the model in
 FSCQ~\cite{chen:fscq}. Because the crash transition is defined by the user, it
@@ -269,12 +272,13 @@ where $e$ represents the storage system, $e_{r}$ is a recovery procedure that
 will run on restart, $P$ is the postcondition for normal execution, and $P_{r}$
 is the \emph{recovery postcondition}. When $e$ is run in a state satisfying this
 $\wprw$, if it terminates normally then $P$ holds, and if the system crashes and
-$e_{r}$ terminates then $P_{r}$ holds. The latter is true even if the system
-crashes while running $e_{r}$ and restarts all over again.
+$e_{r}$ terminates then $P_{r}$ holds. The latter is true even if the system repeatedly
+crashes and restarts while running $e_{r}$.
 
 Perennial has only one rule to prove a $\wprw$, which reduces it to proving a
-$\wpcw$ about $e$ and an \emph{idempotent} specification for
-$e_{r}$~\cite{chen:fscq}:
+$\wpcw$ about $e$ and an \emph{idempotent} specification \tej{look for a classic
+citation for idempotent} for $e_{r}$, namely one where the crash condition
+implies the precondition:
 
 \begin{mathpar}
   \inferH{wpr-idempotence}%
@@ -314,7 +318,8 @@ $P_{c}$. Then the proof rules in Perennial guarantee that recovery can assume
 $P_{c}$ holds if the system crashes and reboots at any time, as given by the
 idempotence rule.
 
-\section{Soundness}
+\section{Soundness}%
+\label{sec:perennial:soundness}
 
 Above we presented an intuitive meaning for $P \proves \wpr{e}{e_{r}}{Q}{Q_{c}}$, but it is
 not obvious that the definitions of $\wprw$ and $\wpcw$ imply that this
@@ -351,7 +356,7 @@ The basic version of the soundness theorem says:
   \end{enumerate}
 \end{theorem}
 To satisfy the premise of the soundness theorem, the user gets to assume points-to
-facts for all of the addresses in the initial disk. In return the theorem has
+facts for all of the addresses in the initial disk (the assertion $\bigast\limits_{a \mapsto v \in d} a \dmapsto v$). In return the theorem has
 several postconditions. First, the theorem promises
 that $e$ runs ``safely'' in the sense of not getting stuck. This immediately
 rules out a number of errors, including any calls to Go's built-in \cc{panic()}
@@ -403,8 +408,9 @@ arises from Iris's flexible ghost state. Namespaces and masks are used to
 prevent re-entrancy where an invariant is opened twice by the same thread, which
 would be unsound. The
 on-paper presentation still aims to capture the essence, but the code is again
-the source of truth for the Perennial logic (which has an associated soundness
-proof in Coq).
+the source of truth for the Perennial logic. The soundness proof ensures that
+the code's rules are sound, and Coq checks that these details and their side
+conditions are all written correctly.
 
 Iris comes with a proof mode called MoSeL~\cite{krebbers:ipm,krebbers:mosel} for
 interactive proofs. The proof mode supports proving separation logic theorems
@@ -425,8 +431,9 @@ resources that are needed for the crash condition but not being used otherwise.
 
 \subsection{Named predicates in separation logic}
 
-In proving GoTxn, every layer defines an invariant that is preserved throughout
-the entire execution. Coming up with these invariants is a challenging part of
+To prove a large system requires writing down many invariants (one for each
+layer of the system) and then proving these invariants are preserved by the
+code. Coming up with these invariants is a challenging part of
 the proof, and requires frequent cycles of finding an invariant doesn't work,
 editing it, and then revising the proofs. The proof will typically need to
 \emph{destruct} the invariant, which breaks it into separate hypotheses for each

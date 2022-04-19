@@ -1,4 +1,5 @@
-\section{Primer on Iris and separation logic}
+\section{Primer on Iris and separation logic}%
+\label{sec:perennial:iris}
 
 A program logic is a formal system for specifying and reasoning about programs.
 One of the simplest program logics is Hoare logic, still the basis for much
@@ -39,9 +40,9 @@ specifications in a different style of \emph{weakest preconditions} (WPs). We wi
 $\wpre{e}{Q}$ to denote the weakest precondition of $e$ with postcondition $Q$;
 if $e$ is run in a state satisfying $\wpre{e}{Q}$ and terminates, the final
 state will satisfy $Q$. Note that the $\wprew$ is a \emph{predicate over
-states}, not an assertion like a Hoare triple. To build intuition, the statement
+states}, not a judgment of the logic like a Hoare triple. To build intuition, the statement
 $P \proves \wpre{e}{Q}$ is equivalent to $\hoare{P}{e}{Q}$. An excellent
-explanation of weakest preconditions vs Hoare triples can be found in
+comparison between weakest preconditions and Hoare triples can be found in
 ``Separation logic for sequential programs''~\cite{chargueraud:seq-seplogic}.
 
 The term ``weakest precondition'' is because $\wpre{e}{Q}$ is supposed to be the
@@ -55,10 +56,11 @@ that also guarantees termination. This thesis uses the term weakest precondition
 \emph{total correctness}), because proving termination in the presence of
 concurrency is quite challenging.
 
-As an example of weakest precondition reasoning, the frame rule becomes
-\ruleref{wp-frame} in terms of WPs. Reading this rule forwards, if in a proof
+\Cref{fig:wp-rules} shows some basic rules of separation logic, phrased in terms of weakest preconditions.
+As an example, the frame rule becomes
+\ruleref{wp-frame} in terms of the \wpw assertion. Reading this rule forwards, if in a proof
 the assumptions include $F$
-and separately $\wpre{e}{Q}$, then we can move $F$ to the postcondition because
+and separately $\wpre{e}{Q}$, then the proof can move $F$ to the postcondition because
 separation logic guarantees the proof of the WP does not affect or invalidate
 the resources in the frame $F$.
 
@@ -90,14 +92,16 @@ the resources in the frame $F$.
 \subsection{Ghost state and concurrency in Iris}
 \label{sec:perennial:concurrency}
 
-Iris generalizes separation logic to also reason about concurrency. A full
+Concurrent separation logic~\cite{brookes:csl} generalizes separation logic to
+also reason about concurrency. Iris is a type of concurrent separation logic,
+with several advances beyond the original formulation. A full
 explanation of the Iris logic is out-of-scope for the thesis; ``Iris from the
 ground up''~\cite{jung:iris-jfp} is a comprehensive introduction while the
 original ``Iris 1.0'' paper~\cite{jung:iris-1} is a shorter introduction for a
 reader already familiar with separation logic. Two features of Iris are most
 relevant since they are used in the GoTxn proof: ghost state and invariants.
 
-Ghost state is a technique for reasoning about a program by augmenting its
+A key technique in Iris is to reasoning about a program by augmenting its
 physical state (local variables and the heap) with some additional \emph{ghost
 state} which is maintained only for the sake of the proof and has no effect on
 the program's execution (hence the term ``ghost''). It is easier to understand
@@ -119,8 +123,12 @@ bubble sort example in
 Ghost variables can also be used to give abstract specifications to a piece of
 code. For example, consider a ``statistics database'' that maintains the running
 mean of a sequence of numbers (written in Go for readability):
-%
-\begin{minted}{go}
+
+\vspace{\baselineskip}
+\hrule
+\vspace{-8pt}
+\begin{multicols}{2}
+\begin{minted}[frame=none]{go}
 type StatDB struct {
   count int
   sum   float64
@@ -130,12 +138,22 @@ func (db *StatDB) Add(n float64) {
   db.count++
   db.sum += n
 }
+\end{minted}
+%
+\columnbreak
 
+\begin{minted}[frame=none]{go}
 func (db *StatDB) Mean() float64 {
-  if db.count == 0 { panic("empty db") }
+  if db.count == 0 {
+    panic("empty db")
+  }
   return db.sum/db.count
 }
 \end{minted}
+\end{multicols}
+\vspace{-5pt}
+\hrule
+\vspace{\baselineskip}
 
 The code only tracks the count of elements and
 their sum, but the behavior of the library is easiest to state in terms of the list of all
@@ -175,11 +193,11 @@ how it may be updated.
 \newcommand{\ghostvar}[2][]{\dashedbox{\gamma \mapsto_{#1} #2}}
 
 A simple example to illustrate both principles is Iris's fractional ghost
-variables. The assertion $\ghostvar[q]{v}$ says that $\gamma$ has value
+variables. The assertion $\ghostvar[q]{v}$ says that the ghost variable $\gamma$ has value
 $v$ (of any fixed type) and asserts ownership over a (positive) fraction $q$ of
 it --- any fraction $q < 1$ represents read-only access to the ghost variable,
 while full ownership $q = 1$ allows writing as well.
-Complete ownership $\ghostvar[1]{v}$ is common enough that it is often
+Full ownership $\ghostvar[1]{v}$ is common enough that it is often
 abbreviated to
 $\ghostvar{v}$, with no fraction. The dashed box around this assertion emphasizes that this
 assertion is about ghost state and not about the heap, as in the points-to
@@ -220,11 +238,11 @@ Fractional ghost state can be updated after creation with \ruleref{frac-update}.
 The update requires full ownership. Fractional ghost variables can instead be
 split into smaller pieces with \ruleref{frac-split}; these pieces can no longer
 be updated (since this would invalidate the rest of the assertions), but two
-assertions for the same ghost variable must be for equal values since the
-underlying variable has only one value.
+assertions for the same ghost variable must be for equal values
+(\ruleref{frac-agree}) since the underlying variable has only one value.
 
 This thesis describes a few constructions for ghost state to carry out parts of
-the proof, such as the example of fractional ghost state described above. In reality all
+the GoTxn proof, such as the example of fractional ghost state described above. In reality all
 ghost state in Iris is defined using a single, general mechanism. Ghost state
 can come from any instance of an algebraic structure $M$ called
 a ``resource algebra'', where ownership really means
