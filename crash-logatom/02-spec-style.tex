@@ -1,0 +1,297 @@
+\section{Crash and recovery reasoning}
+\label{sec:perennial:recovery-spec}
+
+The strategy behind proving crash safety is to prove a theorem about running a
+whole system, restarting after every crash. For example, for DaisyNFS this
+theorem applies to the server's main loop that receives a message from the
+network, processes it in a background thread, and replies over the network.
+Immediately following boot, before processing any requests, the server runs a
+recovery procedure to restore in-memory state. This whole procedure --- recovery
+followed by running the system --- gets an idempotent specification that is
+proven with \ruleref{wpr-idempotence} from \cref{sec:perennial:recovery}. The
+crash condition for this theorem is a description of the state of the whole
+system at any intermediate step; describing this directly would be daunting, but
+it is doable since each layer describes its part of the crash condition.
+
+The circular buffer is the lowest layer of the implementation, so the way it
+fits into the larger plan is that the whole system's recovery starts by
+recovering the circular buffer's state, then uses that state to recover the next
+layer, and so on until the whole system is ready to run. Schematically this
+looks like the following:
+%
+\begin{minted}[linenos]{go}
+func RunSystem() {
+  c, start, upds := RecoverCircular()
+  // recover rest of system from c, start, upds
+  fs := recoverFilesystem(...)
+  for {
+    req := GetRequest()
+    go func() {
+      ret := fs.Handle(req)
+      SendReply(req, ret)
+    }()
+  }
+}
+\end{minted}
+
+The circular buffer supplies three things to fit into the whole-system
+recovery proof: (1) an abstract crash predicate for the state the circular
+buffer requires for recovery, (2) a crash specification for the circular
+buffer's recovery procedure itself, and (3) a post-recovery init theorem that
+helps the caller maintain the circular buffer's crash predicate and also
+initializes the circular buffer's invariant.
+
+The specification for the library's recovery procedure \cc{RecoverCircular()} is:
+%
+\begin{align*}
+  &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \} \\
+  &\qquad\cc{RecoverCircular()} \\
+  &\{ \Ret{(\ell, \cc{diskStart}, \cc{upds})} \sigma = (\cc{diskStart}, \cc{upds}) \sep {} \\
+  &\quad \circstate(\gamma, \sigma) \sep {}  \\
+  &\quad \startIs(\cc{diskStart}) \sep \diskendIs(\cc{diskStart} + \cc{len}(\cc{upds})) \sep {} \\
+  &\quad \cc{circ_appender}(\gamma, \ell) \} \\
+  &\{ \circstate(\gamma, \sigma) \sep \cc{circ_resources}(\gamma) \}
+\end{align*}
+%
+The first thing to notice about the recovery specification is that it preserves
+$\circstate(\gamma, \sigma)$, which gives the current state of the circular
+buffer, both on crash and if recovery completes. It is also the case that
+$\cc{circ_appender}(\gamma, \ell) \proves \cc{circ_resources}(\gamma)$, so that
+$\cc{circ_resources}(\gamma)$ is also preserved by recovery. These two together
+are the crash predicate for the circular buffer. We say the crash predicate is
+abstract because the user of this theorem does not need to know how it is
+defined.
+
+\newcommand{\cfupdw}{\mathrm{cfupd}}
+\newcommand{\cfupd}[1]{\cfupdw\left(#1\right)}
+\newcommand{\cinvw}{\mathrm{cinv}}
+\newcommand{\cinv}[1]{\mathrm{cinv}\left(#1\right)}
+
+The circular buffer's proof also supplies the following \emph{post-recovery
+init} theorem, which sets up the circular buffer for use after recovery:
+%
+\begin{align*}
+  &\forall \sigma, P(\sigma) \vs %
+  P_{\mathrm{rec}}(\sigma) \sep %
+  P_{\mathrm{crash}}(\sigma) \proves \\
+  &\circstate(\gamma, \sigma) \sep P(\sigma) \vs \\
+  &\exists \gamma'.\, \cc{is_circular}(\gamma) \sep {} \\
+  &\quad \cfupd{ \exists \sigma.\, \circstate(\gamma', \sigma) \sep %
+    \cc{circ_resources}(\gamma', \sigma) \sep %
+    P_{\mathrm{rec}}(\sigma) } \sep {} \\
+  &\quad \cinv{ \exists \sigma.\, \circstate(\gamma, \sigma) \sep %
+    \cc{circ_exchanger}(\gamma, \gamma') \sep %
+    P_{\mathrm{crash}}(\sigma) }
+\end{align*}
+
+There are several components to this theorem. First, the circular buffer has the
+caller provide a way to split the HOCAP predicate $P(\sigma)$ into two parts,
+$P_{\mathrm{rec}}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ --- intuitively the
+former is transferred to recovery as part of its crash condition, whereas the
+latter is ``immutable'' and held inside an invariant. Second, the theorem
+consumes $\circstate(\gamma, \sigma) \sep P(\sigma)$ and allocates three things:
+(1) $\cc{is_circular}(\gamma)$ (notice that the premise of this theorem is the
+contents of this invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
+latter two are low-level features of Perennial that we'll now introduce.
+
+The assertion $\cfupd{R}$ (``crash fancy update'') is similar to a view-shift
+$\TRUE \vs R$ in that it is a single-use update that produces the resources $R$.
+However, the ``crash'' part indicates that this update can only be fired after a
+crash, so it can be used to prove a crash condition but is otherwise unusable.
+Practically speaking, having $\cfupd{R}$ in a precondition allows the user to
+\emph{cancel} $R$ from the proof's crash condition, as reflected in the
+following rule:
+
+\begin{mathpar}
+  \inferH{cfupd-use}
+  {P \proves \wpc{e}{Q}{Q_{c}}}%
+  {P \sep \cfupd{R} \proves \wpc{e}{Q}{Q_{c} \sep R}}
+\end{mathpar}
+
+In the context of the circular buffer, what the $\cfupdw$ sets up for the caller
+is that if the system crashes, the recovery proof can dismiss the circular
+buffer's crash predicate, along with $P_{\mathrm{rec}}(\sigma)$, from the
+overall crash condition. Thus using \ruleref{cfupd-use} before running the
+system both sets up the circular buffer for use (by establishing
+$\cc{is_circular}(\gamma)$) and guarantees the circular buffer's part of the
+crash condition from now on. A simpler but abstract version of this
+reasoning appears in the \ruleref{wpc-inv-alloc} rule in \cref{sec:perennial:wpc};
+this theorem is a concrete use case (split into creating the cfupd and later
+using it, rather than in one step as in \ruleref{wpc-inv-alloc}). What Perennial
+makes possible is to take advantage of the invariant for crash reasoning ---
+what must be carefully handled is that while the invariant is shared by all
+threads, only one thread can get ``credit'' for this invariant holding at crash
+time.
+
+Notice in the circular buffer's post-recovery init theorem that the ghost name
+for the circular buffer changes on crash to a new $\gamma'$; the reason for this
+is that other threads (the logger and installer) have access to some of the
+circular buffer resources associated with $\gamma$. Rather than requiring those
+threads to ``return'' those resources on crash and impose a crash condition on
+that code, this theorem simply creates a new instance of the circular buffer and stop using
+the old one. As a result on crash the theorem can produce
+$\cc{circ_resources}(\gamma', \sigma)$ and hand out these resources to the
+caller.
+
+The third component of the theorem is a $\cinvw$ (``crash invariant'').
+$\cinv{R}$ behaves very similarly to an invariant assertion $\knowInv{}{R}$, except
+that like a crash fancy update it can only be used after a crash. This crash
+invariant ``freezes'' the old state of the circular buffer (notice that
+$\circstate(\gamma, \sigma)$ is now unchanging, since future operations will
+interact with the instance named $\gamma'$). This process also produces
+$\cc{circ_exchanger}(\gamma, \gamma')$, which includes additional ghost state
+relating the old and new instances in the form of the predicate. The circular buffer in
+particular does not have an interesting exchanger predicate, but this feature of
+the specification pattern shows up in the GoTxn proof.
+
+In general, each layer supplies a post-recovery init theorem. All of these
+theorems are called after running all the recovery code just
+before starting the system (that is, this would be just after line 4 in the
+\cc{RunSystem()} code above). Calling these view shifts allocates all the layers'
+invariants while simultaneously getting ``credit'' for this allocation in the
+form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
+Prior to calling this initialization, the recovery procedure has access to the
+inner contents of all the invariants, reflecting that it has exclusive access,
+but in turn this proof is required to maintain a complicated crash condition.
+(One interesting side effect is that recovery code can safely call library
+functions without using locks, since this code is still guaranteed to be
+single-threaded.) Once the system starts running the invariant allows multiple
+threads to share access to this state, and the invariant implicitly guarantees
+the crash condition recovery depends on.
+
+\section{Exchanging resources}
+
+The final aspect of the logically-atomic specification pattern is the role of
+the exchanger, one of the conclusions of the post-recovery init theorem. The
+purpose of this predicate is to give the caller a way to, on crash, relate
+resources issued by the library before a crash to those after a crash. In the
+circular buffer, the $\startIs(\cc{start})$ and $\diskendIs(\cc{end})$ resources
+are thrown away on crash and re-created during recovery; there are only two of
+them, so it is easy enough to reconstruct them globally. In contrast, some
+resources are used locally by a thread and we would like a way to retain
+ownership across a crash, into that thread's crash condition. This is exactly
+what happens with GoTxn's lifting-based specification for the journaling layer, explained in greater
+detail in \cref{sec:txn:lifting}. Exchanging gives threads a way to ``trade''
+ownership prior to a crash, associated with the old $\gamma$ instance, for
+ownership after a crash, associated with $\gamma'$; this ownership can also be
+exclusive, because the process destroys the old ownership and thus can only be
+performed once.
+
+\newcommand{\mapstoDisk}{\mapsto_d}
+\newcommand{\mapstoOp}{\mapsto_{\mathit{op}}}
+\newcommand{\mapstoLftd}{\mapsto_d^{\mathrm{lftd}}}
+\newcommand{\jrnlToken}[1]{\textlog{token}(#1)}
+
+To make this a bit more concrete, let us look at a part of the GoTxn lifting
+specification. This specification issues three related resources: the two more important
+ones are $a \mapstoDisk o$ and $a \mapstoOp o$. Both represent exclusive
+access to address $a$. $a \mapstoDisk o$ is a durable statement about the
+logical disk, while $a \mapstoOp o$ gives the value at address $a$ from the
+perspective of an in-progress operation $op$. The lifting-based specification
+gets its name from a logical ``lift'' operation that trades $a \mapstoDisk o$
+for $a \mapstoOp o \sep a \mapstoLftd o$. This brings us to the
+third type of GoJournal resource, $a \mapstoLftd o$, which is
+almost identical to $a \mapstoDisk o$ except that it has been lifted and thus
+cannot be lifted again.\footnote{In the implementation,
+$a \mapstoLftd o$ is the primitive resource. There is a
+resource $\jrnlToken{a}$ that gives the right to lift $a$. Then
+$a \mapstoDisk o$ is simply defined to be
+$a \mapstoLftd o \sep \jrnlToken{a}$.} We can give
+the journal's \cc{Commit} operation a
+(highly-simplified) specification like the following:
+%
+\begin{align*}
+  \hoareCV{a \mapstoLftd o \sep a \mapstoOp o'} %
+  {\mathit{op}.\cc{Commit}()}%
+  {\Ret{\mathit{ok}} \mathrm{if~} \mathit{ok} %
+  \mathrm{~then~} a \mapstoDisk o' \mathrm{~else~} a \mapstoDisk o}%
+  {a \mapstoDisk o \lor a \mapstoDisk o'}
+\end{align*}
+
+In the non-error, non-crash return, the postcondition turns $a \mapstoOp o'$
+into a durable fact $a \mapstoDisk o'$. If the system doesn't crash but the
+transaction fails (which happens if it is too large to fit in the circular
+buffer), then the caller gets back an unlifted disk fact $a \mapstoDisk o$,
+reflecting that the transaction did not affect the disk. In the case of a crash
+the specification promises to give one of these assertions, and which one
+depends on exactly when the crash occurs.
+
+This specification is simplified to only give the case of committing an
+operation that modifies a single address, when in reality \cc{Commit}'s main purpose
+is to atomically commit multiple addresses; a single address is enough to
+understand the proof issues involved. If the system doesn't crash, it is
+relatively straightforward to reverse the lifting process and restore full
+ownership of the disk values. $a \mapstoDisk o'$ reflects that the commit
+actually succeeded in changing the disk value, while $a \mapstoDisk o$ results
+from aborting and throwing away buffered writes in $op$.
+
+On crash it is more difficult to show $a \mapstoDisk o \lor a \mapstoDisk o'$.
+The challenge is how to propagate whether or not the writes were made durable
+from the lower-level abstractions up to this proof; indeed the durability of
+this high-level operation depends on whether or not the lowest level of the
+system, the circular buffer, successfully wrote a single header block!
+
+The write-ahead logging layer conveys durability by issuing two resources: one
+gives the history of multiwrites, and another gives a lower bound on how many
+multiwrites are durable. Its exchanging resource allows the caller to trade an
+assertion about the history before a crash for a similar assertion after a
+crash, albeit with some recent writes lost. Crucially the effect of a crash is
+constrained by the durable lower bound, which can also be exchanged across a
+crash. On top of this exchanging, the journaling proof implements a fine-grained
+exchange of ownership over individual addresses.
+
+The actual implementation of exchanging uses a neat separation logic trick. To
+distinguish between $a \mapstoDisk o$ in two different generations, we'll
+annotate the resource with a $\gamma$. The exchanger for the journaling proof is
+defined in terms of facts like:
+\[
+  \cc{exchange_addr}(a) \defeq (a \mapsto^{\gamma}_{d} o) \lor (a \mapsto^{\gamma'}_{d} o)
+\]
+When proving the post-recovery init theorem, we initially prove
+$\cc{exchange_addr}(a)$ using the right-hand side; this is easy since $\gamma'$
+is fresh, so we've just allocated all of its associated ghost state and it
+hasn't been used by any threads so far. We can then prove exchange lemmas like
+$a \mapsto^{\gamma}_{d} o \sep \cc{exchange_addr}(a) \proves a \mapsto^{\gamma'}_{d} o \sep \cc{exchange_addr}(a)$.
+The reason this proof works is that $a \mapsto_{d} o$ is \emph{exclusive}, thus
+from the premise the proof can rule out that $\cc{exchange_addr}(a)$ is proven with the
+left disjunct and learn that the right-hand side holds. The proof takes out this
+right disjunct ($a \mapsto^{\gamma'}_{d} o$) and gives up
+$a \mapsto^{\gamma'}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
+the left disjunct. This all ensures that exchanging is only performed once,
+which is necessary since all the resources involved are exclusive.
+
+% look at \cc{exchange_mapsto_commit} for the interesting case (ephemeral values
+% that might now be durable) and \cc{exchange_durable_mapsto} for the
+% straightforward case (durable values that are now proven to still be durable,
+% exchanger shows old lower bounds are still valid)
+
+\section{Summary}
+
+The overall logically-atomic crash specification pattern has four components for
+every layer of the system:
+
+\begin{itemize}
+  \item An opaque predicate for the abstract state of the system (e.g.,
+        $\circstate(\gamma, \sigma)$).
+  \item Proofs for each operation that use a client-specified predicate,
+        modified by requiring a view shift that updates the predicate in
+        accordance with the operation's effect on abstract state.
+  \item An opaque crash predicate for the system.
+  \item A recovery theorem, with a crash condition, that preserves the crash
+  predicate for the system and re-builds any in-memory state needed.
+  \item A post-recovery init theorem, to be called after the whole system has
+        recovered, which sets up the layer's invariant for normal execution,
+        creates ghost state for the next generation, and produces an exchanger
+        resource to relate the old state to the new one.
+\end{itemize}
+
+When layers are composed, the upper layer will generally subsume the lower level
+in its own proofs --- for example, the write-ahead log's crash predicate
+includes the circular buffer's crash predicate as a sub-term, and subsumes the
+circular buffer's recovery and post-recovery init theorems.
+
+This pattern can be combined with user-defined ghost resources in order to give
+more powerful specifications (rather than requiring every operation to be
+unconditionally atomic). User-defined ghost resources can interact with crashes
+and recovery; for example, they can be returned from the recovery theorem and
+used across a crash using exchanging lemmas specific to the library.

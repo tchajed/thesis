@@ -3,12 +3,13 @@ MD_FILES:=$(wildcard *.md)
 PDFS:=$(MD_FILES:.md=.pdf) thesis.pdf
 
 TEX_FILES := $(wildcard *.tex) \
-	$(wildcard goose/*.tex) \
 	$(wildcard perennial/*.tex) \
+	$(wildcard crash-logatom/*.tex) \
+	$(wildcard go-txn/*.tex \
+               go-txn/fig/*.tex go-txn/tables/*.tex) \
 	$(wildcard daisy-nfs/*.tex \
                daisy-nfs/fig/*.tex) \
-	$(wildcard go-txn/*.tex \
-               go-txn/fig/*.tex go-txn/tables/*.tex)
+	$(wildcard goose/*.tex)
 DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard go-txn/code/*.go)
 
 default: thesis.pdf abstract.txt
