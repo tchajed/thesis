@@ -268,7 +268,7 @@ func RunSystem() {
     go func() {
       ret := fs.Handle(req)
       SendReply(req, ret)
-    }
+    }()
   }
 }
 \end{minted}
