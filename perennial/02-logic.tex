@@ -21,10 +21,15 @@
 
 \inferH{wpc-let}
 {}
-{\wpc{e_1}{ %
+{ % extra curly braces make the aligned work
+{
+    \begin{aligned}
+&\wpc{e_1}{ %
     \Ret{v} \wpc{\subst{e_2}{x}{v}}{\prop}{\propc} % nested postcondition
-}{\propc} \proves
-\wpc{\gooselet{x}{e_1}{e_2}}{\prop}{\propc}}
+}{\propc} \proves \\
+&\wpc{\gooselet{x}{e_1}{e_2}}{\prop}{\propc}
+      \end{aligned}
+} }
 
 \end{mathpar}
 }
