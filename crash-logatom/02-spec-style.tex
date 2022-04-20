@@ -87,11 +87,11 @@ init} theorem, which sets up the circular buffer for use after recovery:
 There are several components to this theorem. First, the circular buffer has the
 caller provide a way to split the HOCAP predicate $P(\sigma)$ into two parts,
 $P_{\mathrm{rec}}(\sigma)$ and $P_{\mathrm{crash}}(\sigma)$ --- intuitively the
-former is transferred to recovery as part of its crash condition, whereas the
+former is transferred to recovery as part of its precondition, whereas the
 latter is ``immutable'' and held inside an invariant. Second, the theorem
 consumes $\circstate(\gamma, \sigma) \sep P(\sigma)$ and allocates three things:
-(1) $\cc{is_circular}(\gamma)$ (notice that the premise of this theorem is the
-contents of this invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
+(1) $\cc{is_circular}(\gamma)$ (notice that the \cc{is_circular} is defined to
+be an invariant, and the premise of this theorem is the contents of that invariant), (2) a ``$\cfupdw$'', and a (3) ``$\cinvw$''. The
 latter two are low-level features of Perennial that we'll now introduce.
 
 The assertion $\cfupd{R}$ (``crash fancy update'') is similar to a view-shift
@@ -121,14 +121,14 @@ using it, rather than in one step as in \ruleref{wpc-inv-alloc}). What Perennial
 makes possible is to take advantage of the invariant for crash reasoning ---
 what must be carefully handled is that while the invariant is shared by all
 threads, only one thread can get ``credit'' for this invariant holding at crash
-time.
+time, in the sense of permission to cancel it from its crash condition.
 
 Notice in the circular buffer's post-recovery init theorem that the ghost name
 for the circular buffer changes on crash to a new $\gamma'$; the reason for this
 is that other threads (the logger and installer) have access to some of the
 circular buffer resources associated with $\gamma$. Rather than requiring those
 threads to ``return'' those resources on crash and impose a crash condition on
-that code, this theorem simply creates a new instance of the circular buffer and stop using
+that code, this theorem simply creates a new instance of the circular buffer and stops using
 the old one. As a result on crash the theorem can produce
 $\cc{circ_resources}(\gamma', \sigma)$ and hand out these resources to the
 caller.
@@ -159,7 +159,8 @@ single-threaded.) Once the system starts running the invariant allows multiple
 threads to share access to this state, and the invariant implicitly guarantees
 the crash condition recovery depends on.
 
-\section{Exchanging resources}
+\section{Exchanging resources}%
+\label{sec:perennial:exchanging}
 
 The final aspect of the logically-atomic specification pattern is the role of
 the exchanger, one of the conclusions of the post-recovery init theorem. The

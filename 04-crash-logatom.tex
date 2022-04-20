@@ -1,12 +1,17 @@
-On top of the Perennial logic, we developed a specification pattern to organize proofs
-of libraries and compose them. Of particular interest is a pattern for
+On top of the Perennial logic, we developed a specification pattern to organize
+proofs of libraries and compose them. Of particular interest is a pattern for
 \emph{logically-atomic crash specifications}, which capture that a set of
 methods in a library appear atomic with respect to both other threads and on
 crash. In order to illustrate how all of these techniques work together, this
-section walks through the specification and proof intuition for the circular
+section focuses on the specification and proof intuition for the circular
 buffer, a library used in GoTxn that has interesting crash safety and
-concurrency behavior. This library operates directly on top of the disk, so no
-background on GoTxn is needed to understand it.
+concurrency behavior. One feature of this specification style, the idea of an
+\emph{exchanger}, only appears in the journaling code which is much higher in
+the software stack for GoTxn, so \cref{sec:perennial:exchanging} does discuss a
+more sophisticated specification. The circular buffer is relatively independent
+of other details in GoTxn, since it operates directly on top of the disk, but
+journaling is covered in more detail within the GoTxn chapter, in
+\cref{sec:txn:lifting}.
 
 \input{crash-logatom/01-circ.tex}
 \input{crash-logatom/02-spec-style.tex}
