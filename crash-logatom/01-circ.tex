@@ -144,8 +144,19 @@ library maintains an invariant $P(\sigma)$, where $\sigma$ is the current
 abstract state; a key idea in the HOCAP specification is that this predicate $P$
 is chosen by \emph{the client} (that is, the code calling the library).
 
+The predicates in HOCAP specifications express ownership over ghost state. This
+aspect of Perennial is inherited from Iris and described in more detail in
+\cref{sec:perennial:concurrency}. In this chapter we use the \emph{view-shift
+assertion} $R \vs Q$ to express ghost updates, which are used to update the
+predicate $P(\sigma)$ that the library maintains.\footnote{Note that this is a slight
+notation shift, compared to the update modality used in the Perennial chapter; the view shift is equivalent to
+$R \wand \upd Q$.} The intuition for $R \vs Q$ is that it represents some
+resources which allow the holder of the assertion to take
+$R \sep (R \vs Q)$ and ``fire'' the view shift, updating the underlying ghost
+variables, and finally obtain $Q$.
+
 For each operation, the client passes in a
-\emph{view-shift assertion} written $P(\sigma) \vs P(\sigma') * Q$, for any
+view-shift $P(\sigma) \vs P(\sigma') * Q$, for any
 transition from $\sigma$ to $\sigma'$ that is a valid transition for the operation.
 This view shift represents a kind of once-usable ``callback'' which transforms
 $P(\sigma)$ into $P(\sigma')$, by updating the caller's ghost state in
@@ -153,20 +164,11 @@ $P$. At the end of the operation, the client receives $Q$ as a kind of
 certificate that the callback ran. The intuition here is that the library's proof must
 ``fire'' or ``call'' the view shift in order to preserve $P$ and produce $Q$,
 but the proof gets to pick the exact moment when it should fire the view shift,
-which is the linearization point of the operation.
+which is the linearization point of the operation. Note that the view shift
+might be proven using exclusive resources that cannot be duplicated, so it is
+important that it is only fired once.
 
-The predicates in HOCAP specifications express ownership over ghost state. This
-aspect of Perennial is inherited from Iris and described in more detail in
-\cref{sec:perennial:concurrency}. In this chapter we use the view-shift
-assertion $P \vs Q$ to express ghost updates, which are a slight notation
-difference from the use of the update modality in the Perennial chapter. In the
-implementation of Iris, the view shift is implemented in terms of the update
-modality, which is a basic primitive of the logic; the view shift can be encoded
-as $P \wand \upd Q$. The intuition for $P \vs Q$ is that the caller can take
-$P \sep (P \vs Q)$ and ``fire'' the view shift and update the ghost variables in
-the proof to obtain $Q$.
-
-We can see both the HOCAP pattern and the circular buffer resources in action in
+We can see both the HOCAP pattern and the circular-buffer resources in action in
 the specification for Append:
 %
 \begin{align*}
@@ -190,6 +192,13 @@ specification executes the view shift at the linearization point of the \cc{Appe
 operation, changing the state inside the $\cc{is_circular}$ invariant. The view
 shift produces a client-supplied assertion $Q$, which is returned in the
 postcondition.
+
+The assertion $\cc{circ_appender}(\gamma, \cc{c})$ asserts that the
+in-memory state cached in \cc{c} is correct (these are the addresses for the
+updates but not their contents). This resource is unique, since the appending
+thread needs ownership this in-memory buffer, and is returned in the
+postcondition for the next \cc{Append} operation. Exclusive ownership over this
+buffer is one reason why appending is only safe from one thread.
 
 The rest of the specification is specific to how the circular buffer manages
 concurrency. Appending requires precise knowledge of the end position of the
