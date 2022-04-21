@@ -103,7 +103,7 @@ techniques can reason about concurrency by showing that a concurrent program is
 equivalent to a program with sequential or atomic regions. These ideas have been
 used as part of the CIVL verifier~\cite{hawblitzel:civl,kragl:civl-layers} and
 Armada~\cite{lorch:armada}; my own prior work on CSPEC~\cite{chajed:cspec} was
-also based on movers, before working on Perennial. Reduction-based techniques
+also based on movers, before starting Perennial. Reduction-based techniques
 generally reason about a program through a series of transformations, each
 making the program slightly simpler, keeping the proof of each transformation's
 correctness more manageable.
@@ -130,6 +130,17 @@ The Verified Software Toolchain is notable for connecting a CSL-based logic
 carry these guarantees down to assembly~\cite{cao:vst-floyd}. It has been used
 for a number of sequential verified C programs and recently to some shared
 memory C libraries.
+
+Microsoft VCC~\cite{cohen:vcc,cohen:vcc-local} is another verification system
+that is based on annotating C code with pre- and post-conditions and so-called
+two-state invariants that are similar to rely-guarantee
+reasoning~\cite{jones:rg,feng:lrg,rgsep}. VCC is typically used to encode a form
+of concurrent refinement reasoning while also using specifications similar to
+that of a program logic. The system was used to verify a portion of Hyper-V. The
+system is implemented as a verification-condition generator; unlike the program
+logics described in this section, VCC has no soundness argument (even on paper)
+to specify what its specifications mean and argue that it enforces the right
+conditions for that meaning to hold.
 
 Perennial builds directly on Iris~\cite{jung:iris-jfp}. Iris is a general
 framework for concurrency, featuring a base logic with key features for
