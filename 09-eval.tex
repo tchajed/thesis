@@ -18,7 +18,7 @@ ext4 and DaisyNFS both guarantee NFS RPCs are committed durably when they return
 \cc{data=ordered} mode Linux achieves better performance but can
 lose recently written data if the system crashes.
 
-All of these benchmarks were run using Linux~5.11.0 and Go~1.17.3 on an Amazon
+All of these benchmarks were run using Linux~5.13 and Go~1.18 on an Amazon
 EC2 i3.metal instance, which has 72 cores, 512~GB of RAM, and a local 1.9~TB
 NVMe SSD.\@ To reduce variability we limit the experiment to a single 36-core
 socket, disable turbo boost, and disable processor sleep states; the coefficient
@@ -57,7 +57,7 @@ server do not come in order, so some are past the end of the file. The semantics
 of such a write are to fill the gap with zeros, but both DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
 allocating a block. DaisyNFS gets comparable performance on this benchmark because
-GoJournal is good at handling concurrent synchronous writes.
+GoTxn is good at handling concurrent synchronous writes.
 
 DaisyNFS achieves good performance on the app workload, which consists of running
 \cc{git clone} on the xv6 repository followed by \cc{make}. xv6 is an operating
@@ -69,14 +69,11 @@ which are reported as a throughput number so higher is better.
 \label{sec:eval:scale}
 
 DaisyNFS executes NFS operations concurrently to achieve better performance with
-multiple cores. The transaction system is built on GoJournal, which already
-demonstrated scalability. Here we report a similar experiment to demonstrate
-that DaisyNFS can take advantage of GoJournal's scalability, after accounting for
-the transaction system's two-phase locking and any overhead added by the
-transactions themselves. The benchmark used is the smallfile benchmark from
+multiple cores. This section evaluates the scalability of the whole system,
+especially the concurrency provided by GoTxn. The benchmark used is the smallfile benchmark from
 \cref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
-on an SSD, other threads have a chance to prepare transactions while the
-journal is committing to disk.
+on a physical disk, other threads have a chance to prepare transactions while the
+transaction system is committing to disk.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/scale.pdf}
@@ -92,8 +89,8 @@ journal is committing to disk.
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server.
-DaisyNFS scales slightly sub-linearly due to a lock in GoJournal that serializes
-installation of writes into disk blocks at commit time.
+DaisyNFS scales slightly sub-linearly due to a lock in GoTxn's object layer that
+serializes installation of writes into disk blocks at commit time.
 
 \section{Testing the trusted code and spec}
 
