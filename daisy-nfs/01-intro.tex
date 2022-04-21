@@ -1,148 +1,94 @@
-\section{Introduction}
+\section{Motivation and approach}%
+\label{sec:daisy:motivation}
 
-\tej{eventually replace this with a new intro}
+DaisyNFS is an implementation of the Network File System (NFS) API.\@ This is a
+standard file-system interface, specified in RFC 1813~\cite{RFC:1813}
+(specifically this is the standard for NFS version 3, which is what DaisyNFS
+implements). NFS is widely used, generally to export a file system across a
+network to multiple clients, and widely supported by operating systems ---
+Windows Server, macOS, and Linux each include an implementation of both an NFS
+server and client.\footnote{Windows 10 and 11 can act as NFS clients but do not
+include an NFS server.}
 
-File systems are important to implement correctly because applications rely on
-them to safely store user data. Formal verification offers a promise of showing
-that an implementation always meets its specification, including a crash safety
-property that says the file system recovers correctly from a sudden crash and
-reboot. However, efficient implementations are internally complicated,
-especially because they support concurrency and aim to minimize disk
-writes.
-Complexity makes the code more error-prone and motivates the desire for
-formal verification, but also poses a challenge: how can a proof cover
-concurrency, crash safety, and functional behavior while remaining tractable for
-a program the size of a file system?
+In order to verify DaisyNFS, we first need a specification. A natural starting
+point is RFC 1813, which prescribes what a valid NFSv3 server
+does. However, the RFC is a prose document with about 130 pages of English text,
+which is unsuitable for a mathematical proof. Thus the first step is
+to turn the RFC into something more precise. Our NFS specification (described in
+\cref{sec:daisy:nfs}) uses a
+transition system defined in Dafny for this purpose, with an abstract state that
+can capture the state of the server at all times, and transitions that define
+for each NFS operation how the state evolves and what the return value is. The
+transition system allows non-determinism in the specification to give the
+implementation some flexibility.
 
-% Crash safety poses a challenge even without verification, so many file systems
-% use a technique called \emph{journaling} (sometimes called write-ahead logging)
-% to atomically write multiple objects to disk. An efficient journaling system
-% goes a long way towards correctness, but it does not protect the programmer from
-% all concurrency and crash safety reasoning. For example, consider allocating a
-% block using a combination of an in-memory allocator and on-disk state (to recover
-% the allocator state on reboot). Suppose one operation is freeing a block from a
-% file while a concurrent operation is allocating and using it. If the system
-% crashes, it is possible that the allocation and its writes succeed but the
-% freeing is aborted, resulting in the same block being part of two files.
-% \joe{I find this second paragraph a little jarring inbetween the first and third paragraphs}
+The transition system describes the abstraction of an NFS server, but what does
+it mean for the \cc{daisy-nfsd} binary to implement this protocol? To formalize
+DaisyNFS's correctness we use \emph{refinement}, as used in the GoTxn
+specification as well. The server binary is a refinement of the NFS transition
+system (the specification transition system) if every execution of the code has
+user-visible behavior that the specification could also produce (also phrased as
+a behavior that the specification allows). In our specification the visible
+behavior of both systems is defined to be network requests and responses. This
+notion of refinement also considers crashing executions (where the server
+suddenly stops, the machine reboots, and the server resumes), and concurrent NFS
+requests.
 
-The main contribution of this paper is a new approach to verifying a file system that
-\emph{isolates crash safety and concurrency reasoning} to a
-transaction-system implementation. This use of a transaction system wraps the
-file-system data structures and logic inside a transaction, and permits
-\emph{sequential reasoning} for the body of each
-transaction. Sequential reasoning keeps the proof burden manageable even
-with an efficient implementation that supports many features, such as
-large files and in-place updates of serialized metadata.
+DaisyNFS's concurrent refinement is a much more sophisticated property to verify
+than sequential refinement. In both cases, the basic technique is to construct a
+\emph{forward simulation} from the code execution to the specification
+transition system, which requires an invariant connecting their states and a
+proof that shows the invariant is preserved. In a sequential, non-crash
+simulation it is sufficient to show that each operation restores the invariant
+when it returns, since its intermediate states are invisible. In a concurrent
+simulation, the code can have many concurrent threads, each running a different
+operation at the specification level. The invariant must cover intermediate
+states, and the proof must somehow reason about potential interference from
+other threads running at any time.
 
-There are three challenges in realizing this approach. The most important lies
-at the interface between the transaction system and the file system:
-intuitively, transactions make things simpler, but how do we exploit this for a
-proof engineer verifying the code running in a transaction? Our goal is to use
-the guarantees of the transaction system to reason about the body of each
-transaction using a sequential reasoning framework, namely Dafny~\cite{leino:dafny}, avoiding any
-further crash-safety or concurrency reasoning in the proofs. This paper proves a
-specification which formalizes the conditions under which this is possible. This
-specification and its proof are not specific to the file system written on top
-and could be applied to another storage system implemented using transactions.
+The design of DaisyNFS uses transactions, and in particular GoTxn, to simplify
+the proof of concurrent refinement. Transactions appear to run
+sequentially, and thus should permit reasoning about the body of each
+transaction sequentially even though the actual execution interleaves multiple
+transactions. This chapter describes a formalization of this intuition in the
+form of a \emph{simulation-transfer theorem} (described in
+\cref{sec:daisy:simulation-transfer}) which proves that a system implemented
+with transactions that is verified with a sequential forward simulation against
+some specification refines the same specification in the sense of a concurrent,
+crash-safe refinement when run through GoTxn. The proof of this theorem is an
+extension of the program refinement specification from \cref{sec:txn:spec}.
 
-The second challenge is how to implement and prove the transaction system
-itself. The performance and concurrency of the overall system can only be as
-good as the transaction system, so efficiency and fine-grained locking are
-important. To that end our transaction system, called GoTxn, is implemented by
-extending GoJournal~\cite{chajed:gojournal}, a verified journaling system, with
-two-phase locking. GoJournal's specification guarantees crash safety but
-requires the caller to implement concurrency control (enforced with separation logic) to achieve atomicity.
-In proving GoTxn we give a new proof of two-phase
-locking's correctness based on local reasoning rather than
-the typical textbook approach that reasons about the global conflict graph from
-a set of transactions.
+Due to simulation transfer, we are able to use a simpler verification
+methodology of sequential simulation for the DaisyNFS file-system code, compared
+to the Perennial program logic used to verify the transaction system underneath.
+To fully take advantage of this difference, DaisyNFS is verified using
+Dafny~\cite{leino:dafny}, an entirely different tool. Dafny is a
+verification-oriented programming language that is restricted to sequential
+proofs. The use of Dafny greatly reduces the proof burden for verifying
+DaisyNFS, because sequential proofs are well-suited to automation and Dafny's
+automation is well-developed (in contrast automation for concurrent proofs is
+still nascent, and would need to be integrated into Perennial to be used for
+these proofs).
 
-The third and final challenge is how to implement the file system using only
-transactions. File systems typically use journaling combined with concurrency
-control and other shared mutable state, but for sequential reasoning each
-operation must be implemented as a single transaction. Allocation is generally
-not atomic as part of a transaction, which we address using \emph{validation}, a
-general verification technique.
-Some operations, like freeing, can require a large
-number of disk writes that might not fit in a transaction. We implement freeing
-using multiple transactions; a first transaction logically deletes a file, and
-then asynchronously the implementation can run transactions that recover space
-from the file but have no other visible effect.
+The value of sequential proofs can be seen in the proof-to-code ratio for the
+transaction system, which is $18\times$, versus the Dafny proofs which required
+about $2\times$ as many lines of proof as code. Further evidence can be seen in
+the incremental development of DaisyNFS, which \cref{sec:eval:incremental}
+further elaborates on.
 
-The verified artifact from this work is DaisyNFS, which implements a
-Network File System (NFS) server in Go on top of a bare disk and comes
-with a proof that clients observe that each operation follows the NFS
-specification as laid out in RFC 1813~\cite{RFC:1813}. Operations appear atomic
-despite concurrency and crashes. Clients can use the Linux or macOS
-NFS client to mount DaisyNFS like any other file system and interact with
-it using the usual POSIX API.\@  As an end-to-end check that our
-formalization of NFS is accurate and the implementation is reasonably
-complete, we tested with both Linux and macOS clients running a
-variety of programs.
+Simulation transfer greatly reduces the proof burden for verifying DaisyNFS.
+There still remains a challenge of actually implementing the file system using
+transactions. \Cref{sec:daisy:design} discusses some key challenges to address,
+in particular how to ensure transactions are bounded in size (since GoTxn
+transactions cannot exceed the size of the on-disk circular buffer) and avoiding
+deadlocks in the transaction system.
 
-A benefit of this file-system design is that it permits using the
-sharpest tool for each part of the proof: while we use
-Perennial~\cite{chajed:gojournal}, a program logic for crash safety
-and concurrency embedded in Coq, for the
-transaction system's proof, we use Dafny~\cite{leino:dafny}, a verification-aware
-programming language with powerful automation, for the file-system operations.
-Dafny is a purely sequential language, but we are able to use it despite this
-limitation due to the transaction system's proof. The value of
-sequential proofs can be seen in the proof-to-code ratio for the transaction
-system, which is $18\times$, versus the Dafny proofs which required about
-$2\times$ as many lines of proof as code. Further evidence can be seen in the
-incremental development of DaisyNFS, which we elaborate on in
-\cref{sec:eval:incremental}.
-
-% \joe{Should some of this paragraph's ideas move up to the part where we first argue for the split and describe Dafny as the best tool for the other side?}
-% The verification approach we propose makes the proof much simpler. The
-% productivity from doing the proofs in Dafny enabled us to rapidly prototype and
-% add features incrementally, including triply-indirect blocks, directories, and
-% efficient in-memory data structures. These features were important to get good
-% performance and support a range of applications. As some quantitative evidence
-% for simpler proofs, DaisyNFS's DaisyNFS's proof is about $2\times$ as many lines as its
-% implementation, a rough measure of proof complexity. For comparison, this is
-% significantly lower than the overhead in our transaction system (about
-% $18\times$) and comparable to the proof:code ratio for the three prior systems
-% verified in Dafny, IronClad~\cite{hawblitzel:ironclad} with $4.8\times$,
-% IronFleet~\cite{hawblitzel:ironfleet} with $3.6\times$, and VeriBetrKV~\cite{hance:veribetrkv} with
-% $4\times$.\footnote{These numbers exclude refinement proofs in these systems
-% written on top of the implementation specs, since DaisyNFS does not have any
-% comparable proofs.}
-
-To evaluate DaisyNFS's performance, we compare it to that of the Linux NFS server
-exporting an ext4 file system. DaisyNFS achieves almost the same performance as
-Linux with the ext4 \cc{data=journal} option (which gives the same crash-safety
-guarantees as DaisyNFS), across a variety of benchmarks run on top of a fast NVMe
-drive. The comparable performance is due to the efficiency of GoJournal and
-adding little overhead in the file-system code (e.g., updating data structures
-in place to avoid copying). We do note that ext4's default \cc{data=ordered}
-mode can get about $2\times$ better throughput for data-heavy workloads, at the
-cost of relaxed guarantees on crash.
-
-The contributions of this paper are: \tej{not really the contributions in this chapter}
-\begin{itemize}
-  \item A formalization for a specification that captures how the transaction
-  system provides sequential reasoning (\cref{sec:daisy:proof}) for any system
-  implemented using a transaction per operation.
-  \item A proof that the GoTxn implementation meets this specification, written
-  against the GoJournal specification.
-  \item DaisyNFS, a verified file system that is designed to use transactions
-  and work with the GoTxn correctness proof. The Dafny proofs for the
-  file-system code enjoy low overhead compared to the concurrent proofs for GoTxn. A performance
-  evaluation shows that DaisyNFS gets performance comparable to Linux ext4
-  exported over NFS.
-\end{itemize}
-
-Our approach and DaisyNFS have some limitations. We do not support NFS unstable
-writes, which improve performance by not committing writes to stable storage
-until explicitly requested. The proof approach relies on transactions appearing
-to run sequentially, which prevents modifying state
-outside the transaction system.
-There are cases where that would get better performance in exchange for a more
-difficult proof. The transaction system does not have a proof of liveness, and
-we do not prove that transactions avoid deadlock. Our NFS implementation does
-not cover some features, such as symbolic links, hard links, and paginated
-\cc{READDIR}; we believe all of these could be implemented and specified with
-the same approach but have not done so in our prototype.
+The design of DaisyNFS does impose limitations. The proof approach relies on
+transactions appearing to run sequentially, which prevents modifying state
+outside the transaction system. There are cases where that would get better
+performance in exchange for a more difficult proof. The transaction system does
+not have a proof of liveness, and the file-system proof does not show that
+transactions avoid deadlock. Our NFS implementation does not cover some
+features, such as symbolic links, hard links, and paginated \cc{READDIR}; we
+believe all of these could be implemented and specified with the same approach
+but have not done so in our prototype.
