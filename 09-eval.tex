@@ -112,25 +112,26 @@ actually reflects the RFC, and second we would like DaisyNFS to be compatible
 with existing clients, including implementing enough of the RFC's functionality.
 These fall outside the scope of verification so we cover them with testing.
 
-To evaluate the file system we mounted it using the Linux NFS client and ran the
+To evaluate the file system, we mounted it using the Linux NFS client and ran the
 fsstress and fsx-linux tests, two suites used for testing the Linux kernel. In
 order to look for bugs in crash safety and recovery, we also ran
 CrashMonkey~\cite{mohan:crashmonkey}, which found no bugs
 after running all supported 2-operation tests.
 
-While elsewhere in this paper we interact with DaisyNFS via the Linux client, a
-collaborator (but not an author) tested it more directly using an NFS-specific
-testing tool.\footnote{This framework is part of an
-unrelated research project so we unfortunately lack space to give details on
-the methodology itself.} This testing produces a wider range of requests than
-are possible via the Linux client. This process helped us find and fix several bugs in
-the unverified parts of DaisyNFS and in the specification itself. These are
-reported in \cref{fig:daisynfs-bugs}.
+While other experiments in the evaluation interact with DaisyNFS via the Linux
+client, these tests interact with the server directly from a hand-written
+client. That client is then tested with symbolic execution, with feedback from
+the entire machine.\footnote{The framework for this testing is part of an
+unrelated research project so we don't give details on the methodology here.}
+This testing produces a wider range of requests than are possible via the Linux
+client. The process helped us find and fix several bugs in the unverified parts
+of DaisyNFS and in the specification itself, which are reported in
+\cref{fig:daisynfs-bugs}.
 
-The two specification bugs are particularly interesting. The bounded inode bug
+Two of the specification bugs are particularly interesting. The bounded inode bug
 was due to an \cc{ino} argument of type \cc{Ino}; this type is a Dafny
 \emph{subset type}, thus adding an implicit precondition that \cc{ino <
-NUM_INODES}, which is violated by the (unverified) Go code. The fix is to instead
+NUM_INODES}, which can be violated by the (unverified) Go code. The fix is to instead
 use a \cc{uint64} and check the bound in verified code. The RENAME bug was due
 to having an incomplete specification (and implementation) that did not capture
 that RENAME should only overwrite when the source and destination are
