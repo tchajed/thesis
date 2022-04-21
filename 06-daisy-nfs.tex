@@ -7,8 +7,8 @@ guarantee of GoTxn to enable verifying a system written with transactions using
 entirely different techniques, so that the file-system proofs are carried out in
 Dafny, a sequential verification-oriented programming language.
 
-\section{Motivation and goals}%
-\label{sec:daisy-nfs:motivation}
+\section{Motivation and approach}%
+\label{sec:daisy:motivation}
 
 DaisyNFS is an implementation of the Network File System (NFS) API.\@ This is a
 standard file-system interface, specified in RFC 1813~\cite{RFC:1813}
@@ -20,10 +20,11 @@ server and client.\footnote{Windows 10 and 11 can act as NFS clients but do not
 include an NFS server.}
 
 In order to verify DaisyNFS, we first need a specification. A natural starting
-point is RFC 1813, which is supposed to prescribe what a valid NFSv3 server
+point is RFC 1813, which prescribes what a valid NFSv3 server
 does. However, the RFC is a prose document with about 130 pages of English text,
 which is unsuitable for a mathematical proof. Thus the first step is
-to turn the RFC into something more precise. Our NFS specification uses a
+to turn the RFC into something more precise. Our NFS specification (described in
+\cref{sec:daisy:nfs}) uses a
 transition system defined in Dafny for this purpose, with an abstract state that
 can capture the state of the server at all times, and transitions that define
 for each NFS operation how the state evolves and what the return value is. The
@@ -37,11 +38,53 @@ specification as well. The server binary is a refinement of the NFS transition
 system (the specification transition system) if every execution of the code has
 user-visible behavior that the specification could also produce (also phrased as
 a behavior that the specification allows). In our specification the visible
-behavior of both systems is defined to be network requests and responses.
+behavior of both systems is defined to be network requests and responses. This
+notion of refinement also considers crashing executions (where the server
+suddenly stops, the machine reboots, and the server resumes), and concurrent NFS
+requests.
 
-Proving refinement for DaisyNFS's implementation directly would be quite challenging.
+DaisyNFS's concurrent refinement is a much more sophisticated property to verify
+than sequential refinement. In both cases, the basic technique is to construct a
+\emph{forward simulation} from the code execution to the specification
+transition system, which requires an invariant connecting their states and a
+proof that shows the invariant is preserved. In a sequential, non-crash
+simulation it is sufficient to show that each operation restores the invariant
+when it returns, since its intermediate states are invisible. In a concurrent
+simulation, the code can have many concurrent threads, each running a different
+operation at the specification level. The invariant must cover intermediate
+states, and the proof must somehow reason about potential interference from
+other threads running at any time.
 
-\tej{still say ``this paper'' in several places}
+The design of DaisyNFS uses transactions, and in particular GoTxn, to simplify
+the proof of concurrent refinement. Transactions appear to run
+sequentially, and thus should permit reasoning about the body of each
+transaction sequentially even though the actual execution interleaves multiple
+transactions. This chapter describes a formalization of this intuition in the
+form of a \emph{simulation-transfer theorem} (described in
+\cref{sec:daisy:simulation-transfer}) which proves that a system implemented
+with transactions that is verified with a sequential forward simulation against
+some specification refines the same specification in the sense of a concurrent,
+crash-safe refinement when run through GoTxn. The proof of this theorem is an
+extension of the program refinement specification from \cref{sec:txn:spec}.
+
+Due to simulation transfer, we are able to use a simpler verification
+methodology of sequential simulation for the DaisyNFS file-system code, compared
+to the Perennial program logic used to verify the transaction system underneath.
+To fully take advantage of this difference, DaisyNFS is verified using
+Dafny~\cite{leino:dafny}, an entirely different tool. Dafny is a
+verification-oriented programming language that is restricted to sequential
+proofs. The use of Dafny greatly reduces the proof burden for verifying
+DaisyNFS, because sequential proofs are well-suited to automation and Dafny's
+automation is well-developed (in contrast automation for concurrent proofs is
+still nascent, and would need to be integrated into Perennial to be used for
+these proofs).
+
+Simulation transfer greatly reduces the proof burden for verifying DaisyNFS.
+There still remains a challenge of actually implementing the file system using
+transactions. \Cref{sec:daisy:design} discusses some key challenges to address,
+in particular how to ensure transactions are bounded in size (since GoTxn
+transactions cannot exceed the size of the on-disk circular buffer) and avoiding
+deadlocks with two-phase locking.
 
 \input{daisy-nfs/01-intro}
 \input{daisy-nfs/03-system}
