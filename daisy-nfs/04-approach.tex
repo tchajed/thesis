@@ -200,7 +200,7 @@ appropriate NFS transition, and sends the reply back. Let us denote this server
 loop with $s_{NFS} : \gooselayer{NFS}$. Note that when this (abstract) server
 processes an NFS operation, it does so by definition atomically, and its state
 is again by definition preserved on crash. $s_{NFS}$ can be viewed as an
-abstraction of the following pseudo-code that looks more like the essence of the
+abstraction of the following pseudo-code that represents the essence of the
 real \cc{daisy-nfsd} binary:
 
 \begin{minted}[linenos]{go}
@@ -225,7 +225,7 @@ func main() {
 }
 \end{minted}
 
-Notice that this code starts with some recovery, restoring the transaction
+This code starts with some recovery, restoring the transaction
 system on line 3 and the file system on line 4. Then it repeatedly accepts new
 requests from the network, abstracted with \cc{GetRequest()}. These requests are
 each processed in a background thread due to the goroutine in line 7. The
