@@ -184,6 +184,60 @@ its link count drops to zero.
 \label{fig:layers}
 \end{figure}
 
+The previous section (ref{sec:daisy:nfs}) defines the transition system for NFS,
+which this section relates to the actual DaisyNFS implementation in order to
+define correctness. The definition uses the ideas from
+\cref{sec:txn:refinement-def,sec:txn:go-layers}, namely the definition of
+refinement and the definitions of $\gooselayer{Txn}$ and
+$\gooselayer{NFS}$. The NFS layer has a primitive for each operation supported by
+DaisyNFS, and the semantics of these primitives is defined to be the NFS
+transition system written in Dafny. Implicit in such a semantics is that each
+operation is atomic both with respect to other threads and on crash.
+
+With the NFS layer we can model a \emph{server loop} that recovers the
+file-system state, then repeatedly accepts a new request, processes it with the
+appropriate NFS transition, and sends the reply back. Let us denote this server
+loop with $s_{NFS} : \gooselayer{NFS}$. Note that when this (abstract) server
+processes an NFS operation, it does so by definition atomically, and its state
+is again by definition preserved on crash. $s_{NFS}$ can be viewed as an
+abstraction of the following pseudo-code that looks more like the essence of the
+real \cc{daisy-nfsd} binary:
+
+\begin{minted}[linenos]{go}
+// this is the core of daisy-nfsd
+func main() {
+  tx := txn.Recover()
+  fs := filesys.Recover(tx)
+  for {
+    req := GetRequest()
+    go func() {
+      switch req.Op {
+      case READDIR:
+        ret := fs.READDIR(req.Args)
+        SendReply(req, ret)
+      case LOOKUP:
+        ret := fs.LOOKUP(req.Args)
+        SendReply(req, ret)
+      // ... other cases ...
+      }
+    }()
+  }
+}
+\end{minted}
+
+Notice that this code starts with some recovery, restoring the transaction
+system on line 3 and the file system on line 4. Then it repeatedly accepts new
+requests from the network, abstracted with \cc{GetRequest()}. These requests are
+each processed in a background thread due to the goroutine in line 7. The
+processing for each request dispatches to the appropriate file-system operation
+(e.g., lines 10 and 13). The implementations of these operations are compiled from Dafny
+to Go, and then linked with the transaction system.
+
+\tej{next, explain how $\sdfy$ fits in between these two abstractions and how
+they relate via linking}
+
+\resume
+
 \tej{starting here the text is out-of-place}
 
 The proof is about the server loop at three layers of abstraction, as outlined
