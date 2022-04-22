@@ -133,9 +133,6 @@ transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.
 
-\subsection{Safe transactions}
-\label{sec:txn:safe}
-
 The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code
 within a transaction not access any shared memory outside of the transaction
 layer; other than that, transactions can use the GoTxn operations to interact
@@ -171,9 +168,9 @@ allocator searching for a free bit would be difficult to do in an efficient
 way). The return value of \cc{Alloc} must be checked against the durable bitmap
 (this is efficient because GoTxn supports accessing an individual bit with
 \cc{ReadBit}). There is a chance the allocator returns a used address, if it was
-freed in memory but not on disk by a concurrent transaction, but the allocator
+freed in memory by a concurrent transaction that hasn't committed to disk, but the allocator
 is designed not to return recently freed addresses to avoid this issue.
-Similarly \cc{Free} is used as a hint but the caller also issues
+Similarly in addition to calling \cc{Free} the caller also issues
 $\cc{WriteBit}(a, \goosefalse)$ to mark the correct bit free on disk. During
 recovery, for the in-memory allocator to be useful it must know what numbers
 have already been allocated. The caller reads the on-disk allocator state and

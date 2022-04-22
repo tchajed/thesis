@@ -24,7 +24,7 @@ First, GoTxn's specification is stated in terms of programs using the
 transaction system, and not all programs will observe atomic transactions ---
 for example, accessing global variables or the network in the middle of a
 transaction is not atomic. To state a provable specification for GoTxn we needed
-a formalization of \emph{safe transactions}, described in \cref{sec:txn:safe},
+a formalization of \emph{safe transactions}, described in \cref{sec:txn:program-refinement},
 which obey some restrictions that the specification assumes the caller follows.
 
 The second challenge is supporting an in-memory allocator, which is necessary

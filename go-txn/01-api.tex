@@ -64,7 +64,7 @@ insofar as its operations are allowed within a transaction. In contrast using
 other shared memory within a transaction is not permitted since it would
 compromise the atomicity guarantees --- the transaction system acquires locks to
 make reads and writes seem atomic, but it doesn't have any locking discipline
-for other state. \Cref{sec:txn:safe} explains these restrictions and an
+for other state. \Cref{sec:txn:program-refinement} explains these restrictions and an
 \emph{under-specification} technique for fitting the
 in-memory allocator API into GoTxn's atomicity guarantee.
 
