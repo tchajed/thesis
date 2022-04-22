@@ -36,15 +36,16 @@ the NFS server state as shown in \cref{fig:dafny-state}.
 \begin{figure}[ht!]
 \begin{small}
 \begin{verbatim}
-type Ino = uint64
-type Path = seq<byte>
-datatype Attrs = Attrs(mode: uint32, ...)
-datatype File =
-  | ByteFile(data: seq<byte>, attrs: Attrs)
-  | Dir(dir: map<Path, Ino>, attrs: Attrs)
-
 // the abstract state of the file system
 type FilesysData = map<Ino, File>
+
+datatype File =
+  | ByteFile(data: seq<byte>, attrs: Attrs)
+  | Dir(dir: map<FileName, Ino>, attrs: Attrs)
+
+type Ino = uint64
+type FileName = seq<byte>
+datatype Attrs = Attrs(mode: uint32, ...)
 \end{verbatim}
 \end{small}
 \caption{Dafny definition of the NFS server state (simplified).}
@@ -149,8 +150,10 @@ but it does not have a meaningful specification.
 \end{figure}
 
 DaisyNFS could support some of the remaining operations with some more effort.
-Symbolic links (symlinks) are essentially a file that holds a path, which can be read with
-\cc{READLINK}. \cc{MKNOD} similarly creates a new type of special file.
+A symbolic link is essentially a file that holds a path, which is created with
+\cc{SYMLINK} and can be read with
+\cc{READLINK}. \cc{MKNOD} similarly creates a new type of special file that
+consists of a major and minor device number.
 Specifying these operations would require mostly mechanical changes to the
 specification to accommodate the new file types.
 \cc{LINK} is more complicated because in addition to tracking
@@ -158,7 +161,8 @@ the link count of every file in the state, the specification for \cc{REMOVE}
 needs to say that the link count is decremented and that the file is deleted if
 its link count drops to zero.
 
-\subsection{Specifying correctness for DaisyNFS}
+\subsection{Specifying correctness for DaisyNFS}%
+\label{sec:daisy:refinement-spec}
 
 \begin{figure}[ht]
 \small

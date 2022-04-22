@@ -15,11 +15,11 @@ write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
 from layer X.
 Layer operations are always atomic transitions in a state machine. Layers will
 be one of Sys, Txn, or Disk, where Sys is a
-stand-in for an arbitrary system implemented on top of GoTxn. We write this
-generically to emphasize that the GoTxn specification does not fix how the
+stand-in for an arbitrary system implemented on top of GoTxn. We write
+``Sys'' generically to emphasize that the GoTxn specification does not fix how the
 caller uses transactions; in practice it will be instantiated with the NFS state
-machine for DaisyNFS.
-The Txn layer consists of the GoTxn API, with reads and writes over a logical
+machine for DaisyNFS, as described in \cref{sec:daisy:refinement-spec}.
+The Txn layer allows the operations of the GoTxn API, with reads and writes over a logical
 disk and the ability to wrap these into an atomic transaction. The
 Disk transition system is formalized in Coq as part of the GoTxn proof,
 and assumes reads and writes of 4KB blocks are atomic. All layers
@@ -27,22 +27,36 @@ include concurrent threads that interleave layer
 operations, basic heap operations on pointers, slices, and maps, and computation
 on primitives like integers and structs.
 
-The correctness for GoTxn relates a \emph{spec program} $p : \gooselayer{Txn}$
-that uses transactions to its implementation. These specification programs can
-invoke transactions, which we write $\atomically{\cc{f}}$ to represent a
-transaction running \cc{f}, which in turn might have calls to Read and Write
-from the GoTxn API. A specification program $p$ has an associated implementation
-program $\mathrm{link}(\sdfy, \txncode) : \gooselayer{Disk}$, where we ``link''
-with the GoTxn code. Linking has two effects: first it expands
-$\atomically{\cc{f}}$ to a
-sequence like \cc{tx := Begin(); f(tx); tx.Commit()} (with some additional code
-handling aborts), and second it replaces calls to the Txn abstract Read and
-Write operations with the GoTxn implementations at the Disk abstraction layer.
+The concept of a layer is part of how GooseLang formalizes Go. The definition of
+GooseLang is parameterized by some ``external'' operations and state, as
+described in \cref{sec:goose:lang}. A program $p : \gooselayer{X}$ represents a
+Go program which uses any Go primitives and only imports additional operations
+from the layer $X$. This factoring is used to represent a class of Go programs
+that uses external state in a controlled way, for the purpose of defining the
+specification. GooseLang is limited to only one external layer, but of course Go
+permits unlimited imports; this simplifies modeling Go.
+
+The correctness for GoTxn relates a \emph{spec program}
+$p_{s} : \gooselayer{Txn}$ that uses transactions, to its executable version
+which invokes the GoTxn implementation. These specification programs can invoke
+transactions, which we write $\atomically{\cc{f}}$ to represent a transaction
+running \cc{f}, which in turn might have calls to Read and Write from the GoTxn
+API. The Read and Write operations in this model are primitive, external calls.
+Each specification program $p_{s}$ has an associated implementation program
+$\mathrm{link}(p_{s}, \txncode) : \gooselayer{Disk}$. The notation is intended
+to suggest the linking process where each call to GoTxn is replaced with an
+implementation that uses the Disk operations. Linking has the additional effect,
+specific to the transaction system, of replacing a specification
+transaction $\atomically{\cc{f}}$ with a sequence \cc{tx := Begin(); f(tx); tx.Commit()}
+(with some additional code handling aborts).
+
+\tej{refinement could be its own small subsection before this, and this just
+defines GooseLang layers}
 
 Refinement relates two programs in terms of their visible behavior, which is
 used in the specification
-to connect a program written at the transaction layer to its
-implementation at the disk layer. This notion of refinement also incorporates
+to connect a program written at the Txn layer to its
+implementation at the Disk layer. This notion of refinement also incorporates
 crashes into the outcomes of executing the program and gives it a corresponding specification.
 For the purposes of this work, the visible
 behavior is always network I/O, corresponding to receiving requests for the
