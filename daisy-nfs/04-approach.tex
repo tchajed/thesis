@@ -212,8 +212,8 @@ func main() {
     req := GetRequest()
     go func() {
       switch req.Op {
-      case READDIR:
-        ret := fs.READDIR(req.Args)
+      case CREATE:
+        ret := fs.CREATE(req.Args)
         SendReply(req, ret)
       case LOOKUP:
         ret := fs.LOOKUP(req.Args)
@@ -225,36 +225,42 @@ func main() {
 }
 \end{minted}
 
-This code starts with some recovery, restoring the transaction
-system on line 3 and the file system on line 4. Then it repeatedly accepts new
-requests from the network, abstracted with \cc{GetRequest()}. These requests are
-each processed in a background thread due to the goroutine in line 7. The
-processing for each request dispatches to the appropriate file-system operation
-(e.g., lines 10 and 13). The implementations of these operations are compiled from Dafny
-to Go, and then linked with the transaction system.
+This code starts by recovering the state of the system, starting with the
+transaction system on line 3 and then continuing on to the file-system state on
+line 4. Then it repeatedly accepts new requests from the network, abstracted
+with \cc{GetRequest()} (including parsing the NFS wire protocol). These requests
+are each processed in a background thread due to the goroutine spawned on line
+7. The processing for each request dispatches to the appropriate file-system
+operation (eg, lines 10 and 13). The implementations of these operations are
+compiled from Dafny to Go and then linked with the transaction system.
 
-\tej{next, explain how $\sdfy$ fits in between these two abstractions and how
-they relate via linking}
+The term $\snfs$ represents the abstract version of this loop where, for example,
+the entire call to \cc{fs.CREATE} is an atomic primitive. In the Dafny code,
+this corresponds to an entire method that calls the GoTxn API. We can think of
+each method as having a corresponding GooseLang term that represents its
+implementation at the Txn layer of abstraction, for example
+$\mathit{CREATE} : \gooselayer{Txn}$ might model the \cc{fs.CREATE} method.
+These constructions are all for the sake of the proof argument; it is part of
+the assumptions of the proof that every method can be modeled using GooseLang.
+Next, let $\sdfy$ denote the same overall server dispatch loop with
+methods at the GoTxn abstraction level. Finally, the lowest-level model of the
+server is derived by combining the Dafny implementation with the actual GoTxn
+implementation, which we write as $\linkedcode$.
 
-\resume
-
-\tej{starting here the text is out-of-place}
-
-The proof is about the server loop at three layers of abstraction, as outlined
-in \cref{fig:layers}. The Disk layer at the bottom is where the whole server
-runs, while the NFS layer serves as the specification. In addition, there
-is an intermediate layer Txn for the transaction system which is the abstraction
-on which the Dafny code is written and verified.
-
-Now we have enough to state the final DaisyNFS correctness theorem:
+$\linkedcode$ and $\snfs$ are both models of the \cc{daisy-nfsd} server binary's
+behavior. The former is a model of its implementation running on top of a disk,
+while the latter is its specification at the level of NFS methods. These two
+together are enough to state the final DaisyNFS correctness theorem:
 \begin{theorem}[DaisyNFS correctness]
-  $\mathrm{link}(\sdfy, \txncode) \refines \snfs$.%
+  $\linkedcode \refines \snfs$. Initialization requires running a separate Dafny
+  method on an empty disk. Subsequently the system boots by recovering the
+  transaction system and then the file system, with a different Dafny method.
   \label{thm:correctness}
 \end{theorem}
 
-%
-In this correctness theorem, initialization requires running a Dafny method on
-an empty disk. Subsequently the system boots by first recovering the transaction
-system, then restoring the file system. \Cref{thm:correctness} will follow
-from the correctness of the transaction system combined with the results from
-Dafny.
+This theorem connects the server's implementation at the disk layer,
+$\linkedcode$, which combines a model of the Dafny code with the GoTxn
+implementations, to the most abstract version of the server $\snfs$ which by
+definition atomically processes operations, preserves data on crash, and follows
+the NFS state machine written in Dafny. \Cref{sec:daisy:proof} explains how the
+theorem is proven.

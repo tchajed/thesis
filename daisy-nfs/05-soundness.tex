@@ -1,24 +1,23 @@
 \section{Verifying DaisyNFS using Dafny}
 \label{sec:daisy:proof}
 
-\tej{connect this back to GoTxn better}
-
 A key contribution of DaisyNFS is a proof structure that isolates concurrency and crash
-reasoning to the transaction system. This is done by giving GoTxn a specification
-that captures how it enables sequential reasoning for the body of each
-transaction, then carrying out that sequential reasoning in Dafny for the
-DaisyNFS file-system logic. This section formalizes the theorem statements
-involved in the proof, especially the transaction system's correctness theorem.
+reasoning to the transaction system. The proof works in two steps. First, a
+\emph{simulation transfer} theorem extends GoTxn's program refinement to show
+how transactions enable sequential reasoning for an arbitrary system implemented
+top (\cref{sec:daisy:simulation-transfer}). Second, the sequential reasoning
+is implemented and verified in Dafny for the specific case of DaisyNFS and its
+NFS specification (\cref{sec:daisy:proof-dafny}).
 
 \subsection{Simulation transfer}%
 \label{sec:daisy:simulation-transfer}
 
 The GoTxn specification from \cref{sec:txn:spec} uses program refinement to
-capture that transactions are atomic. On top of this
-specification for the purpose of this chapter, we prove a \emph{simulation
-transfer} theorem that further shows how transactions enable \emph{sequential
-reasoning} for a system on top. In DaisyNFS we will see how this justifies
-carrying out those proofs using Dafny, a sequential verification system.
+capture that transactions are atomic in the sense that every interleaved
+execution has a corresponding execution where each transaction runs all at once.
+This section describes a \emph{simulation transfer} theorem, proven in Coq, that
+uses program refinement to show how GoTxn enables \emph{sequential
+reasoning} for a system implemented with transactions on top.
 
 The idea behind the simulation transfer specification is to express that a system
 verified using sequential reasoning for each transaction is also correct when
