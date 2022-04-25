@@ -78,6 +78,19 @@ which is the opposite of Go. We haven't yet fixed this, either by adjusting the
 GooseLang semantics or changing the translation to emit code that explicitly
 evaluates all the arguments in the correct order before calling the function.
 
+Map iteration in Go happens in a non-deterministic order.\footnote{In fact the
+runtime randomizes the starting position of the iteration, to avoid callers
+accidentally relying on any particular behavior. See
+\href{https://github.com/golang/go/blob/c379c3d58d5482f4c8fe97466a99ce70e630ad44/src/runtime/map.go\#L844-L850}%
+{\cc{mapiterinit} from src/runtime/map.go}.} Thus, strictly speaking, the model
+of map iteration described in \cref{sec:goose:maps} given by \cc{MapIter} should
+shuffle the elements of the map before iterating over it, in order to model the
+non-determinism of the implementation. Goose does not (currently) do this,
+simply because the shuffle would be hard to implement in GooseLang. However, the
+specification for map iteration does not expose an iteration order and would
+apply unchanged to this more non-deterministic model. All proofs go through a
+common iteration specification, so our proofs should remain unchanged if
+\cc{MapIter} started modeling non-deterministic ordering.
 
 \section{Conclusion}
 

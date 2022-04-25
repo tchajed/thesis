@@ -525,7 +525,8 @@ while proving theorems about subslicing in GooseLang. Even as experienced Go
 developers, we had never thought about subslicing and appending in enough detail
 to appreciate this difference in ownership reasoning.
 
-\subsection{Maps}
+\subsection{Maps}%
+\label{sec:goose:maps}
 
 \newidentmacro{mapVal}
 \newidentmacro{mapRep}
@@ -544,11 +545,7 @@ over it is considered
 undefined behavior, while allowing concurrent read-read access. Maps
 support all the usual Go operations: insertions, reads (including returning
 whether the key is present), \cc{len} to get the number of elements
-in the map, deletion, and iteration. Go map iteration is
-non-deterministic and in practice random, but Goose does not explicitly model this
-since it would be challenging to do so. The reasoning
-principles for map iteration do not expose an iteration order so changing the
-model would not affect any existing proofs.
+in the map, deletion, and iteration.
 
 The implementation of maps is the most involved out of any of the Go
 primitives. It required directly implementing maps (albeit
@@ -603,7 +600,10 @@ for a map is a list of all appended key-value pairs in reverse insertion order
 (puts do not delete old values). To iterate over the map's contents, the
 implementation gets the next key-value pair, then deletes that key from the rest
 of the map before making a recursive call, avoiding iterating over old values
-that are no longer logically part of the map.
+that are no longer logically part of the map. The code for the model uses the
+order of key-value pairs in the order of the GooseLang representation, but Go
+actually randomizes map iteration order; see the relevant discussion of
+limitations in \cref{sec:goose:limitations}.
 
 The possibility of
 \emph{iterator invalidation} adds a subtlety to Go's map iteration --- it
@@ -621,8 +621,7 @@ undefined behavior.
 Iteration gets a \emph{higher-order} specification that assumes a specification
 for the body, showing it preserves a loop invariant $P$ over the part of the map
 consumed so far:
-
-\[
+\begin{mathpar}
   \infer{
     \forall m_{0}, k, v.\,
     k \notin m_{0} \land m[k] = v \to \\\\
@@ -633,27 +632,12 @@ consumed so far:
 {\cc{MapIter}(\ell, \textlog{body})}%
 {\mapRep(\ell, m) \sep P(m)}
 }
-\]
+\end{mathpar}
 
 GooseLang includes some alternate specifications, proven on top of this one, that
 express the invariant in slightly different ways --- for example, it is often
 useful for a proof to express its loop invariant in terms of both the map
 iterated over so far and the remaining subset of the map.
-
-\tej{there's a redundant explanation above (this one seems better), and maybe
-this should be moved to limitations}
-Map iteration in Go happens in a non-deterministic order\footnote{In fact the
-runtime randomizes the starting position of the iteration, to avoid callers
-accidentally relying on any particular behavior. See
-\href{https://github.com/golang/go/blob/c379c3d58d5482f4c8fe97466a99ce70e630ad44/src/runtime/map.go\#L844-L850}%
-{\cc{mapiterinit} from src/runtime/map.go}.}
-Thus strictly speaking $\cc{MapIter}$ should shuffle the elements of the map
-before iterating over it, in order to model the non-determinism of the
-implementation. Goose does not (currently) do this, simply because the shuffle would
-be hard to implement in GooseLang. However, the specification for map iteration
-does not expose an iteration order and would apply unchanged to this more
-precise model. All proofs go through this specification, so our proofs should
-remain unchanged if $\cc{MapIter}$ started modeling non-deterministic ordering.
 
 Getting the size of a map has a relatively simple specification but a somewhat
 complex implementation. Like map iteration, the code for \cc{MapLen} (modeling
