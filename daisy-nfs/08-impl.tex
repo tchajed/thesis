@@ -154,3 +154,49 @@ using eight CPU cores.
 
 % VeriBetrKV is 1.8h CPU time and 11min on 32 cloud machines (of unspecified
 % number of cores)
+
+\subsection{Achieving good performance}
+
+\tej{moved this section here, fit it into chapter}
+
+An important aspect of the Dafny proof was to write code in a way that produces
+high-performance Go code.
+% problem because Dafny's built-in immutable collections (sequences and maps) are
+% extremely inefficient in Go due to an impedance mismatch between Dafny and Go
+% semantics.
+Compared to Dafny's C\# backend, the generated Go code for Dafny's built-in
+immutable collections has much
+additional pointer indirection and defensive copying. Using these data
+structures for byte sequences would simplify proofs, but has unacceptably poor
+performance in Go.
+
+To avoid this performance problem we use an axiomatized interface to
+Go byte slices (\cc{[]byte} in Go) whenever raw data is required, including file
+data and paths, and then modify these slices in-place. It was possible to
+axiomatize this API without any changes to Dafny; we use a standard Dafny
+feature of \cc{:extern} classes to specify a Dafny class \cc{Bytes} in terms of
+ghost state of type \cc{seq<byte>} but then implement it as in Go as a thin
+wrapper around the native \cc{[]byte} type. This API is trusted, so we
+test it. To catch off-by-one errors in the specification, we wrote
+tests like \verb![]byte{1,2,3}[2]! and ran them in Go and
+(equivalent) Dafny.
+%(this test should return 3 because both languages are
+% zero-indexed).
+
+% We implement the file system fairly efficiently, taking advantage of Dafny's
+% support for imperative code.
+The on-disk data structures---inodes, indirect
+blocks, and directories---are represented in memory in their serialized form and
+modified by updating this representation directly, avoiding copies to move
+between representations. These were first written with slower purely
+functional code, which was then migrated to imperative code that
+used the functional code as a specification.
+
+
+Dafny's default integer type \cc{int} is unbounded and compiled to big-integer
+operations. We used Dafny's
+\cc{nativeType} support to instead define a type of 64-bit integers (that
+is, natural numbers less than $2^{64}$) and compile this to Go's \cc{uint64}.
+This requires overflow reasoning, but
+automation makes this palatable in the proof and the performance gain is
+significant.

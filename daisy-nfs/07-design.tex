@@ -106,7 +106,46 @@ this set of inodes as a lock hint; these are first acquired in the correct
 order, then compared against the current source and destination in case they
 have been renamed concurrently.
 
-\subsubsection{Large files}%
+\subsubsection{Freeing space}
+\label{sec:dafny:freeing}
+
+Freeing space becomes surprisingly tricky with large files. The problem is that
+a large-enough file may reference too many blocks to be
+freed in a single transaction.
+DaisyNFS handles this issue by splitting removing a file and reclaiming space
+into separate transactions. The latter is implemented with an operation
+\cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
+we prove has no effect on the file-system state. Because this operation is a
+logical no-op, it is safe to call it at any time.
+
+The implementation is careful to call \cc{ZeroFreeSpace} after any operation
+that leaves unused blocks, in particular \cc{REMOVE}, which deletes a file, and
+\cc{SETATTR}, which can shrink a file by reducing its size. Since
+\cc{ZeroFreeSpace} doesn't affect the user-visible data, it can return early to
+avoid overflowing a transaction. The unverified code that manages freeing space
+runs the operation in a loop until it covers all of the unused space in an
+inode.
+
+There is one case where freeing blocks is important for correctness and not just
+to reclaim space. Growing a file is supposed to logically fill the new space
+with zeros. If the file had old data in that space, it might not be zero but
+instead contain previously written and deleted data, which both violates the specification and
+is a potential security risk. The way we handle this with background freeing is
+with validation: when the \cc{SETATTR} operation grows a file, it checks if the
+free space is already zero first, and if not fails with a special error code. The
+unverified code uses this error as a signal to immediately call
+\cc{ZeroFreeSpace} and try the operation again. The same support also handles
+holes created by writing past the end of a file, which are similarly supposed to
+be zero.
+
+The freeing implementation is an interesting example of using validation in
+verification. The specification for much of the freeing code is loose, allowing
+any data to be written to the free space. Only the code that checks if the
+zeroing is done needs to be verified against a strong specification. The rest of
+the code does still needs to be correct for this check to succeed, but we
+aren't required to prove it.
+
+\subsection{Verifying the indirect block implementation}%
 \label{sec:dafny:indirect}
 
 DaisyNFS supports large files using indirect blocks. A file's inode has a fixed
@@ -175,90 +214,6 @@ mapping each leaf position to its linear index within the inode. Separating
 these two made it easier to work on the indirect layer while exposing a much
 more natural abstraction of a file as a sequence of blocks for the rest of the
 file-system implementation.
-
-\subsubsection{Freeing space}
-\label{sec:dafny:freeing}
-
-Freeing space becomes surprisingly tricky with large files. The problem is that
-a large-enough file may reference too many blocks to be
-freed in a single transaction.
-DaisyNFS handles this issue by splitting removing a file and reclaiming space
-into separate transactions. The latter is implemented with an operation
-\cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
-we prove has no effect on the file-system state. Because this operation is a
-logical no-op, it is safe to call it at any time.
-
-The implementation is careful to call \cc{ZeroFreeSpace} after any operation
-that leaves unused blocks, in particular \cc{REMOVE}, which deletes a file, and
-\cc{SETATTR}, which can shrink a file by reducing its size. Since
-\cc{ZeroFreeSpace} doesn't affect the user-visible data, it can return early to
-avoid overflowing a transaction. The unverified code that manages freeing space
-runs the operation in a loop until it covers all of the unused space in an
-inode.
-
-There is one case where freeing blocks is important for correctness and not just
-to reclaim space. Growing a file is supposed to logically fill the new space
-with zeros. If the file had old data in that space, it might not be zero but
-instead contain previously written and deleted data, which both violates the specification and
-is a potential security risk. The way we handle this with background freeing is
-with validation: when the \cc{SETATTR} operation grows a file, it checks if the
-free space is already zero first, and if not fails with a special error code. The
-unverified code uses this error as a signal to immediately call
-\cc{ZeroFreeSpace} and try the operation again. The same support also handles
-holes created by writing past the end of a file, which are similarly supposed to
-be zero.
-
-The freeing implementation is an interesting example of using validation in
-verification. The specification for much of the freeing code is loose, allowing
-any data to be written to the free space. Only the code that checks if the
-zeroing is done needs to be verified against a strong specification. The rest of
-the code does still needs to be correct for this check to succeed, but we
-aren't required to prove it.
-
-\subsection{Achieving good performance}
-
-An important aspect of the Dafny proof was to write code in a way that produces
-high-performance Go code.
-% problem because Dafny's built-in immutable collections (sequences and maps) are
-% extremely inefficient in Go due to an impedance mismatch between Dafny and Go
-% semantics.
-Compared to Dafny's C\# backend, the generated Go code for Dafny's built-in
-immutable collections has much
-additional pointer indirection and defensive copying. Using these data
-structures for byte sequences would simplify proofs, but has unacceptably poor
-performance in Go.
-
-To avoid this performance problem we use an axiomatized interface to
-Go byte slices (\cc{[]byte} in Go) whenever raw data is required, including file
-data and paths, and then modify these slices in-place. It was possible to
-axiomatize this API without any changes to Dafny; we use a standard Dafny
-feature of \cc{:extern} classes to specify a Dafny class \cc{Bytes} in terms of
-ghost state of type \cc{seq<byte>} but then implement it as in Go as a thin
-wrapper around the native \cc{[]byte} type. This API is trusted, so we
-test it. To catch off-by-one errors in the specification, we wrote
-tests like \verb![]byte{1,2,3}[2]! and ran them in Go and
-(equivalent) Dafny.
-%(this test should return 3 because both languages are
-% zero-indexed).
-
-% We implement the file system fairly efficiently, taking advantage of Dafny's
-% support for imperative code.
-The on-disk data structures---inodes, indirect
-blocks, and directories---are represented in memory in their serialized form and
-modified by updating this representation directly, avoiding copies to move
-between representations. These were first written with slower purely
-functional code, which was then migrated to imperative code that
-used the functional code as a specification.
-
-
-Dafny's default integer type \cc{int} is unbounded and compiled to big-integer
-operations. We used Dafny's
-\cc{nativeType} support to instead define a type of 64-bit integers (that
-is, natural numbers less than $2^{64}$) and compile this to Go's \cc{uint64}.
-This requires overflow reasoning, but
-automation makes this palatable in the proof and the performance gain is
-significant.
-
 
 
 % \subsection{Random notes on development process}
