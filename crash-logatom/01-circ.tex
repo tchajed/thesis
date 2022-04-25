@@ -1,19 +1,34 @@
 \section{Circular buffer API}
 
-\tej{add a figure of the circular buffer's physical state}
-
 The circular buffer (``circ'' for short) is a fixed-size, \emph{on-disk} queue of
 updates, which are pairs of an address and a disk block. It is used to implement
 write-ahead logging: updates are first stored in the circular buffer, and
 then eventually moved to a separate data region. It supports two operations
-during normal usage: \cc{Append(upds)} appends a list of updates to the buffer
+during normal usage: \cc{Append(end, upds)} appends a list of updates to the buffer
 and \cc{TrimTill(pos)} deletes updates up to the position \cc{pos}. These logical queue positions grow
-indefinitely, but the buffer can hold at most 511 updates at a time and it
+indefinitely, but the buffer can hold a finite and fixed number of update at a time and it
 is the caller's responsibility to avoid overflowing with \cc{Append}. The only
 read operation is recovery, which restores the durable updates and current queue
 position; the write-ahead log caches updates during normal execution, but this
 is not the circular buffer's concern. The complete Go API is shown in
 \cref{fig:circ:api}.
+
+The circular buffer supports atomic and concurrent \cc{Append} and \cc{TrimTill}
+with a careful on-disk layout. It consists of two header blocks and 511 data
+blocks, depicted graphically in \cref{fig:circ:phys}. The first header block (the ``trim'' block, since it is used for
+trimming) holds the logical start position of the queue, while the second header
+(the ``append'' block, since it is used for appending) holds the logical end
+position and 511 addresses; the data blocks for these addresses are in the
+remaining data blocks. This append block has 4096 bytes, or enough space for 512
+64-bit numbers; one is used for the end position, and the remainder for update
+addresses. To append atomically, \cc{c.Append(end, upds)} first writes the data
+(using \cc{end} to know where to start writing), and then writes the append
+header block to atomically incorporate the writes, and simultaneously to write
+the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
+addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
+deletes by merely writing a new, higher start position to the trim header. Since
+these operations touch disjoint parts of disk, they can be performed
+concurrently.
 
 \begin{figure}[ht]
 \begin{minted}{go}
@@ -31,6 +46,13 @@ type Update {
 \end{minted}
   \caption{The Go API for the circular buffer.}%
   \label{fig:circ:api}
+\end{figure}
+
+\begin{figure}[ht]
+\tej{add a figure of the circular buffer's physical state}
+\caption{The circular buffer's on-disk layout, consisting of a fixed 513 blocks
+  located at the beginning of the disk.}
+\label{fig:circ:phys}
 \end{figure}
 
 \begin{figure}[ht]
