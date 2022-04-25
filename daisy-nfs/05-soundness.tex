@@ -76,26 +76,32 @@ conditions for a system implemented using transactions and derives a \emph{concu
 A transaction must satisfy some conditions to ensure atomicity. We write
 $\mathrm{safe}(p)$ to say that $p$ is a valid transaction. The main
 restriction is that $p$ cannot access global state such as the heap, since
-the transaction system does not make such accesses atomic.
-The implementation $i$
-in this theorem gives only the body of each transaction; the theorem is about
-$\atomiccomp i$ where $(\atomiccomp i)(op) = \atomically{i(op)}$ uses
-the macro from the Txn layer to specify that the
-operation is wrapped in a transaction.
-%\begin{verbatim}
-%type txnBody =
-%  func(tx *Txn) (v interface{}, ok bool)
-%func runTxn(f txnBody) (v interface{}, ok bool) {
-%  tx := Begin()
-%  v, ok := f(tx)
-%  if ok {
-%    tx.Commit()
-%  } else {
-%    tx.Abort()
-%  }
-%  return v, ok
-%}
-%\end{verbatim}
+the transaction system does not make such accesses atomic; further details are
+discussed in \cref{sec:txn:program-refinement}.
+
+The theorem uses
+$\atomiccomp i$ to represent a substitution that replaces each operation with
+its implementation as a transaction; that is,
+$(\atomiccomp i)(op) = \atomically{i(op)}$. $\atomically{i(op)}$ represents an
+abstract transaction at the Txn layer, which corresponds to a pattern like the
+following when linked with the actual GoTxn implementation (this code snippet
+uses Go's support for generics, introduced in version 1.18):
+
+\begin{minted}{go}
+type txnBody[T] =
+  func(tx *Txn) (v T, ok bool)
+func runTxn[T](f txnBody[T]) (v T, ok bool) {
+  tx := Begin()
+  v, ok := f(tx)
+  if ok {
+    tx.Commit()
+  } else {
+    tx.Abort()
+  }
+  return v, ok
+}
+\end{minted}
+
 \begin{theorem}[Simulation transfer]
   Let $\textdom{Sys}$ be a layer implemented using transactions with
 $i : \textdom{Sys} \to \gooselayer{Txn}$, such that
@@ -106,6 +112,23 @@ $\forall op.\, \mathrm{safe}(i(op))$ hold. Then
 \]
 \label{thm:gotxn-transfer}
 \end{theorem}
+
+The theorem assumes only an implementation $i$ which gives the body of each
+operation in $\mathit{Sys}$ as a transaction. It then gives a refinement in the
+style of program refinement for an arbitrary program $p$ that uses the
+$\mathit{Sys}$ API, such as the server loop seen in
+\cref{sec:daisy:refinement-spec}. The conclusion is a refinement whose
+right-hand side is the program $p$ at the top-most abstraction level of the
+system. The left-hand side is the executable code for this program, derived in
+two steps: first $\mathrm{link}(p, \atomiccomp i)$ takes each abstract operation
+$op$ in $p$ and replaces it with $\atomically{i(op)}$, and second
+$\linked{\mathrm{link}(p, \atomiccomp i)}$ takes the result of this process and
+further replaces $\atomically{i(op)}$ with executable code that uses the GoTxn
+implementation for each call to the Txn API and the \cc{runTxn} pattern above to
+make the snippet atomic. The overall refinement says that this executable code
+has a subset of behaviors of $p$, so that each operation is not only atomic but
+follows the abstract specification of the $\mathit{Sys}$ layer.
+
 %Notice that this theorem assumes simply an implementation of some interface $S$
 % using transactions and a proof of its correctness in terms of standard
 % \emph{sequential} reasoning, while the conclusion says that the combination of
