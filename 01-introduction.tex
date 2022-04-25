@@ -87,62 +87,52 @@ in-memory but concurrent file system AtomFS~\cite{zou:atomfs}. These systems use
 verification techniques that do not support both crashes and concurrency, and we
 cannot extend them in a straightforward way to support the other form of reasoning.
 
-\section{Challenges in implementing file systems}
-
-\tej{probably will delete this section}
-
-Fundamentally a file system is a data structure that stores files inside a
-hierarchy of directories. That makes the implementation challenging is that the file system must persist all
-of its data into disk blocks, and we would like the file system to keep
-stored data safe even in the face of an interruption like a kernel panic,
-power failure, or sudden disconnect of the storage device. We call such an
-interruption a crash and use the term ``crash safety'' to refer to the goal of
-correctness even under crashes. Without appropriate care in the implementation,
-a naive implementation could lose or corrupt data. Data loss is particularly bad
-when
-metadata is corrupted --- for example, if a directory is moved by removing it
-from its original parent and then adding it to the new parent, interrupting this
-process might lose the directory and all of its contents.
-
-To get good performance, it is helpful to take advantage of multiple CPUs to
-prepare concurrent operations. However, this concurrency adds complexity on top
-of implementing the file system as a crash-safe data structure. Concurrency and
-storage also interact, since an efficient file system will improve performance
-by taking advantage of concurrently-issued writes to combine multiple disk
-operations into one.
-
-With both crash safety and concurrency, there is a wide spectrum of guarantees
-the file system might make about what happens with concurrent operations and
-crashes. The informal goal is for the system to never lose data, even when used concurrently. For the approach of this thesis, we need a more formal
-definition of correctness to prove that the system meets.
-
-Applications and users can have different expectations for what guarantees the
-file system makes. DaisyNFS implements the strongest guarantee for concurrency
-and crash safety: every operation should appear to occur at a single instant in
-time, or in other words should be atomic. This holds for concurrent threads as
-well as if a system crashes and the system reboots. Operations that are in
-progress might still be interrupted on crash, so data in the process of being
-written will be lost, but this is unavoidable if the system never reached the
-point of persisting that data.
-
-File systems do offer weaker guarantees --- especially allowing recently-written
-data to be lost on crash in order to defer writing data persistently
---- but it is generally difficult to formalize and verify a system that provides
-these weaker guarantees. In any case the NFS specification requires most operations to be persistent
-when they return, restricting when an NFS server can take advantage
-of weaker durability guarantees. Instead of relaxing the guarantees we focused
-on a fairly efficient implementation of our strong atomic specification.
-
-\tej{maybe get rid of this example from the intro}
-Concurrency and crash safety can interact to make atomicity difficult to
-achieve. To give a flavor of the kinds of interactions these two can bring
-about, we give a simple example from the transaction system. Writes to the
-transaction system are buffered in memory before being flushed to disk, with the
-goal of coalescing concurrent transactions in a single flush. Perhaps
-surprisingly, even if all writes are immediately followed by a flush, the system
-does not appear to have atomically durable writes. If one thread writes, another
-thread can concurrently read the buffered value before it is flushed, but a
-crash immediately afterward will lose the write and revert to the old value.
+% \section{Challenges in implementing file systems}
+%
+% %% this section covered an unrelated concern, discussing how DaisyNFS provides
+% %% the strongest crash safety and concurrency guarantees.
+%
+% Fundamentally a file system is a data structure that stores files inside a
+% hierarchy of directories. That makes the implementation challenging is that the file system must persist all
+% of its data into disk blocks, and we would like the file system to keep
+% stored data safe even in the face of an interruption like a kernel panic,
+% power failure, or sudden disconnect of the storage device. We call such an
+% interruption a crash and use the term ``crash safety'' to refer to the goal of
+% correctness even under crashes. Without appropriate care in the implementation,
+% a naive implementation could lose or corrupt data. Data loss is particularly bad
+% when
+% metadata is corrupted --- for example, if a directory is moved by removing it
+% from its original parent and then adding it to the new parent, interrupting this
+% process might lose the directory and all of its contents.
+%
+% To get good performance, it is helpful to take advantage of multiple CPUs to
+% prepare concurrent operations. However, this concurrency adds complexity on top
+% of implementing the file system as a crash-safe data structure. Concurrency and
+% storage also interact, since an efficient file system will improve performance
+% by taking advantage of concurrently-issued writes to combine multiple disk
+% operations into one.
+%
+% With both crash safety and concurrency, there is a wide spectrum of guarantees
+% the file system might make about what happens with concurrent operations and
+% crashes. The informal goal is for the system to never lose data, even when used concurrently. For the approach of this thesis, we need a more formal
+% definition of correctness to prove that the system meets.
+%
+% Applications and users can have different expectations for what guarantees the
+% file system makes. DaisyNFS implements the strongest guarantee for concurrency
+% and crash safety: every operation should appear to occur at a single instant in
+% time, or in other words should be atomic. This holds for concurrent threads as
+% well as if a system crashes and the system reboots. Operations that are in
+% progress might still be interrupted on crash, so data in the process of being
+% written will be lost, but this is unavoidable if the system never reached the
+% point of persisting that data.
+%
+% File systems do offer weaker guarantees --- especially allowing recently-written
+% data to be lost on crash in order to defer writing data persistently
+% --- but it is generally difficult to formalize and verify a system that provides
+% these weaker guarantees. In any case the NFS specification requires most operations to be persistent
+% when they return, restricting when an NFS server can take advantage
+% of weaker durability guarantees. Instead of relaxing the guarantees we focused
+% on a fairly efficient implementation of our strong atomic specification.
 
 \section{Approach}
 \label{sec:intro:approach}
