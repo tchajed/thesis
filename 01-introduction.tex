@@ -1,109 +1,17 @@
-One crucial service in an operating system is its \emph{file system}, the piece
-of software that takes a disk (which simply stores a long sequence of bytes) and
-makes it more useful by giving applications the abstraction of files and directories. The file
-system is important because applications rely on it to store data, and to
-persist that data even if the computer shuts down (perhaps unexpectedly, say due
-to a power failure) and reboots. Due to their importance to nearly all applications, many
-file systems have internally complicated implementations, with optimizations and
-concurrency for high performance. However, due to this complexity, file systems
-sometimes have bugs, especially subtle bugs that only manifest if the system
-crashes at an inopportune time or if concurrent operations interleave in just
-the wrong way. These bugs can result in the file system misbehaving, for example
-losing files when the file system's internals are corrupted.
-
-A file system's developers generally use testing to identify and fix bugs in the
-implementation. Unfortunately, testing is fundamentally difficult due to the
-combination of a concurrent implementation and the requirement that the file
-system be correct even when the computer crashes. Both of these facets of a file
-system mean even a handful of operations can have a large number of possible
-executions, making it difficult to test all of them and gain high confidence in the
-implementation.
-
-This thesis takes an alternate approach to testing to obtain a correct file
-system: we formally verify a new file-system implementation against a high-level
-specification of the file system's behavior. The high-level approach of this
-thesis is to \emph{implement} a file system, define a mathematical
-\emph{specification} of what the file system is supposed to do, and then
-\emph{prove} that the implementation always meets the specification regardless
-of how the program executes, and even if the system crashes. To increase confidence in
-the proof, we carry it out with a computer and a piece of software called a
-\emph{proof assistant} checks that the proof is valid. The nature of these
-proofs means they force the developer to systematically cover every corner case
-in the code.
-
-The thesis's contributions address two main challenges in verifying a file system. The
-first challenge is reasoning about the combination of crash safety and
-concurrency at all, which we address with new verification foundations.
-The second challenge is the complexity of the implementation, which we address
-with a novel, verification-friendly file-system design that allows us to reason
-about each operation as if it were atomic, resulting in much simpler sequential reasoning.
-
-For the first challenge of reasoning about crashes and concurrency this thesis
-develops new foundations for verifying systems. \textbf{Perennial} is a
-framework for reasoning about systems that have concurrency and make crash
-safety guarantees. The framework includes a program logic for writing
-specifications that capture the crash behavior of individual functions in the
-system. The reasoning principles in this program logic allow verifying
-programs with concurrently executing threads with shared memory, in conjunction
-with reasoning about crash behavior. Finally, Perennial comes with a soundness
-theorem that shows that a verified system satisfies its specification even if
-the computer crashes and the system has to be restarted.
-
-The Perennial logic gives general reasoning principles for programs. To tie
-Perennial to executable code, we also developed \textbf{Goose}, a system for
-translating a subset of Go to a model suitable for reasoning in Perennial. Goose
-supports enough of Go to verify high-performance code. At the same time, it
-comes with reasoning principles developed in Perennial for convenient
-verification of the supported subset of Go.
-
-These foundations were used to verify a high-performance file system called
-\textbf{DaisyNFS}, the main artifact of this thesis. DaisyNFS implements the Network
-File System (NFS) protocol on top of a disk with block-based access. NFS is a
-standard file-system protocol intended for accessing a file system over a network.
-We chose to
-implement NFS since it is widely used, and the behavior of an NFS server is relatively well-specified
-by the RFC 1813 standard, compared to the requirements on a Linux file system,
-for example. The specification for our file system stipulates that each
-operation appears to execute all at once --- that is, atomically --- with
-respect to both other threads and on crash, and that every operation behaves
-according to our mathematical model of the NFS specification.
-
-DaisyNFS has a verification-friendly design where all disk access goes through a
-\emph{transaction system} called \textbf{GoTxn}. The advantage of this design is that the
-transaction system addresses the core challenges of crash safety and concurrency
-and gives the caller transactions that appear to run sequentially. As a result the file-system code can then be verified with sequential
-reasoning, a principle formalized in a \emph{simulation-transfer theorem}.
-As a side effect of having simpler sequential reasoning, we were
-able to focus our effort on writing file-system features and getting good
-performance. While other file systems (including the most common Linux file
-system, ext4, and the Windows NTFS file system) have mechanisms for crash atomicity, DaisyNFS
-uses transactions to generically handle both crash and concurrency atomicity.
-
-A key technical contribution that allows us to verify this file-system design is
-a formal specification of how the transaction system guarantees atomicity,
-expressed using a specification called \emph{program refinement}. Our
-formal specification is backed by a machine-checked proof against the GoTxn
-implementation, giving confidence that this specification is actually achieved.
-A challenge in this specification is formalizing under what conditions the
-transaction system is able to guarantee atomicity --- for example, transactions
-that read or write global state outside the transaction system cannot be made atomic.
-
-Perennial is implemented as a library in the Coq proof assistant~\cite{coq}, on
-top of the Iris concurrency framework~\cite{jung:iris-jfp}. Goose is implemented
-in Go, in order to use the Go parsing and type-checking tools. GoTxn is
-implemented in Go, using Goose and Perennial to verify its program refinement
-specification. We prove the simulation-transfer theorem in Coq on top of program
-refinement. This theorem justifies verifying DaisyNFS using sequential
-reasoning, so its implementation and proof are in Dafny~\cite{dafny-refman}, a
-specialized verification-aware programming language.
-
-A performance evaluation shows that DaisyNFS gets good performance compared to
-Linux NFS. We compare the two by mounting each with the Linux NFS client, then
-interacting with it using the standard Linux system-call API.\@ The thesis also
-evaluates the reliability of DaisyNFS's unverified, trusted code and the
-flexibility of changing the code and proofs.
+One crucial service in an operating system is its \emph{file system}, the
+software that implements the abstraction of files and directories on top of a
+disk, which simply stores a long sequence of bytes. File systems are important
+because they are used by all applications to store data, and bugs in file
+systems are especially costly because they can lead to data loss for any of
+these applications. This thesis describes an approach towards building a
+reliable and correct file system using formal verification, in which the file
+system is developed along with a proof that it always follows a high-level
+specification of its intended behavior. The artifact of this thesis is DaisyNFS,
+a verified file system that comes with a proof of correctness and gets good
+performance.
 
 \section{Motivation}
+\label{sec:intro:motivation}
 
 A file system is an especially critical part of the systems software stack for
 three reasons. First, they are widely used --- essentially all applications have
@@ -141,6 +49,7 @@ focuses on implementing features like the details of the NFS semantics, large
 files, and efficient data structures.
 
 \section{State of the art}
+\label{sec:intro:related}
 
 Production file systems are generally validated by testing. While testing is
 indispensable for development, the nature of a file system makes it difficult to
@@ -164,7 +73,7 @@ The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
 another verified, concurrent file system,
 Flashix~\cite{bodenmuller:concurrent-flashix}. Flashix runs on top of a
-lower-level storage technology, raw flash rather than an SSD. The techniques
+lower-level storage technology, raw flash rather than an SSD.\@ The techniques
 developed to verify Flashix are specialized to its particular file-system
 design, especially its write-back cache. Its concurrency is primarily between
 regular operations and garbage collection, and read-only concurrency. DaisyNFS
@@ -179,6 +88,8 @@ verification techniques that do not support both crashes and concurrency, and we
 cannot extend them in a straightforward way to support the other form of reasoning.
 
 \section{Challenges in implementing file systems}
+
+\tej{probably will delete this section}
 
 Fundamentally a file system is a data structure that stores files inside a
 hierarchy of directories. That makes the implementation challenging is that the file system must persist all
@@ -234,6 +145,7 @@ thread can concurrently read the buffered value before it is flushed, but a
 crash immediately afterward will lose the write and revert to the old value.
 
 \section{Approach}
+\label{sec:intro:approach}
 
 What does it mean to give a machine checked, formal proof of a system? At a high
 level, program proofs always have three components: an implementation, a
@@ -342,6 +254,7 @@ conditions are required for the simulation transfer, including restrictions on
 the transactions and exactly what crash safety guarantees are achieved.
 
 \section{Contributions}
+\label{sec:intro:contributions}
 
 This thesis makes several contributions that enable its overall goal of a
 verified, concurrent file system.
@@ -386,34 +299,43 @@ store.
 \section{Reading guide for the thesis}
 \label{sec:intro:reading-guide}
 
-The chapters of the thesis are intended to be as independent as possible, with
-only a few dependencies. Most of the thesis is written for a broad systems
-audience, except for the Perennial chapter which has a more programming
-languages-oriented audience.
+This section briefly outlines the chapters of the thesis, the dependencies
+between chapters, and the intended audience. Broadly the thesis is intended for
+a systems audience, except for the verification foundations. The support for
+concurrency makes all of the formal underpinnings in the work more technical
+than foundations for sequential systems verification.
 
-\Cref{ch:related} covers related work across Perennial, GoTxn, and DaisyNFS.
+\Cref{ch:related} covers related work across Perennial, GoTxn, and DaisyNFS, for
+a broad computer-science audience. To keep the Goose chapter self-contained, its
+related work is described in the relevant chapter.
 
 \Cref{ch:perennial} is an overview of Perennial. This chapter is oriented
 towards a reader interested in the general verification concepts and not
 necessarily the systems side. At this level of abstraction Perennial is
-independent of both the GoTxn proof and even Goose for verifying Go code.
+independent of both the GoTxn proof and even Goose for verifying Go code. Some
+experience with program logics is helpful for understanding the presentation.
 
 \Cref{ch:crash-logatom} describes a style of logically atomic specifications
 that capture both concurrency and crash atomicity using Perennial. It uses an
 extended example from the GoTxn proof and explains its formal underpinnings at a
-high level.
+high level. This is the most technically involved chapter.
 
-\Cref{ch:txn} describes the GoTxn proof, going up to the program refinement
-specification. An important part of GoTxn
-is its specification, which captures how transactions are atomic. This chapter
-does not require the full Perennial or logical atomicity chapters.
+\Cref{ch:txn} describes the GoTxn proof. An important part of GoTxn is its
+specification, which captures how transactions are atomic. This chapter does not
+require the full Perennial or logical atomicity chapters.
 
 \Cref{ch:daisy-nfs} describes the design and proof of DaisyNFS.\@ This chapter
-explains the simulation-transfer theorem, which justifies using Dafny to verify
-DaisyNFS even though Dafny is a sequential verification tool and DaisyNFS is a
-concurrent system.
+explains the proof approach which justifies using Dafny to verify DaisyNFS even
+though Dafny is a sequential verification tool and DaisyNFS is a concurrent
+system.
 
 \Cref{ch:goose} is about Goose and talks about verifying Go code generally, with
-nothing specific to GoTxn or even storage systems. There is the first detailed
+nothing specific to GoTxn or even storage systems. This is the first detailed
 description of Goose, so this chapter is written to be readable without any of
 the other chapters.
+
+\Cref{ch:impl} is a short chapter covering some implementation details in
+DaisyNFS, covering both GoTxn and the file-system code.
+
+\Cref{ch:eval} evaluates the whole file system along a few dimensions,
+especially performance but also aspects of the proof.
