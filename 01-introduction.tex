@@ -103,6 +103,43 @@ interacting with it using the standard Linux system-call API.\@ The thesis also
 evaluates the reliability of DaisyNFS's unverified, trusted code and the
 flexibility of changing the code and proofs.
 
+\section{Motivation}
+
+A file system is an especially critical part of the systems software stack for
+three reasons. First, they are widely used --- essentially all applications have
+data that is ultimately stored in a file system. Second, implementations are
+concurrent and optimized, which increase the potential for bugs. Finally, bugs
+in this part of the system are particularly costly since they can lead to
+permanent data loss for any application running on top.
+
+Two challenges make implementing a correct file system challenging: crashes and
+concurrency. A file system is generally expected to keep application data safe
+even if the system stops running at any time, say due to a power failure or
+kernel panic. This thesis uses ``crash'' to refer to any of these circumstances
+where the computer stops and is rebooted. After a reboot, the file system is
+expected to preserve data from before the crash. The second big challenge is
+concurrency in the implementation, which complicates approaches for improving
+reliability, including both testing and verification.
+
+The approach in this thesis to make a reliable file system is to use formal
+verification. In this approach, we write the code, then a specification of the
+intended behavior of the code, and finally a mathematical proof that shows the
+code always meets the specification. For confidence in the proof itself, the
+proof is carried out in a computer and a piece of software called a proof
+assistant checks that the proof is valid. The nature of formal verification
+forces the proof engineer to systematically cover every corner case in the code.
+
+This thesis develops new techniques to address the core challenges of crash
+safety and concurrency, and to scale to a system of the size of a file system.
+The key to the approach is a design that splits the file system into two main
+parts: a transaction system called GoTxn that makes it easy to get atomicity
+over the disk, and then the rest of the file-system implemented using a
+transaction per operation. GoTxn must face the key challenges of crash safety
+and concurrency, but it handles them in such a way that DaisyNFS is verified
+using comparatively much simpler sequential reasoning. The file-system code then
+focuses on implementing features like the details of the NFS semantics, large
+files, and efficient data structures.
+
 \section{State of the art}
 
 Production file systems are generally validated by testing. While testing is
