@@ -173,37 +173,38 @@ have been renamed concurrently.
 Freeing space becomes surprisingly tricky with large files. The problem is that
 a large-enough file may reference too many blocks to be
 freed in a single transaction.
-DaisyNFS handles freeing by removing a file from its directory and marking it free in
-one transaction, and in separate transactions reclaiming the space it took by deallocating
-its blocks.
-
-Removal is implemented as a combination of two transactions,
-one which performs the logical operation but leaks space, and an operation
+DaisyNFS handles this issue by splitting removing a file and reclaiming space
+into separate transactions. The latter is implemented with an operation
 \cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
 we prove has no effect on the file-system state. Because this operation is a
-logical no-op, it is safe to call it at any time. In practice the implementation
-is careful to call it after any operation that leaves unused blocks, in
-particular \cc{SETATTR}, which can shrink a file by reducing its size, and
-\cc{REMOVE}, which deletes a file. Furthermore since \cc{ZeroFreeSpace} doesn't
-affect the user-visible data, it may return early to avoid overflowing a
-transaction, which GoJournal limits to 511 blocks.
+logical no-op, it is safe to call it at any time.
 
-There is one case where freeing blocks is important for correctness and not just to reclaim space. Growing a file is supposed to logically fill the new space with
-zeros. If the file had old data in that space, it would not be zero but some
-previously written and deleted data, which both violates the specification and
+The implementation is careful to call \cc{ZeroFreeSpace} after any operation
+that leaves unused blocks, in particular \cc{REMOVE}, which deletes a file, and
+\cc{SETATTR}, which can shrink a file by reducing its size. Since
+\cc{ZeroFreeSpace} doesn't affect the user-visible data, it can return early to
+avoid overflowing a transaction. The unverified code that manages freeing space
+runs the operation in a loop until it covers all of the unused space in an
+inode.
+
+There is one case where freeing blocks is important for correctness and not just
+to reclaim space. Growing a file is supposed to logically fill the new space
+with zeros. If the file had old data in that space, it might not be zero but
+instead contain previously written and deleted data, which both violates the specification and
 is a potential security risk. The way we handle this with background freeing is
-with validation: when the \cc{SETATTR} operation grows a file checks, it checks if the
+with validation: when the \cc{SETATTR} operation grows a file, it checks if the
 free space is already zero first, and if not fails with a special error code. The
-unverified code interprets this as a signal to immediately call
+unverified code uses this error as a signal to immediately call
 \cc{ZeroFreeSpace} and try the operation again. The same support also handles
 holes created by writing past the end of a file, which are similarly supposed to
 be zero.
 
 The freeing implementation is an interesting example of using validation in
 verification. The specification for much of the freeing code is loose, allowing
-any data to be written to the free space. We only needed a strong specification
-for the code that checks if the zeroing is done; the rest of the code needs to
-be correct for this check to ever succeed, but we aren't required to prove it.
+any data to be written to the free space. Only the code that checks if the
+zeroing is done needs to be verified against a strong specification. The rest of
+the code does still needs to be correct for this check to succeed, but we
+aren't required to prove it.
 
 \subsection{Achieving good performance}
 
