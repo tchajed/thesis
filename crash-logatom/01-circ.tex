@@ -28,7 +28,9 @@ the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
 addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
 deletes by merely writing a new, higher start position to the trim header. Since
 these operations touch disjoint parts of disk, they can be performed
-concurrently.
+concurrently. Recovery uses the header blocks do determine what subset of the
+circular buffer holds complete multiwrites; partially-appended
+updates are ignored for atomicity.
 
 \begin{figure}[ht]
 \begin{minted}{go}
@@ -91,9 +93,6 @@ is an absolute position; the effect of \cc{TrimTill(pos)} is to delete
 \cc{pos - start} updates from the beginning of the list of updates and set the
 new start position to \cc{pos}. A more formal specification is given in
 \cref{fig:circ:spec}.
-
-\tej{explain the implementation and how it achieves crash atomicity (physical
-encoding will help)}
 
 There are three challenges in specifying how the circular buffer's
 implementation connects to the abstract transitions given above. First, we
