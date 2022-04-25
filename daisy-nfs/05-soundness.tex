@@ -132,32 +132,25 @@ follows the abstract specification of the $\mathit{Sys}$ layer.
 \subsection{Using simulation transfer with Dafny}%
 \label{sec:daisy:proof-dafny}
 
-\begin{figure}
-  %\includegraphics{fig/refinement-execs}
-  \begin{center}
-  \input{daisy-nfs/fig/refinement-execs.tex}
-  \end{center}
-  \caption[One execution of DaisyNFS at its three abstraction levels]{One possible execution of DaisyNFS, receiving parallel LOOKUP and
-    CREATE operations, at its three abstraction levels.
-    Within an execution each row is a thread, and dashed arrows indicate
-    context switches.
-    The proof shows the bottom execution is equivalent to an atomic execution of
-    each thread at
-    the Txn layer~(in \cref{thm:gotxn-transfer}),
-    and sequential reasoning shows each atomic sequence behaves according to the NFS
-    specification~(in \cref{thm:dafny}).}
-  \label{fig:refinement-execs}
-\end{figure}
+\newlength{\stepw}
+\newlength{\dstepw}
+\newlength{\nfstop}
 
-In order to use the GoTxn simulation transfer theorem, \cref{thm:gotxn-transfer} to obtain \cref{thm:correctness}, we need to
-prove that DaisyNFS's implementation, $i_{NFS}$, satisfies the sequential refinement conditions. To do so, we define
-$\seqrefinement_{\mathrm{dfy}}(i)$, an encoding of sequential refinement
-using Dafny pre- and post-conditions (as illustrated in \cref{fig:refinement}), and prove that DaisyNFS
-satisfies these conditions in Dafny. The crash refinement condition (3) is
-straightforward; crashes have no effect in both the Txn layer and the NFS layers
-because they do not have ephemeral state.
+Simulation transfer reduces verifying DaisyNFS's correctness to reasoning about
+the transaction that implements each NFS operation. Because this reasoning is
+sequential, we carry it out in Dafny, a verification-oriented programming language.
+Let $i_{\mathrm{NFS}} : \mathrm{NFS} \to \gooselayer{Txn}$ denote a model of the
+Dafny implementation of each NFS operation, as a program using the GoTxn
+interface. Note that this is merely a hypothetical model of the Dafny code,
+since Goose does not support enough of Go to explicitly construct these terms in
+GooseLang. The Dafny annotations on these methods prove sequential refinement
+conditions that we will denote $\seqrefinement_{\mathrm{dfy}}(i)$, as
+illustrated in \cref{fig:refinement}. This sequential refinement is intended to
+encode as precisely as possible the conditions of sequential refinement in the
+simulation-transfer theorem, but formally they are distinct since the
+definitions are in different formal systems.
 
-\begin{theorem} $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ holds.
+\begin{theorem} $\seqrefinement_{\mathrm{dfy}}(i_{\mathrm{NFS}})$ holds, as checked by Dafny.
   \label{thm:dafny}
 \end{theorem}
 
@@ -194,19 +187,61 @@ errors.}
   \label{fig:refinement}
 \end{figure}
 
-From here we can apply \cref{thm:gotxn-transfer} to \cref{thm:dafny} and
-obtain \cref{thm:correctness}. \Cref{fig:refinement-execs} illustrates
-just one execution that the theorem covers: the transaction system proof guarantees an
+\tej{now can say what Dafny sequential refinement has to say about
+initialization and recovery here}
+
+The crash refinement condition (3) is
+straightforward; crashes have no effect in both the Txn layer and the NFS layers
+because they do not have ephemeral state.
+
+\begin{theorem}
+  DaisyNFS atomically implements the NFS protocol, formally stated as the
+  refinement $\linkedcode \refines \snfs$. Note that
+  $\sdfy = \mathrm{link}(\snfs, i_{\mathrm{NFS}})$.
+  \label{thm:daisy-correctness}
+\end{theorem}
+
+This theorem re-states the specification developed in
+\cref{sec:daisy:refinement-spec}. Its proof is a simple on-paper argument that
+connects \cref{thm:gotxn-transfer} (which \emph{assumes} a sequential
+refinement) to \cref{thm:dafny} (which \emph{proves} this sequential refinement).
+\Cref{fig:refinement-execs} illustrates
+the intuition for this theorem in terms of an example execution of $\snfs$: the transaction system proof guarantees an
 atomic execution while the sequential refinement guarantees the transactions
-themselves are correct. There are two trusted assumptions needed for the
-theorems to compose. First, $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ should imply
-$\seqrefinement(i_{NFS})$. That is, the encoding of the refinement
-conditions in Dafny must be correct, but also the semantics of the transaction
-system operations modeled in Dafny must match the Coq proof. Second, every Dafny
-transaction must be valid, meaning $\mathrm{safe}(i_{NFS}(op))$. The Dafny code
-satisfies safety due to a simple syntactic check: the only mutable state in the
-file-system Dafny class is the transaction system, so file-system operations
-cannot make mutations other than through GoTxn.
+themselves are correct.
+
+\begin{figure}
+  %\includegraphics{fig/refinement-execs}
+  \begin{center}
+  \input{daisy-nfs/fig/refinement-execs.tex}
+  \end{center}
+  \caption[One execution of DaisyNFS at its three abstraction levels]{One possible execution of DaisyNFS, receiving parallel LOOKUP and
+    CREATE operations, at its three abstraction levels.
+    Within an execution each row is a thread, and dashed arrows indicate
+    context switches.
+    The proof shows the bottom execution is equivalent to an atomic execution of
+    each thread at
+    the Txn layer~(in \cref{thm:gotxn-transfer}),
+    and sequential reasoning shows each atomic sequence behaves according to the NFS
+    specification~(in \cref{thm:dafny}).}
+  \label{fig:refinement-execs}
+\end{figure}
+
+There are two assumptions needed for the theorems to compose. First,
+$\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ should imply $\seqrefinement(i_{NFS})$,
+to bridge the assumption and theorem being proven in Dafny. That is, the
+encoding of the refinement conditions in Dafny must be correct, but also the
+semantics of the transaction system operations modeled in Dafny must match the
+Coq proof. Second, every Dafny transaction must be valid, meaning
+$\mathrm{safe}(i_{NFS}(op))$. Safety has a static restriction that transactions
+should not modify global state, which the Dafny code satisfies because the only
+mutable state in the file-system Dafny class is the transaction system, so
+file-system operations cannot make mutations other than through GoTxn. The
+dynamic restrictions for safety are expressed with preconditions on the GoTxn
+interface so that Dafny automatically enforces them.
+
+\tej{subtlety about internal mutable state}
+
 % We have some
 % confidence this holds due to a simple check over the Dafny code: the only
 % mutable state in the Dafny class that implements the file system is the ghost

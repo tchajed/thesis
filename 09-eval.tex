@@ -94,13 +94,14 @@ serializes installation of writes into disk blocks at commit time.
 
 \section{Testing the trusted code and spec}
 
-For the NFS server to satisfy \cref{thm:correctness}, we trust that (1) the
+For the proof of \cref{thm:daisy-correctness} to apply to the actual server, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
 refinement is correctly encoded into Dafny, (3) the libraries for Go primitives
 are correctly specified in Dafny, and (4) the unverified Go code calling the
-Dafny methods and implementing the NFS wire protocol is correct. Finally, the
+Dafny methods and implementing the NFS wire protocol is correct. The
 user must follow the assumed execution model and run initialization from an
-empty disk, run recovery after each boot, and the disk should preserve written
+empty disk and recovery after each boot. Finally, the disk needs to behave
+according to its assumed specification, which requires that it preserve written
 data and not corrupt it.
 
 Beyond satisfying this formal theorem statement, we want two more things from
