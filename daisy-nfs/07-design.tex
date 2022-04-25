@@ -3,26 +3,21 @@
 
 We follow the standard approach for verifying software in Dafny: each
 file-system operation is implemented as a method on a class and its
-specification is given using pre- and post-conditions. In \cref{sec:daisy:proof-dafny},
-we explained how the Dafny proof shows the code is a correct implementation of NFS in terms of sequential refinement. This
-section provides details about the file-system design and proof.
+specification is given using pre- and post-conditions. \Cref{sec:daisy:proof-dafny},
+explains how the Dafny notion of sequential refinement connects to the
+concurrent specification for GoTxn. This section focuses on the sequential
+verification itself, as well the file-system design.
 
 % The proof is given by annotating the code with proof steps, which include
 % updates to ghost state, assertions to assist the automated verification, and
 % calls to lemmas.
 
-DaisyNFS is implemented and verified in several layers of abstraction, depicted in
-\cref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
-lower layer as a field. The transaction system is an assumed interface in Dafny,
-while the complete server implements the NFS wire protocol and calls into the
-top-level Dafny class for each operation.
-
-% The approach we follow is inspired by xv6. We borrow some tricks from FSCQ and
-% Yggdrasil to accomodate verification (especially using more layers than the xv6
-% C implementation). We also needed to adapt the proof a bit so that rather than
-% using separation logic we encode disjointness in an SMT-friendly way. The
-% approach we take is standard and the same as used in Yggdrasil (see how layer 3
-% works).
+DaisyNFS is implemented and verified in several layers of abstraction, depicted
+in \cref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
+lower layer as a field. The transaction system is an assumed interface in Dafny.
+The final \cc{daisy-nfsd} binary also implements the NFS wire protocol in
+unverified Go code, but it calls into the top-level Dafny class and its verified
+methods to handle each operation.
 
 \begin{figure}
 \small \centering
@@ -34,7 +29,7 @@ top-level Dafny class for each operation.
   typed & Inode allocation. \\
   byte & Implement byte-level operations using blocks. \\
   block & Gather blocks for each file into a single sequence. \\
-  indirect & Triple-indirect blocks organized in a tree. \\
+  indirect & Indirect blocks organized in a tree. \\
   inode & In-memory, high-level inodes; block allocation. \\
   txn & Assumed interface to external transaction system. \\
   \bottomrule
@@ -102,9 +97,12 @@ destination names, but those might be files that are earlier in the inode lock
 order. We address this in the code by returning an error from the Dafny
 transaction before the lock order would be violated. The error comes with the
 set of inodes that should have been acquired.  The rename is then re-run with
-this set of inodes as a lock hint; these are first acquired in the correct
-order, then compared against the current source and destination in case they
-have been renamed concurrently.
+this set of inodes as a lock hint which are all acquired in the correct
+order at the beginning of the operation. The inodes to lock are only a hint and must be compared
+against the current source and destination in case those inodes have changed in
+the mean time. The rename operation runs in a loop until the lock hint succeeds;
+the loop is potentially unbounded, but each iteration can only fail due to
+concurrent renames that involve the same inodes.
 
 \subsubsection{Freeing space}
 \label{sec:dafny:freeing}
