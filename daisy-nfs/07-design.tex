@@ -136,8 +136,8 @@ could be uniformly used as triply-indirect blocks. However, this would create a
 lot of indirection for small files and lower performance for the common case.
 Thus instead of organizing them in this way, the code uses a whole range, with
 mostly direct blocks and a handful of indirect blocks. To keep the code general,
-the indirection level of each of the twelve blocks is given in a global Config
-list, and most of the code is generic over the configuration. We currently
+the indirection level of each of the twelve blocks is given in a global
+indirect-block configuration, and most of the code is generic over the configuration. We currently
 configure DaisyNFS with 8 direct blocks, two 1-indirect blocks, a 2-indirect
 block, and a 3-indirect block. Just the direct and indirect blocks can address 4
 MB fairly efficiently, but the triply-indirect block allows files to be large.

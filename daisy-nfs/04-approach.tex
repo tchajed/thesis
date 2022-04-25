@@ -231,7 +231,7 @@ line 4. Then it repeatedly accepts new requests from the network, abstracted
 with \cc{GetRequest()} (including parsing the NFS wire protocol). These requests
 are each processed in a background thread due to the goroutine spawned on line
 7. The processing for each request dispatches to the appropriate file-system
-operation (eg, lines 10 and 13). The implementations of these operations are
+operation (e.g., lines 10 and 13). The implementations of these operations are
 compiled from Dafny to Go and then linked with the transaction system.
 
 The term $\snfs$ represents the abstract version of this loop where, for example,
