@@ -271,9 +271,9 @@ verified, concurrent file system.
         proof.
   \item GoTxn has a new \textbf{lifting-based specification} for its journaling
         layer to reason about concurrent transactions separately, which is
-        challenging since the logical disk can change during one transaction due
-        to a concurrent commit. Its proof uses a novel \textbf{history-based
-        abstract state} for the write-ahead log. This model allowed us to carry
+        challenging since the logical disk can change during a transaction to a
+        concurrently committed transaction. Its proof uses a novel
+        \textbf{history-based abstract state} for the write-ahead log. This model allowed us to carry
         out a modular proof where the write-ahead logging library hides most of
         its internal complexity, simplifying reasoning about the rest of the GoTxn
         code that uses it. Finally, GoTxn exports a \textbf{program refinement}
@@ -283,6 +283,9 @@ verified, concurrent file system.
         reasoning for each transaction in a system implies correctness for the
         whole system when run on top of GoTxn. This justifies using Dafny, a
         sequential verification language, to verify the DaisyNFS implementation.
+        The specification for DaisyNFS uses a mathematical formulation of RFC
+        1813, the document that (in prose) specifies what a NFSv3 server should
+        do.
   \item \textbf{Goose} connects efficient code implemented in Go to a model of
         that code in Perennial. A general contribution here is a design for
         systems verification that enables efficient code and convenient
