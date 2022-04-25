@@ -59,8 +59,16 @@ rule above is used at the linearization point of $p_o$, to mark
 when the operation logically takes effect by executing $o$ in the ghost code.
 
 These refinement triples imply a refinement between programs in $\gooselayer{S}$
-and $\gooselayer{I}$. This is formally stated and proven in Coq, using the Perennial
-framework's soundness theorem.
+and $\gooselayer{I}$. Refinement triples encode this refinement property into
+per-operation specifications, which raises the question of whether the encoding
+is correct. To address this concern, the Coq development uses Perennial to prove
+refinement, stated directly, using the refinement triples. This involves using
+the classic technique of \emph{logical relations} and using a low-level
+soundness theorem from Perennial to derive a refinement theorem between the two
+programs rather than the usual Hoare triple soundness theorem about a single
+program's executions. The resulting theorem only requires trusting the statement
+of the soundness theorem (which does not involve the Perennial logic) while its
+proof has access to the full range of Perennial's features.
 
 In the particular case of the transaction system, the key refinement triple to
 prove is for a block of code $f$ enclosed in transaction \cc{Begin} and
