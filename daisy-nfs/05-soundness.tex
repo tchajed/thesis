@@ -88,16 +88,11 @@ following when linked with the actual GoTxn implementation (this code snippet
 uses Go's support for generics, introduced in version 1.18):
 
 \begin{minted}{go}
-type txnBody[T] =
-  func(tx *Txn) (v T, ok bool)
-func runTxn[T](f txnBody[T]) (v T, ok bool) {
+type txnBody[T any] func(tx *Txn) (T, ok bool)
+func runTxn[T any](f txnBody[T]) (v T, ok bool) {
   tx := Begin()
   v, ok := f(tx)
-  if ok {
-    tx.Commit()
-  } else {
-    tx.Abort()
-  }
+  if ok { tx.Commit() } else { tx.Abort() }
   return v, ok
 }
 \end{minted}
@@ -139,20 +134,72 @@ follows the abstract specification of the $\mathit{Sys}$ layer.
 Simulation transfer reduces verifying DaisyNFS's correctness to reasoning about
 the transaction that implements each NFS operation. Because this reasoning is
 sequential, we carry it out in Dafny, a verification-oriented programming language.
-Let $i_{\mathrm{NFS}} : \mathrm{NFS} \to \gooselayer{Txn}$ denote a model of the
+Let $\infs : \mathrm{NFS} \to \gooselayer{Txn}$ denote a model of the
 Dafny implementation of each NFS operation, as a program using the GoTxn
 interface. Note that this is merely a hypothetical model of the Dafny code,
 since Goose does not support enough of Go to explicitly construct these terms in
 GooseLang. The Dafny annotations on these methods prove sequential refinement
-conditions that we will denote $\seqrefinement_{\mathrm{dfy}}(i)$, as
+conditions that we will denote $\seqrefinementdfy(i)$, as
 illustrated in \cref{fig:refinement}. This sequential refinement is intended to
 encode as precisely as possible the conditions of sequential refinement in the
 simulation-transfer theorem, but formally they are distinct since the
 definitions are in different formal systems.
 
-\begin{theorem} $\seqrefinement_{\mathrm{dfy}}(i_{\mathrm{NFS}})$ holds, as checked by Dafny.
+\begin{theorem} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
   \label{thm:dafny}
 \end{theorem}
+
+The Dafny code is implemented as a class with ghost variables for its abstract
+state and an invariant that expresses the proof's refinement relation $R$
+between the abstract state and its concrete state (which is limited to constants
+and the transaction system's logical disk). Condition (1) in the definition of
+sequential refinement is encoded exactly in Dafny, using requires and ensures
+clauses. There are some differences in the Dafny encoding proven in this theorem statement,
+in particular around condition (2) for initialization and condition (3) for
+crashes.
+
+Initialization and recovery are both special in that are implemented in Dafny as
+two \emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's
+global constants and establish $R$ to begin with. In the formalism above,
+initialization and recovery code are not given any special treatment. We can
+incorporate initialization and recovery formally as ordinary operations in the
+$\mathit{Sys}$ layer, albeit with particular preconditions that enforce the
+``lifecycle'' of the file system, namely from uninitialized, to initialized (a
+one-time process), and then from crashed to recovered on every subsequent boot.
+
+The Dafny code implements the initialization using a \cc{NewTxnSystem} method
+that creates a fresh instance of GoTxn and sets up its initial object schema, as
+described in \cref{sec:txn:lifting}. The \cc{Init} constructor establishes the
+class invariant \cc{Valid()} starting from nothing, implicitly assuming that the
+disk is all-zero to be ready for initialization. It promises a file
+system with just a single root inode.
+
+The \cc{Recover} constructor has a more interesting verification story, because
+it is permitted to assume the abstraction relation held just prior to the crash
+but should prove that the file-system restores its global constants. We express
+this in Dafny by giving the recovery the following specification:
+
+\begin{verbatim}
+constructor Recover(txs: TxnSystem,
+    ghost fs: Filesys)
+  requires fs.Valid()
+  requires same_txn_disk(txs, fs.txs)
+  ensures Valid()
+  ensures this.data == fs.data
+\end{verbatim}
+
+The specification takes a \emph{ghost} \cc{fs} that satisfies the invariant, as
+well as an assumption that the transactional disk from GoTxn is unchanged. The
+idea is that the system always maintains \cc{fs.Valid()} for \emph{some} file
+system is always an invariant, in general for the current \cc{fs} object, but
+just after a crash \cc{fs} is lost (in particular its read-only state). At the
+same time GoTxn does promise to maintain its logical state after a crash and its
+own recovery. Finally recovery establishes the postconditions \cc{Valid()} and
+\cc{this.data == fs.data}, which say respectively that recovery restores
+invariant for this \cc{Filesys} object and logically has the same file-system
+state. We can think of the effect of a crash on the file-system abstract state
+as turning the \cc{Filesys} instance into a ghost instance, and this recovery
+procedure as restoring it to an in-memory instance.
 
 \begin{figure}
   \centering
@@ -178,26 +225,22 @@ method CREATE(d_ino: uint64,
   %\caption{Dafny encoding}%
   %\label{fig:refinement:dafny}
 \end{subfigure}
+\vspace{0.5\baselineskip}
   \caption[Illustration of sequential refinement and its Dafny encoding]%
-  {Illustration of $\seqrefinement(i_{NFS})$ (left) and its encoding
-in Dafny $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ (right), for one particular operation.
+  {Illustration of $\seqrefinement(\infs)$ (left) and its encoding
+in Dafny $\seqrefinementdfy(\infs)$ (right), for one particular operation.
 In the diagram, the solid parts are assumed, and the
 dashed parts must be shown to exist. The complete Dafny spec is more precise about
 errors.}
   \label{fig:refinement}
 \end{figure}
 
-\tej{now can say what Dafny sequential refinement has to say about
-initialization and recovery here}
-
-The crash refinement condition (3) is
-straightforward; crashes have no effect in both the Txn layer and the NFS layers
-because they do not have ephemeral state.
-
 \begin{theorem}
   DaisyNFS atomically implements the NFS protocol, formally stated as the
   refinement $\linkedcode \refines \snfs$. Note that
-  $\sdfy = \mathrm{link}(\snfs, i_{\mathrm{NFS}})$.
+  $\sdfy = \mathrm{link}(\snfs, \infs)$. Initialization falls outside the
+  server's code; the caller is expected to run the \cc{Init} constructor once on
+  an empty disk to establish the right $\mathrm{init}$ predicate.
   \label{thm:daisy-correctness}
 \end{theorem}
 
@@ -239,8 +282,6 @@ mutable state in the file-system Dafny class is the transaction system, so
 file-system operations cannot make mutations other than through GoTxn. The
 dynamic restrictions for safety are expressed with preconditions on the GoTxn
 interface so that Dafny automatically enforces them.
-
-\tej{subtlety about internal mutable state}
 
 % We have some
 % confidence this holds due to a simple check over the Dafny code: the only
