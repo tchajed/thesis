@@ -106,66 +106,75 @@ this set of inodes as a lock hint; these are first acquired in the correct
 order, then compared against the current source and destination in case they
 have been renamed concurrently.
 
-%% \subsubsection{Large files}
-%% \label{sec:dafny:indirect}
-%%
-%% The indirect and block layers together implement an abstraction of
-%% files as a sequence of blocks, using some blocks in the transaction
-%% system as indirect blocks that contain pointers to other blocks.  Most
-%% of the code implementing indirect blocks is implemented recursively
-%% using an approach borrowed from DFSCQ~\cite{akonradi-meng}.
-%% In practice we configure the system with several direct and (single)
-%% indirect blocks in an inode to make small files more efficient, plus a
-%% triple-indirect block that allows files to grow to 512GB.
+\subsubsection{Large files}%
+\label{sec:dafny:indirect}
 
-%% Using only a single level of
-%% indirection would be convenient for verification, but it would limit the size of
-%% files to 28MB. Instead, we use multiple levels of indirection. Indirect blocks
-%% have a natural recursive structure, where a $k$-indirect block holds pointers to
-%% $(k-1)$-indirect blocks, down to $k=0$ for the data blocks.
+DaisyNFS supports large files using indirect blocks. A file's inode has a fixed
+number of addresses for block addresses, some of which are used as indirect
+blocks that hold another layer of addresses rather than direct blocks that have
+file data. A single level of indirection is insufficient for a practical file
+system, so DaisyNFS implements support for arbitrarily indirect blocks, and in
+practice the file system uses up to triply-indirect blocks to support files up
+to 512GB.\@
 
-%% Files at the block layer are always of the maximum size, to avoid
-%% reasoning about sizes until the higher layers. To efficiently
-%% represent such large files, the zero block number is treated specially
-%% as encoding a zero block, including for indirect blocks; an idea we
-%% borrowed from DFSCQ~\cite{akonradi-meng}. Because this works
-%% recursively, the single zero for the root of the triple-indirect block
-%% address efficiently stores the many GBs of zeros in a typical small
-%% file.
+The indirect and block layers together implement an abstraction of a file as a
+sequence of blocks, hiding the fact that some of the blocks are used as
+metadata. These sequences are always of the maximum size, and only the next
+layer reasons about file sizes. To efficiently represent files of the maximum
+size, the code uses a convention that a zero block address is treated implicitly
+as encoding a zero block, including for indirect blocks, an idea borrowed from
+DFSCQ~\cite{akonradi-meng}. Indirect blocks are implemented recursively, where a
+$k$-indirect block is always treated as containing 512 pointers to
+$(k-1)$-indirect blocks, and a 0-indirect block contains file data. Zeros are
+also treated recursively so that a single zero in an inode for the root of a
+triply-indirect block efficiently stores a whole tree corresponding to many
+gigabytes of zeros.
 
-%% The representation of file data using zero addresses and
-%% recursive indirect block implementation were directly inspired by the
-%% DFSCQ indirect-block~\cite{akonradi-meng}.
+An inode has space for twelve 64-bit block addresses, after accounting for space
+used by its attributes and type information. In principle all of these addresses
+could be uniformly used as triply-indirect blocks. However, this would create a
+lot of indirection for small files and lower performance for the common case.
+Thus instead of organizing them in this way, the code uses a whole range, with
+mostly direct blocks and a handful of indirect blocks. To keep the code general,
+the indirection level of each of the twelve blocks is given in a global Config
+list, and most of the code is generic over the configuration. We currently
+configure DaisyNFS with 8 direct blocks, two 1-indirect blocks, a 2-indirect
+block, and a 3-indirect block. Just the direct and indirect blocks can address 4
+MB fairly efficiently, but the triply-indirect block allows files to be large.
 
-%% Indirect blocks pose a challenge for verification due to the classic problem of
-%% \emph{aliasing}. The proof must show that modifying a data block or indirect
-%% block has no effect on other files. In the DFSCQ proof, the invariant
-%% captures the non-aliasing between files using separation logic, which makes
-%% disjointness easy to express. In Dafny we have no such logical
-%% technique, so we instead use a standard SMT-friendly trick for the invariant: in
-%% addition to the physical mapping that tracks how to dereference a block address,
-%% the indirect layer proof tracks a ghost \emph{reverse} mapping that tracks where
-%% each in-use block number is stored. The invariant states that the forward and reverse
-%% mappings are inverses of each other, which implies that modifying an address
-%% only affects its owner and nothing else.
+Indirect blocks pose a challenge for verification due to the classic problem of
+\emph{aliasing}. The proof must show that modifying a data block or indirect
+block has no effect on other files. In the DFSCQ proof, the invariant
+captures the non-aliasing between files using separation logic, which makes
+disjointness easy to express. In Dafny we have no such logical
+technique, so we instead use a standard SMT-friendly trick for the invariant: in
+addition to the physical mapping that tracks how to dereference a block address,
+the indirect layer proof tracks a ghost \emph{reverse} mapping that tracks where
+each in-use block number is stored. The invariant states that the forward and reverse
+mappings are inverses of each other, which implies that modifying an address
+only affects its owner and nothing else.
 
-%% To encode the reverse mapping, we need a data type to represent the location of
-%% a block within an inode. With indirect blocks, the metadata blocks themselves
-%% also need to be considered locations, since the invariant must also rule out
-%% metadata aliasing with data or other metadata. We encode locations with a
-%% position datatype that encodes an inode, an indirection level, and an offset for
-%% the blocks at that indirection level. If we imagine that an inode's block
-%% pointers are organized in a tree, the roots are stored directly in the inode
-%% while the leaves are direct blocks. An indirection level which is higher than
-%% the leaf level describes a metadata block.
+To encode the reverse mapping, the code uses a ``position'' datatype \cc{Pos} to
+represent the location of a block within an inode. With indirect blocks, the
+metadata blocks themselves also need to be considered locations, since the
+invariant must also rule out metadata aliasing with data or other metadata. A
+\cc{Pos} encodes an inode, an indirection level, and an offset for the blocks at
+that indirection level to uniquely identify where a block is used. If we imagine
+that an inode's block pointers are organized in a tree, the roots are stored
+directly in the inode while the leaves are direct blocks. An indirection level
+which is higher than the leaf level describes a metadata block.
 
-%% The indirect block proof is split into the indirect and blocks layers. In the
-%% indirect layer, the abstract state maps positions (including the inode number)
-%% to data, and off to the side tracks the size and attributes of each inode. The
-%% block layer changes this representation to a flat sequence of blocks by mapping
-%% each leaf position to its linear index within the inode. Separating these two
-%% made it easier to work on the indirect layer while giving the upper layers the
-%% much more natural abstraction of a file as a sequence of blocks.
+The indirect block proof is split into the indirect and blocks layers. In the
+indirect layer, the abstract state maps a \cc{Pos} to a block, and separately
+tracks the size and attributes of each inode. The invariant also expresses that
+the block allocator's used blocks have an associated \cc{Pos} and that the free
+ones do not. The interface for the indirect layer exposes reads and writes for
+positions, regardless of whether they are metadata or data blocks. The block
+layer above instead exposes a map from inode number to a flat sequence of blocks by
+mapping each leaf position to its linear index within the inode. Separating
+these two made it easier to work on the indirect layer while exposing a much
+more natural abstraction of a file as a sequence of blocks for the rest of the
+file-system implementation.
 
 \subsubsection{Freeing space}
 \label{sec:dafny:freeing}
