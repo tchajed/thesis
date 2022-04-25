@@ -166,7 +166,8 @@
 
 % https://tex.stackexchange.com/questions/52697/automated-lists-for-todos-in-latex-document
 \newcounter{todo}
-\newcommand\todo[1]{\refstepcounter{todo}\textcolor{red}{#1}\addcontentsline{tod}{subsection}{\thetodo.~#1}}%
+\newcommand\todo[1]{\refstepcounter{todo}\textcolor{red}{#1}%
+\addcontentsline{tod}{subsection}{\thetodo.~(\S\thesection)~#1}}%
 \makeatletter
 \newcommand\listoftodos{%
   \section*{List of TODOs}\@starttoc{tod}}
