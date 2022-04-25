@@ -170,7 +170,7 @@ global constants and establish $R$ to begin with. In the formalism above,
 initialization and recovery code are not given any special treatment. We can
 incorporate initialization and recovery formally as ordinary operations in the
 $\mathit{Sys}$ layer, albeit with particular preconditions that enforce the
-``lifecycle'' of the file system, namely from uninitialized, to initialized (a
+``life cycle'' of the file system, namely from uninitialized, to initialized (a
 one-time process), and then from crashed to recovered on every subsequent boot.
 
 The Dafny code implements the initialization using a \cc{NewTxnSystem} method
