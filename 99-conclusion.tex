@@ -22,6 +22,12 @@ layered, modular proofs. We developed the specification approach alongside
 developing the proofs, so the resulting code doesn't cleanly reflect what the
 intermediate specifications and abstractions look like.
 
+Hard to model interfaces with the outside world when they interact with memory,
+especially when ownership transfers are needed. Maybe we needed a library for
+this to make the assumptions more easily.
+
+\tej{in conclusion, expand on memory safety text}
+
 \resume
 
 \section{Future work}
@@ -30,3 +36,24 @@ Model disk as asynchronous. Support asynchronous commit in GoTxn.  Use GoJournal
 directly in conjunction with non-transactional state. Try to take advantage of
 sequential reasoning from within Perennial --- how nice can this be, if we put
 effort into it and learn from Dafny? We never really tried.
+
+Experiment with logical logging in write-ahead log.
+
+Apply Perennial to non-volatile memory or other storage APIs, like newer zoned
+SSDs, or an asynchronous callback-style APIs.
+
+Apply these techniques to Rust or C code. This would be a first step towards
+better systems integration especially (not necessarily better performance).
+Another important step for kernel integration would be modeling the interface,
+which seems like a challenging problem.
+
+More explicit testing of interface boundaries would be interesting, between Coq
+and Dafny for example, but also disk API.
+
+Treat NFS specification as a first-class project. Test the specification
+directly with an executable, highly non-deterministic implementation. Test
+against servers. Observe more client behavior in conjunction with exploring
+server behavior. (I didn't have a testbed for rapidly trying out different
+server behavior, other than just implementing it in DaisyNFS or at least GoNFS.)
+
+\tej{describe future work with some more-complete text}
