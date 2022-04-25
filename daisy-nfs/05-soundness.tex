@@ -74,13 +74,13 @@ refinement condition (1) diagrammatically.
 The simulation transfer theorem takes a proof of \emph{sequential} refinement
 conditions for a system implemented using transactions and derives a
 \emph{concurrent and crash-safe} refinement. Like program refinement, it is
-stated as a theorem about an arbitrary program $p$ using the specification-level
-API. To model that program using the transactions given by
-implementation $i$, we write $\mathrm{link}(p, \atomiccomp i)$. The function
-$(\atomiccomp i)(\opv) = \atomically{i(\opv)}$ gives an atomic transaction in the
-GoTxn layer that implements $\opv$. Physically this
-\cc{atomically} block corresponds to running code in a pattern like the
-following, written using Go's support for generics:
+stated as a theorem about an arbitrary program $p : \gooselayervar{Sys}$ using
+the specification-level API.\@ To model that program using the transactions given
+by implementation $i$, we write $\mathrm{link}(p, \atomiccomp i)$. The function
+$(\atomiccomp i)(\opv) = \atomically{i(\opv)}$ gives an atomic transaction in
+the GoTxn layer that implements $\opv$. Physically this \cc{atomically} block
+corresponds to running code in a pattern like the following, written using Go's
+support for generics:
 %
 \begin{minted}{go}
 type txnBody[T any] func(tx *Txn) (T, bool)
@@ -104,18 +104,17 @@ $i : \textdom{Sys} \to \gooselayer{Txn}$, such that
 $\seqrefinement\targ{\gooselayer{Txn}, \textdom{Sys}}(i)$ and
 $\forall \opv.\, \mathrm{safe}(i(\opv))$ hold. Then
 \[
-  \forall p : \gooselayer{Sys}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
+  \forall p : \gooselayervar{Sys}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
 \]
 \label{thm:gotxn-transfer}
 \end{theorem}
 
-The theorem assumes only an implementation $i$ which gives the body of each
-operation in $\mathit{Sys}$ as a transaction. It then gives a refinement in the
-style of program refinement for an arbitrary program $p$ that uses the
-$\mathit{Sys}$ API, such as the server loop seen in
-\cref{sec:daisy:refinement-spec}. The conclusion is a refinement whose
-right-hand side is the program $p$ at the top-most abstraction level of the
-system. The left-hand side is the executable code for this program, derived in
+The theorem is about a program $p$ using some API $\Sys$, such as the server
+loop for DaisyNFS seen in \cref{sec:daisy:refinement-spec}, and an
+implementation $i$ of this API.\@
+The conclusion is a refinement that uses $p$ as the \emph{specification}; recall
+that the semantics of $p$ automatically make $\Sys$ operations atomic at this
+level. The left-hand side is the executable code for this program, derived in
 two steps: first $\mathrm{link}(p, \atomiccomp i)$ takes each abstract operation
 $\opv$ in $p$ and replaces it with $\atomically{i(\opv)}$, and second
 $\linked{\mathrm{link}(p, \atomiccomp i)}$ takes the result of this process and
