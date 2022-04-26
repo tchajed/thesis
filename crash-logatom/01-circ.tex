@@ -13,25 +13,6 @@ position; the write-ahead log caches updates during normal execution, but this
 is not the circular buffer's concern. The complete Go API is shown in
 \cref{fig:circ:api}.
 
-The circular buffer supports atomic and concurrent \cc{Append} and \cc{TrimTill}
-with a careful on-disk layout. It consists of two header blocks and 511 data
-blocks, depicted graphically in \cref{fig:circ:phys}. The first header block (the ``trim'' block, since it is used for
-trimming) holds the logical start position of the queue, while the second header
-(the ``append'' block, since it is used for appending) holds the logical end
-position and 511 addresses; the data blocks for these addresses are in the
-remaining data blocks. This append block has 4096 bytes, or enough space for 512
-64-bit numbers; one is used for the end position, and the remainder for update
-addresses. To append atomically, \cc{c.Append(end, upds)} first writes the data
-(using \cc{end} to know where to start writing), and then writes the append
-header block to atomically incorporate the writes, and simultaneously to write
-the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
-addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
-deletes by merely writing a new, higher start position to the trim header. Since
-these operations touch disjoint parts of disk, they can be performed
-concurrently. Recovery uses the header blocks do determine what subset of the
-circular buffer holds complete multiwrites; partially-appended
-updates are ignored for atomicity.
-
 \begin{figure}[ht]
 \begin{minted}{go}
 // Circular buffer Go API
@@ -51,11 +32,42 @@ type Update {
 \end{figure}
 
 \begin{figure}[ht]
-\tej{add a figure of the circular buffer's physical state}
+  \includegraphics{fig/circ-phys.png}
 \caption{The circular buffer's on-disk layout, consisting of a fixed 513 blocks
   located at the beginning of the disk.}
 \label{fig:circ:phys}
 \end{figure}
+
+The basic idea is that the circular buffer is specified in terms of an abstract
+state that transitions for each operation. The recovery operation
+restores the pre-crash state of the queue from disk. The state for this library consists
+of two components: a queue of updates (which are pairs of an address to write to
+and a 4KB block to write there) and a 64-bit start position that indicates how
+many updates occurred prior to the current list of updates. The \cc{Append} operation, as
+mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
+is an absolute position; the effect of \cc{TrimTill(pos)} is to delete
+\cc{pos - start} updates from the beginning of the list of updates and set the
+new start position to \cc{pos}. A more formal specification is given in
+\cref{fig:circ:spec}.
+
+The circular buffer supports atomic and concurrent \cc{Append} and \cc{TrimTill}
+with a careful on-disk layout. It consists of two header blocks and 511 data
+blocks, depicted graphically in \cref{fig:circ:phys}. The first header block (the ``trim'' block, since it is used for
+trimming) holds the logical start position of the queue, while the second header
+(the ``append'' block, since it is used for appending) holds the logical end
+position and 511 addresses; the data blocks for these addresses are in the
+remaining data blocks. This append block has 4096 bytes, or enough space for 512
+64-bit numbers; one is used for the end position, and the remainder for update
+addresses. To append atomically, \cc{c.Append(end, upds)} first writes the data
+(using \cc{end} to know where to start writing), and then writes the append
+header block to atomically incorporate the writes, and simultaneously to write
+the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
+addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
+deletes by merely writing a new, higher start position to the trim header. Since
+these operations touch disjoint parts of disk, they can be performed
+concurrently. Recovery uses the header blocks do determine what subset of the
+circular buffer holds complete multiwrites; partially-appended
+updates are ignored for atomicity.
 
 \begin{figure}[ht]
 \begin{minted}{coq}
@@ -82,17 +94,6 @@ Definition trim_till (s: circ_state) (new_start: u64) : circ_state :=
   \label{fig:circ:spec}
 \end{figure}
 
-The basic idea is that the circular buffer is specified in terms of an abstract
-state that transitions for each operation. The recovery operation
-restores the pre-crash state of the queue from disk. The state for this library consists
-of two components: a queue of updates (which are pairs of an address to write to
-and a 4KB block to write there) and a 64-bit start position that indicates how
-many updates occurred prior to the current list of updates. The \cc{Append} operation, as
-mentioned, simply appends to the list of updates. The argument to \cc{TrimTill}
-is an absolute position; the effect of \cc{TrimTill(pos)} is to delete
-\cc{pos - start} updates from the beginning of the list of updates and set the
-new start position to \cc{pos}. A more formal specification is given in
-\cref{fig:circ:spec}.
 
 There are three challenges in specifying how the circular buffer's
 implementation connects to the abstract transitions given above. First, we
