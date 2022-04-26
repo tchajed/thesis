@@ -25,14 +25,15 @@ GooseLang program is much more general than translated Go programs --- for
 example, GooseLang has support for pointer arithmetic. This
 has no impact on verifying any \emph{specific} Go program.
 
-The extra generality of GooseLang does have some downsides since at one point in
-the development, the transaction system's specification about
-arbitrary GooseLang programs. The complete theorem statement is made a bit more
-complicated since there are some ill-defined GooseLang programs --- which are
-not possible to produce by writing Go and translating it to GooseLang --- which
-the theorem needs to exclude. The transaction system specification uses a
-standard technique of restricting to well-typed GooseLang programs, and encoding
-syntactic restrictions in that type system.
+The extra generality of GooseLang is a downside when a theorem talks about an
+\emph{arbitrary} GooseLang program, as shows up in the transaction system's
+program refinement and simulation-transfer theorems. In order to make these
+theorems true, they must rule out
+some ill-defined GooseLang programs, which are
+not possible to produce by writing Go and translating it to GooseLang. Both
+specifications make these assumptions using a
+standard technique of using a type system for GooseLang developed in Coq, and encoding
+syntactic restrictions via that type system.
 
 \tej{add a diagram, perhaps like the ones in the Goose talk, showing the
 translation process and how Go/Goose/GooseLang all fit together}
