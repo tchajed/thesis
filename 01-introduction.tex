@@ -14,11 +14,11 @@ performance.
 \label{sec:intro:motivation}
 
 A file system is an especially critical part of the systems software stack for
-three reasons. First, they are widely used --- essentially all applications have
+three reasons. First, the file system is widely used --- essentially all applications have
 data that is ultimately stored in a file system. Second, implementations are
-concurrent and optimized, which increase the potential for bugs. Finally, bugs
-in this part of the system are particularly costly since they can lead to
-permanent data loss for any application running on top.
+concurrent and optimized, which increases the potential for bugs. Finally, bugs
+are particularly costly since they can lead to permanent data loss for any
+application running on top.
 
 Two challenges make implementing a correct file system challenging: crashes and
 concurrency. A file system is generally expected to keep application data safe
@@ -37,16 +37,22 @@ proof is carried out in a computer and a piece of software called a proof
 assistant checks that the proof is valid. The nature of formal verification
 forces the proof engineer to systematically cover every corner case in the code.
 
-This thesis develops new techniques to address the core challenges of crash
-safety and concurrency, and to scale to a system of the size of a file system.
-The key to the approach is a design that splits the file system into two main
-parts: a transaction system called GoTxn that makes it easy to get atomicity
-over the disk, and then the rest of the file-system implemented using a
-transaction per operation. GoTxn must face the key challenges of crash safety
-and concurrency, but it handles them in such a way that DaisyNFS is verified
-using comparatively much simpler sequential reasoning. The file-system code then
-focuses on implementing features like the details of the NFS semantics, large
-files, and efficient data structures.
+While the idea of formal verification is not new, there was essentially no
+support for reasoning about the combination of crashes and concurrency when this
+thesis work started (in 2015). Thus this thesis develops new techniques to
+reason about the combination in the first place. We apply these techniques to
+DaisyNFS, a verified implementation of the Network File System (NFS) protocol, a
+standard file-system interface.
+
+The key to scaling up to a system with the complexity of DaisyNFS is a design
+that splits the file system into two main parts: a transaction system called
+GoTxn that makes it easy to get atomicity over the disk, and then the rest of
+the file system implemented using a transaction per operation. GoTxn must face
+the key challenges of crash safety and concurrency, but it handles them in such
+a way that the code on top is verified using comparatively much simpler
+sequential reasoning. The file-system code then focuses on implementing features
+like the details of the NFS semantics, large files, and efficient data
+structures.
 
 \section{State of the art}
 \label{sec:intro:related}
@@ -83,7 +89,7 @@ failures and thus crashes in every write to storage.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
-in-memory but concurrent file system AtomFS~\cite{zou:atomfs}. These systems use
+concurrent but in-memory file system AtomFS~\cite{zou:atomfs}. These systems use
 verification techniques that do not support both crashes and concurrency, and we
 cannot extend them in a straightforward way to support the other form of reasoning.
 
@@ -155,38 +161,33 @@ enough that we explain them separately.
 
 In Coq, the core feature is proofs based on dependent type theory, which is
 expressive enough to represent essentially any math. A first step when using Coq
-is to connect the code to a model in Coq. The model and its semantics encodes any
-assumptions we make about how the program behaves; the rest of the proof will be
-about these behaviors. The semantics is typically structured as a transition
+is to connect the code to the reasoning in the proof assistant. The approach in this thesis translates executable code to a model in Coq, but other approaches are possible. The model and its semantics encodes any
+assumptions the proof makes about how the program behaves. The semantics is typically structured as a transition
 system, where an execution is a sequence of states the program goes through
 along with some notion of observable behavior, like external I/O or return
-values. From now on this thesis will refer to the model as simply being the original
-program being verified,
-but we'll make a distinction when discussing what it means to have verified
-the system.
+values.
 
 Once we have a program in Coq, we can reason about it. The goal of
 verification is to prove that the program meets its specification, and
-specifications tend to give the allowed behaviors of the program. These
-specifications forbid universally incorrect behavior, like reading an
-out-of-bounds address in an array, but more precisely specify what the program's
-allowed return values are. In principle it might be possible to prove a theorem
-about all the behaviors of a program directly, but such a proof would be
-monstrous to write, hard to split up, and challenging to maintain as the code
-evolved.
+where the specification describes the allowed behaviors of the program. The
+specifications in this work forbid universally incorrect behavior, like reading an
+out-of-bounds address in an array, but more precisely specify what the program
+is supposed to do, for example how it responds to user requests.
+
 
 A common structure to tame the complexity of reasoning about a program is to use
-a \emph{program logic}. The program logic is a way of expressing and proving
-statements about the program, including properties about individual functions
-and language constructs like \cc{if}-statements and \cc{while}-loops. The proof
-in a program logic will often mirror the structure of the code, since each
-function has its own specification and groups of related functions have related
-specs.
+a \emph{program logic}. In principle it might be possible to prove a theorem
+about all the behaviors of a program directly, but such a proof would too
+complex to be feasible. The program logic organizes the proof with a structured
+way of expressing and proving statements about the program, such as breaking the
+proof down into theorems about individual functions. The proof in a program
+logic will often mirror the structure of the code, since each function has its
+own specification and groups of related functions have related specs.
 
 Program logics for concurrency are still an active area of research; only
 recently have they reached the maturity to give completely mechanized proofs of
 moderate-sized programs. There are few logics that also can reason about crash
-safety. Our approach in this thesis is to build a new program logic with all the
+safety. Our approach in this thesis is to build a new program logic called Perennial with all the
 concurrency-reasoning features of a modern program logic, plus new features for
 reasoning about crashes. What makes this feasible is Iris, a modular framework
 for concurrency. Iris includes a concurrent program logic which we are able to
@@ -194,23 +195,26 @@ extend with crash-safety reasoning while preserving the concurrency reasoning
 features, without reimplementing them from scratch.
 
 Using our new program logic, we verified GoTxn, a concurrent transaction system.
-What we prove about the transaction system is that any program that uses
+The transaction system's correctness theorem says that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
-specification includes some important details, but this intuition still holds.
+specification includes some important details in order to formalize the
+intuition behind atomicity.
 
-Next, we use GoTxn in Dafny as the basis for a file system.
-The transaction system is implemented as an ordinary Go package, with methods to
-start a transaction, execute reads and writes within it, and finally commit or
-abort it. Using Dafny's \cc{extern} feature we make these methods available with
-assumed specifications that match the specifications proven in Coq.
+Next, because transactions appear to run sequentially, and write to disk all at
+once, it is no longer necessary to use a sophisticated program logic like
+Perennial to reason about the body of each transaction. Instead, we switch to
+using Dafny, a verification-oriented programming language that can only reason
+about sequential code but as a result is highly productive for this kind of
+software. The file system is written and verified in Dafny, then compiled to Go
+and linked with GoTxn.
 
 Dafny verification works quite differently from Coq. Dafny is a programming
 language with verification features; contrast this with Coq, which supports
 general math that can \emph{model} programs. A Dafny method can be annotated
 with a specification. The Dafny checker converts a method and its specification
-to a logical formula, which is true if and only if the specification holds for
-the method. It then queries a \emph{solver} to determine if the formula is true.
+to a logical formula (called a verification condition), which is true if and only if the specification holds for
+the method. It then queries a \emph{solver} (Z3, in the case of Dafny) to determine if the formula is true.
 Contrast all of this with Coq, where the user manually develops the program
 logic and connects the rules of this logic. Checking a program against its specification in Dafny cannot be perfectly
 automated because it is impossible to answer whether a general logical formula
