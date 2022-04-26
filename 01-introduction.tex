@@ -150,9 +150,6 @@ physically represented as code in a verification system. The verification system
 checks the proof against the implementation and specification, ensuring that the
 proof is complete.
 
-\tej{some diagram with how the pieces fit together would be good, perhaps like
-the talk's implementation slide}
-
 This thesis integrates interactive, foundational proofs using custom
 infrastructure (in Coq) as well as automated verification using a
 verification-aware programming language (Dafny). These are both machine-checked,
@@ -246,6 +243,22 @@ sequential simulation proof shows those atomic transactions implement the
 abstract specification. However, the GoTxn theorem formalizes precisely what
 conditions are required for the simulation transfer, including restrictions on
 the transactions and exactly what crash safety guarantees are achieved.
+
+\Cref{fig:overview} depicts how the artifacts of this thesis combine. GoTxn is
+implemented in Go and verified using Perennial in Coq. Goose is the system that
+connects the code to a model suitable for reasoning in Perennial. Separately,
+DaisyNFS implements the file-system operations in Dafny, which has integrated
+support for code and proofs. On the left-hand side of the figure,
+\cc{daisy-nfsd} uses the verified code for DaisyNFS (compiled from Dafny to Go)
+and GoTxn to implement a complete NFS server. On the right-hand side, the GoTxn
+simulation transfer theorem takes the DaisyNFS Dafny proof and turns it into an
+overall correctness theorem for the whole server.
+
+\begin{figure}
+\includegraphics{fig/overview.png}
+\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
+\label{fig:overview}
+\end{figure}
 
 \section{Contributions}
 \label{sec:intro:contributions}
