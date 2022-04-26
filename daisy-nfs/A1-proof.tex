@@ -1,130 +1,7 @@
 \section{Proof of refinement for DaisyNFS}
 \label{appendix:proof}
 
-% make theorem re-statements get the same numbers
-\setcounter{theorem}{0}
-
-Previously in \cref{sec:daisy:proof} we gave an informal overview of DaisyNFS's
-correctness proof. This section develops the proof in more detail. There are two
-gaps we will fill in compared to the proof above: first, we will be more precise
-about what the requirements of the transaction system proof are and why DaisyNFS
-satisfies them, and second, we will specify what the theorem says about recovery.
-
-To make this section self-contained, we will re-state theorems 1--3 (with slight
-tweaks to describe initialization better). First, we re-state program refinement
-for the transaction system:
-
-\begin{theorem}
-  The transaction system's implementation $\txncode$ is a program refinement,
-  meaning for all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
-  $\mathrm{link}(p, \txncode) \refines p$. Initialization relates an all-zero
-  disk to an all-zero transactional disk.
-  \label{thm:txn-appendix}
-\end{theorem}
-
-So far, we have been vague about what exactly $p : \gooselayer{L}$ means. In
-Coq, $\gooselayer{L}$ is a datatype in a language we called GooseLang, which is
-intended to represent a Go program with access to operations from layer $L$. Any
-GooseLang program has access to standard Go constructs like heap allocation,
-concurrency, and operations on basic types like integers and booleans. All of
-the concrete GooseLang code we reason about for the transaction system is in
-$\gooselayer{Disk}$. $\gooselayer{Txn}$ is used to give a specification for code
-using the transaction system, while $\gooselayer{NFS}$ is only used to model the
-NFS server in the top-level specification.
-
-The overall correctness statement for DaisyNFS refers to
-$\stxn : \gooselayer{Txn}$, which models the Dafny implementation at the level
-of transactions. We express the result from Dafny as the following refinement
-theorem:
-
-\begin{theorem}
-  $\sdfy \refines \snfs$. Initialization requires an invariant stated in Dafny,
-  which is established by running a separate \cc{Init} procedure verified in
-  Dafny starting from an all-zero transactional disk.
-  \label{thm:dafny-appendix}
-\end{theorem}
-
-The overall correctness theorem says
-$\linkedcode \refines \snfs$ (ignoring initialization). Both the code and spec
-are expressed as a single program, a top-level loop whose
-observable behavior is to receive some input from the outside world, which is an
-NFS operation and its arguments, then to dispatch a handler thread to process
-the request and respond over the network with the handler's result. The
-difference between the two is that the specification $\snfs$ processes requests
-atomically and according to a high-level NFS transition system, whereas in the
-code $\linkedcode$ handlers represent the executable code running on top of a
-disk, derived by compiled from Dafny and linking with the transaction-system
-implementation.
-
-Notice that even the code dispatch loop in this specification abstracts over the
-details of interacting with the outside world; in reality, the executable binary connects
-to clients over TCP and parses a stream of bytes to produce NFS operations. The
-NFS wire protocol is outside the scope of our verification. We want to
-interpret the specification as saying something about the binary that we run at
-the end of the day; in doing so, we assume that the code correctly implements
-the protocol, translating the byte stream into the right method calls for each
-handler, and then translating the responses back.
-
-Combining the above results, the top-level specification is:
-
-\begin{theorem}
-  $\linkedcode \refines \snfs$. Initialization requires
-  starting from an empty disk, then running the initialization implemented in
-  Dafny. After that, the system boots by first recovering the transaction
-  system's state, then running file-system recovery.
-  \label{thm:correctness-appendix}
-\end{theorem}
-
-Recovery is part of this specification because the semantics of running any
-program includes the possibility to crash and restart, with a crash considered
-visible behavior. With crashing as just another possible behavior, the normal
-definition of refinement enforces that $\linkedcode$ has crash atomicity, since
-its crash and restart behaviors must correspond to one from $\snfs$ which does
-not allow crashes during a transaction.
-
-The overall strategy to prove this theorem is
-$\linkedcode \refines \sdfy \refines \snfs$; refinement is clearly transitive
-because it is a subset relation on program behaviors. This argument
-centers on $\sdfy : \gooselayer{Txn}$. Note that we are assuming that
-such a program actually exists, one that models the Dafny code using GooseLang
---- it isn't something we'll actually construct because we don't translate Dafny
-to GooseLang. We believe this assumption is reasonable because GooseLang is
-fairly complete and we use only basic features of Go to implement the file
-system. At this level of abstraction, transactions are not represented with the
-usual \cc{Begin}, \cc{Commit}, and \cc{Abort} calls but with a
-specification-only Atomically operation.
-
-In the following two sections we expand on how to apply \cref{thm:txn-appendix} to
-$\sdfy$ and how the initialization and recovery code is incorporated to prove
-\cref{thm:correctness-appendix}.
-
 \subsection{Safety}
-
-The formal definition of safety in Coq is split into two properties. The first
-is a static restriction that describes the
-relationship between the specification's $\mathrm{Atomically}(f)$ construct and
-the code that implements a transaction. Static restrictions rule out constructs
-that would break atomicity, notably use of the heap could produce effects
-outside the transaction system. They also enforce a correct discipline over
-transaction objects; for example, a single transaction should use only one
-\cc{tx} object and when finished should call one of \cc{Commit} or \cc{Abort}
-and then dispose of \cc{tx}. The translation of a transaction body is
-non-trivial because the specification has operations that implicitly refer to
-the ``current'' transaction, while the code must manipulate a transaction object
-\cc{tx}. The Coq implementation enforces the static restrictions using a type
-system, which allows us to prove program refinement
-using a standard proof technique called \emph{logical relations}.
-
-The model of the Dafny code $\sdfy$ uses Atomically blocks, but its
-implementation uses the usual transaction-system API\@. We can be fairly confident
-that the real Dafny code after linking with Go is equivalent to $\linkedcode$.
-The main requirement is that the Dafny code manage transaction objects the same
-way as the type system does. Each handler is written as a method that takes a
-transaction object (and it never starts another transaction) and returns a
-result or signals an error. Then a common utility function \cc{runTxn(f)} takes
-care of beginning a transaction, passing it to \cc{f}, and determining whether
-to commit or abort based on the return value. This utility function captures
-exactly the translation of an Atomically block in the transaction system specification.
 
 The more serious restriction is that transactions cannot access the heap at all.
 The Dafny code does use the heap, but only ever in a local way to access objects
@@ -155,77 +32,12 @@ The Dafny proofs show that $\sdfy$ maintains ghost state corresponding to the
 NFS transition system and an invariant that is strong enough to conclude all the
 handlers simulate the NFS specification.
 
-There is one subtlety in connecting this proof to the transaction system proof,
-even though it appears to be simple transitivity to connect them and show
-$\linkedcode \refines \snfs$. The subtlety is that the Dafny proof is about a
-model of the transaction system expressed in Dafny, whereas the transaction
-system's program refinement proof uses a specification written in Coq. It is
-important that the specifications line up, or at least that the behaviors in Coq
-are a subset of those in Dafny. These being different formal systems we cannot
-directly compare them, but we aimed to formalize the two as closely as possible.
-The interfaces are also sufficiently narrow that we can inspect and compare both
-by hand.
-
-We have discussed the static restrictions for a safe Txn program, but there are
-also dynamic restrictions, namely that the caller should not trigger undefined
-behavior in the transaction system. We handle this systematically by enforcing
-all of the required preconditions in the Dafny interface to the transaction
-system, and these preconditions are respected by virtue of the Dafny proof
-succeeding. Similar to trusting that the semantics of the transaction system are
-the same, we also trust that Dafny enforces the preconditions correctly.
-
 \subsection{Initialization and recovery}
 
-So far, when we write a refinement of the form $\sdfy \refines \snfs$, we have
-been vague about how initialization and recovery factor in. Now we'll
-be more precise about how these are handled, first in the program refinement
-definition for the transaction system and then for the overall DaisyNFS
-correctness theorem.
-
-The transaction system does not require any initialization code, as long as the
-disk is initially all-zero. The theorem relates an all-zero disk to a
-transaction-system state full of zero objects. Our proof requires the caller to
-use each disk block with a consistent object size (since changes in object size
-are difficult to coordinate between threads). We call a mapping of block numbers
-to object sizes a \emph{schema}, and enforce that the schema picked during
-initialization is static for the rest of the execution. The Dafny interface also
+The Dafny interface also
 uses a constant schema, which DaisyNFS sets to include a super block, some
 number of inode blocks, then some allocator blocks, and finally data blocks
 for the remainder of the disk.
-
-Unlike the transaction system, the file system does require initialization code
-separate from recovery, because an all-zero set of objects is not a valid
-file-system state (at minimum, the root inode should be an allocated directory).
-More precisely then, DaisyNFS's specification as stated above requires that the
-caller first run \cc{Init} on an all-zero disk, initially establishing the
-file-system invariant. After that, the system should run the recovery method on
-each reboot to behave like $\sdfy$ according to \cref{thm:txn-appendix}.
-
-While we can use \cref{thm:txn-appendix} to show the code behaves like $\sdfy$, why
-does $\sdfy$ behave like $\snfs$ across a crash? The specification we prove in
-Dafny about recovery is this:
-
-\begin{verbatim}
-constructor Recover(txs: TxnSystem,
-    ghost fs: Filesys)
-  requires fs.Valid()
-  requires same_txn_disk(txs, fs.txs)
-  ensures this.data == fs.data
-  ensures Valid()
-\end{verbatim}
-
-The key to this proof is the argument \texttt{fs: Filesys}, which encodes the
-assumptions about the file system just before the crash. Because this file
-system is now lost, it is a \emph{ghost} argument; we cannot implement recovery
-using the
-old in-memory state, but do get to assume that the transaction system \cc{txs}
-is the same as before the crash. Each operation is handled
-atomically, so recovery also assumes that the file system satisfies its
-\cc{fs.Valid()} invariant. What we prove in this specification Dafny
-is that \cc{Recover()} produces a new, valid \cc{Filesys} in memory with the
-same abstract state as the old one. With the file-system invariant restored, we
-can say that operations after a crash and recovery continue to follow the NFS
-state machine.
 
 \subsection{A hypothetical mechanized proof}
 
