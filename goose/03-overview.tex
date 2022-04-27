@@ -3,7 +3,8 @@
 The goal of the translation is to model a Go program using GooseLang,
 which is a programming language defined in Coq for this purpose. That is,
 GooseLang is defined using expressions defined in Coq, equipped with a
-semantics also given in Coq. Since GooseLang programs support references
+semantics also given in Coq. \Cref{fig:goose:overview} gives a graphical
+depiction of how Goose and GooseLang fit together. Since GooseLang programs support references
 to model the Go heap, the semantics is written in terms of transitions
 of (expression, heap) pairs where the heap maps pointers to values. The
 intention of the translation is that the semantics of the translated
@@ -35,8 +36,14 @@ specifications make these assumptions using a
 standard technique of using a type system for GooseLang developed in Coq, and encoding
 syntactic restrictions via that type system.
 
-\tej{add a diagram, perhaps like the ones in the Goose talk, showing the
-translation process and how Go/Goose/GooseLang all fit together}
+\begin{figure}
+  \includegraphics{fig/goose.png}
+  \vspace{0.5\baselineskip}
+  \caption{Goose supports a subset of Go, which it translates to GooseLang. The
+    target is more general, so not all of GooseLang can be produced from Go
+    code. GooseLang itself is embedded in the Coq proof assistant.}
+  \label{fig:goose:overview}
+\end{figure}
 
 An important aspect of GooseLang is supporting interactive proofs on top
 of the translated code. The interactive proofs use separation logic, a
@@ -73,4 +80,18 @@ feature, in the form of separation logic assertions (for example, to
 represent a slice) and Hoare triples (for example, to specify the
 behavior of the \cc{append()} operation). The goal for the model is to capture
 Go's behavior, whereas the reasoning
-principles aim to make proofs using the model practical.
+principles aim to make proofs using the model practical. See
+\cref{fig:goose:workflow} for an overview of how
+the code and proofs fit together when using Goose.
+
+\begin{figure}
+  \includegraphics{fig/goose-proofs.png}
+  \vspace{0.5\baselineskip}
+  \caption{Workflow for proving code using Goose. The user writes the code and
+    proofs on top of the generated model. The model references libraries that
+    model features of Go, which come equipped with proof libraries to make
+    proofs easier. The code is ordinary Go that can be compiled, tested, and
+    debugged with the usual Go tools. The proofs are all checked by the Coq
+    proof assistant.}
+  \label{fig:goose:workflow}
+\end{figure}
