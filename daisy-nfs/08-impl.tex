@@ -2,9 +2,9 @@
 
 %% daisy-nfsd spec:
 % gsed -n '/public/,/^\s*{/p' src/fs/dir_fs.dfy | wc -l
-%   261
+%   272
 % cloc --read-lang-def ~/dafny-lang.txt src/fs/nfs.s.dfy
-%   306
+%   313
 
 % getting lines of code and total lines (proof is total - code)
 \begin{comment}
@@ -33,8 +33,8 @@ end
   \midrule
   GoJournal & \loc{26000} & \loc{1345} & \cite{chajed:gojournal} \\
   Transaction system & \loc{10000}  & \loc{250} & \loc{564} (Thm~\ref{thm:gotxn-transfer}) \\
-  File system & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{261+306}} (Thm~\ref{thm:dafny}) \\
-  \cc{daisy-nfsd} & \emph{unverified} & \loc{1015} & --- \\
+  File system & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{272+313}} (Thm~\ref{thm:dafny}) \\
+  \cc{daisy-nfsd} & \emph{unverified} & \loc{1073} & --- \\
   \bottomrule
 \end{tabular}
 \caption[Lines of proof, code, and trusted specification for DaisyNFS]%
@@ -127,7 +127,7 @@ end | wc -l
 
 % additional unverified lines of Go in dafny-nfsd
 % wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
-% 1015
+% 1073
 
 Similar to VeriBetrKV~\cite{hance:veribetrkv}, we followed a
 discipline of identifying and addressing timeouts in the proof.
@@ -151,6 +151,7 @@ using eight CPU cores.
 %% one abstraction rather than all the lower levels.
 
 % Tej: takes 10m on my laptop with just one core (no VC parallelism)
+% time make -j1 DAFNY_CORES=1 verify
 
 % VeriBetrKV is 1.8h CPU time and 11min on 32 cloud machines (of unspecified
 % number of cores)
