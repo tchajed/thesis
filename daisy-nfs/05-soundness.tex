@@ -260,19 +260,21 @@ atomic execution while the sequential refinement guarantees the transactions
 themselves are correct.
 
 \begin{figure}
-  %\includegraphics{fig/refinement-execs}
   \begin{center}
-  \input{daisy-nfs/fig/refinement-execs.tex}
+  \includegraphics{fig/refinement-execs.png}
   \end{center}
-  \caption[One execution of DaisyNFS at its three abstraction levels]{One possible execution of DaisyNFS, receiving parallel LOOKUP and
-    CREATE operations, at its three abstraction levels.
-    Within an execution each row is a thread, and dashed arrows indicate
-    context switches.
-    The proof shows the bottom execution is equivalent to an atomic execution of
-    each thread at
-    the Txn layer~(in \cref{thm:gotxn-transfer}),
-    and sequential reasoning shows each atomic sequence behaves according to the NFS
-    specification~(in \cref{thm:dafny}).}
+  \caption[Overall DaisyNFS proof strategy]{Illustration of the DaisyNFS proof
+    strategy in terms of one
+    possible execution of DaisyNFS, receiving parallel MKDIR and LOOKUP
+    operations, at its three abstraction levels. Operations in each row are
+    color-coded according to which operation they correspond to. The refinement proof first
+    shows that for every code execution (bottom row), there exists an atomic
+    execution at the Txn layer (middle row), as proven in
+    \cref{thm:gotxn-program-refinement}. This justifies sequential reasoning to
+    show the transactions on top follow the NFS specification (top row), as
+    proven in \cref{thm:dafny}. Putting the two together,
+    \cref{thm:daisy-correctness} shows the entire DaisyNFS server atomically
+    implements the NFS specification.}
   \label{fig:refinement-execs}
 \end{figure}
 
