@@ -8,18 +8,18 @@ To evaluate the performance of DaisyNFS, we ran three benchmarks: the LFS smallf
 and largefile benchmarks, and a development workload that consists of \cc{git
 clone} from a local repository followed by running \cc{make}. These are the same
 benchmarks used by DFSCQ~\cite{chen:dfscq} (a state-of-the art sequential
-verified file system) and for an unverified NFS server implemented on top of
-GoJournal~\cite{chajed:gojournal}. As a baseline, this evaluation uses a Linux
+verified file system). As a baseline, this evaluation uses a Linux
 NFS server exporting an ext4 file system mounted with \cc{data=journal} mode.
 The NFS server lets us compare fairly since both go through the Linux NFS client
 and use the same underlying protocol. Using \cc{data=journal} forces all data to
 go through the journal and disables log-bypass writes, which ensures that
-ext4 and DaisyNFS both guarantee NFS RPCs are committed durably when they return. In
+ext4 and DaisyNFS both guarantee NFS RPCs are committed durably when they
+return, and makes the designs more comparable. In
 \cc{data=ordered} mode Linux achieves better performance but can
 lose recently written data if the system crashes.
 
-All of these benchmarks were run using Linux~5.13 and Go~1.18 on an Amazon
-EC2 i3.metal instance, which has 72 cores, 512~GB of RAM, and a local 1.9~TB
+All of these benchmarks were run using Linux~5.13, Dafny~3.5.0, Go~1.18 on an Amazon
+EC2 i3.metal instance, which has 72 cores running at 2.7~GHz, 512~GB of RAM, and a local 1.9~TB
 NVMe SSD.\@ To reduce variability we limit the experiment to a single 36-core
 socket, disable turbo boost, and disable processor sleep states; the coefficient
 of variation for all experiments is under 5\% so we omit error bars for visual
@@ -40,16 +40,26 @@ clarity.
   \label{fig:eval:bench}
 \end{figure}
 
-The results are shown in \cref{fig:eval:bench}. DaisyNFS gets about the same
-throughput as Linux on the smallfile benchmark, which is intended to
-be metadata-heavy. The smallfile benchmark repeatedly creates a file,
-writes 100 bytes to it and syncs the file, then deletes it.
+The first set of results are for the three benchmarks, run on an NVMe disk, all
+with a single client. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS
+achieves comparable performance on these benchmarks after implementing many
+optimizations and features; both CPU and I/O efficiency are important to get
+good performance.
+
+The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
+file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. At
+the NFS level this results in four RPCs per iteration: \cc{LOOKUP} (which
+fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Getting the client to issue
+exactly these four RPCs took some work, since Linux relies on getting the right
+``weak cache-consistency'' data from all the operations to maintain its local
+cache. Without this caching, it would issue more operations to retrieve and
+re-retrieve the directory attributes and permissions.
 
 DaisyNFS gets slightly better throughput compared to Linux on the largefile benchmark, which is
 intended to measure bulk data writes. Note that in this benchmark ext4 would be
 significantly faster in \cc{data=ordered} mode due to no longer writing all data
 through the journal; with that option it gets 315~MB/s even over
-NFS.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
+NFS \tej{double-check this number}.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
 syncs it. The Linux NFS client buffers the entire append process until the final
 sync, at which point it issues the writes in many chunks in parallel. This
 benchmark is challenging to support efficiently because the writes at the NFS
@@ -88,9 +98,15 @@ transaction system is committing to disk.
 
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
-clients, comparable to the scalability of the Linux NFS server.
-DaisyNFS scales slightly sub-linearly due to a lock in GoTxn's object layer that
-serializes installation of writes into disk blocks at commit time.
+clients, comparable to the scalability of the Linux NFS server. \tej{see if we
+can explain what limits scalability, if it's the disk or due to locking}
+
+\tej{add scalability experiments with additional locking: add locking to
+GoJournal's installer and logger to evaluate importance of that, add global
+txn lock to see how much client concurrency there is and to measure cost of
+locking on largefile performance}
+
+\tej{also should show scalability on in-memory disk}
 
 \section{Testing the trusted code and spec}
 
@@ -110,11 +126,11 @@ actually reflects the RFC, and second we would like DaisyNFS to be compatible
 with existing clients, including implementing enough of the RFC's functionality.
 These fall outside the scope of verification so we cover them with testing.
 
-To evaluate the file system, we mounted it using the Linux NFS client and ran the
-fsstress and fsx-linux tests, two suites used for testing the Linux kernel. In
-order to look for bugs in crash safety and recovery, we also ran
-CrashMonkey~\cite{mohan:crashmonkey}, which found no bugs
-after running all supported 2-operation tests.
+To evaluate the file system's correctness and compatibility as a whole, we
+mounted it using the Linux NFS client and ran the fsstress and fsx-linux tests,
+two suites used for testing the Linux kernel. In order to look for bugs in crash
+safety and recovery, we also ran CrashMonkey~\cite{mohan:crashmonkey}, which
+found no bugs after running all supported 2-operation tests.
 
 While other experiments in the evaluation interact with DaisyNFS via the Linux
 client, these tests interact with the server directly from a hand-written
@@ -203,6 +219,15 @@ whole stack (but by design no changes to the file-system invariant).
 We believe additional features such as symbolic links
 could be added incrementally with modest effort because
 of sequential reasoning and proof automation.
+
+For the smallfile benchmark, as mentioned it took some work to return enough
+attribute information that Linux reliably cached everything it could, to avoid
+extra RPCs. This work primarily consisted of expanding the information
+operations return, and at the same time expanding the specifications. These
+improvements were carried out in many small steps, but they were similar to the
+incremental improvements above in terms of taking a small amount of time and
+few changes to lines of proof; most of the work went into figuring out what was
+missing in the implementation.
 
 %% \begin{itemize}
 %%   \item Directories were initially parsed into a functional data structure, then
