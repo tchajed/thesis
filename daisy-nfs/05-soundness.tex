@@ -276,19 +276,6 @@ themselves are correct.
   \label{fig:refinement-execs}
 \end{figure}
 
-\begin{figure}
-  \includegraphics{fig/concurrent-refinement.png}
-  \caption[Concurrent refinement obligation]{Proving concurrent refinement
-    requires proving that assuming some invariant relating the code state to the
-    abstract state, every operation (1) preserves the invariant, and (2)
-    simulates the abstract specification for the operation at some
-    \emph{linearization point}. Unlike sequential refinement, the proof must
-    show the invariant holds at all intermediate points in order to reason about
-    potential interference with other threads. \tej{concurrent refinement figure
-    isn't used in the text}}
-  \label{fig:concurrent-refinement}
-\end{figure}
-
 There are two assumptions needed for the theorems to compose. First,
 $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ should imply $\seqrefinement(i_{NFS})$,
 to bridge the assumption and theorem being proven in Dafny. That is, the
