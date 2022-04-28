@@ -329,6 +329,15 @@ started) must agree on the part of the block storing $o$.  As a result,
 regardless of what block happened to be read,
 the caller is guaranteed to see the correct object $o$.
 
+The object layer supports \emph{bit-sized}, which create a verification
+challenge since the operations involved need to use bit arithmetic. For example,
+one operation is to install a bit into another word, which is specified using a
+pair of conversion functions \cc{byte_to_bits} and \cc{bit_to_bytes} that go
+between an 8-bit integer (a \cc{u8}) and \cc{list bool} (of length 8). To reason
+about this code we wrote tactics to prove theorems about bytes and bits by brute
+force, simply considering all possible cases; this works reasonably well in Coq
+even when there are thousands of cases (but not too much more).
+
 \subsection[Lock-free reads in WAL]{Lock-free reads in \scc{wal}}
 
 \Cref{fig:walread} shows the implementation of \cc{Read} in the
