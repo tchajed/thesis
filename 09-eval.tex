@@ -42,11 +42,19 @@ clarity.
 
 \begin{figure}
   \begin{verbatim}
+running on NVMe:
 bench         dnfs       dnfs-seq-txn  dnfs-seq-wal  linux      linux-ordered
 smallfile-1   1248.0384  1147.4468     864.6746      1298.5368  1275.6765
 smallfile-25  6744.0015  1529.678      1349.9663     6864.4008  6792.8298
 largefile     180.76     194.14        135.52        172.31     316.25
 app           0.140252   0.42735       0.403226      0.416667   0.42735
+
+running on tmpfs:
+bench         dnfs       dnfs-seq-txn  dnfs-seq-wal  linux       linux-ordered
+smallfile-1   1899.7582  1908.0521     1816.1219     2116.4551   2024.4887
+smallfile-25  7811.338   3245.1898     4191.8783     13742.4956  13641.676
+largefile     209.69     240.52        190.35        242.18      421.08
+app           0.42735    0.438596      0.423729      0.436681    0.446429
 \end{verbatim}
   \caption{Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
@@ -130,7 +138,7 @@ can explain what limits scalability, if it's the disk or due to locking}
   \caption[Concurrent smallfile performance, with RAM disk]%
   {Combined throughput of the \cc{smallfile} microbenchmark running on an
     in-memory disk while varying the number of concurrent clients.}
-  \label{fig:eval:scale}
+  \label{fig:eval:scale-ram}
 \end{figure}
 
 \section{Testing the trusted code and spec}
