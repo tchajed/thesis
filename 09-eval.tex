@@ -40,6 +40,30 @@ clarity.
   \label{fig:eval:bench}
 \end{figure}
 
+\begin{figure}
+  \begin{verbatim}
+bench         dnfs       dnfs-seq-txn  dnfs-seq-wal  linux      linux-ordered
+smallfile-1   1248.0384  1147.4468     864.6746      1298.5368  1275.6765
+smallfile-25  6744.0015  1529.678      1349.9663     6864.4008  6792.8298
+largefile     180.76     194.14        135.52        172.31     316.25
+app           0.140252   0.42735       0.403226      0.416667   0.42735
+\end{verbatim}
+  \caption{Performance across various file-system configurations. The smallfile
+    benchmark is run with a single client (\cc{smallfile-1}) and also with 25
+    parallel clients (\cc{smallfile-25}). \cc{dnfs-seq-txn} is DaisyNFS with a
+    global transaction lock while \cc{dnfs-seq-wal} is DaisyNFS with additional
+    locking in the write-ahead log, showing the impact of this concurrency on
+    both smallfile and largefile. \cc{linux} uses ext4 with \cc{data=journal}
+    mode while \cc{linux-ordered} uses the default \cc{data=ordered} mode. This
+    optimization helps most with the largefile benchmark since it avoids
+    double-writing that all the other configurations experience, once to the
+    journal and again to the data region.}
+  \label{fig:bench-configs}
+\end{figure}
+
+\tej{Fix setup for \cref{fig:bench-configs} to average over several runs and
+  report as a bar graph with normalized throughput}
+
 The first set of results are for the three benchmarks, run on an NVMe disk, all
 with a single client. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS
 achieves comparable performance on these benchmarks after implementing many
