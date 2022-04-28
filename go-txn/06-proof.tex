@@ -367,9 +367,10 @@ func (l *Wal) ReadInstalled(a uint64) Block {
 \end{figure}
 
 There is a challenge in specifying the behavior of \cc{Read} because its commit
-point is not obvious. \tej{add a figure for this explanation} Consider a case
+point is not obvious. Consider a case
 where address $a$ is not in the in-memory log, so that the \cc{Read} operation
-falls back to \cc{ReadInstalled(a)}. If there is a concurrent write to address
+falls back to \cc{ReadInstalled(a)} --- the situation is depicted graphically in
+\cref{fig:wal:future-read}. If there is a concurrent write to address
 $a$, then there are two possibilities for the linearization point of the
 \cc{Read} call: it can either appear to occur before the concurrent write, if
 \cc{ReadInstalled(a)} returns the old value, or its linearization point might be
@@ -377,7 +378,20 @@ after the write if the concurrent write is installed before
 \cc{ReadInstalled(a)} runs. Unfortunately the decision to linearize before
 \cc{ReadInstalled(a)} or at the point it runs \emph{depends on the future
   behavior} of the system (the linearization point is before if there is no
-concurrent write that gets installed, and not otherwise).
+concurrent write that gets installed, but if there is such an installed write it
+needs to be after that write).
+
+\begin{figure}[ht]
+\includegraphics{fig/future-read.png}
+\caption[Future-dependent linearization point for WAL's Read operation]{The
+linearization point for \cc{Read(a)} depends on future operations. In
+this example, there is a concurrent write to the address being read
+(highlighted in red). Because this write is installed before the
+\cc{ReadInstalled} operation, the correct linearization point is after the read,
+but if the installation had not happened yet the \cc{Read} would return the old
+value and the linearization point is earlier.}
+\label{fig:wal:future-read}
+\end{figure}
 
 Instead of proving that \cc{Read} is atomic, we instead give atomic specifications to
 \cc{ReadMem()} and \cc{ReadInstalled()} individually. The write-ahead log's
