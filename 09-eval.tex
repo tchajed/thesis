@@ -125,12 +125,13 @@ achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server. \tej{see if we
 can explain what limits scalability, if it's the disk or due to locking}
 
-\tej{add scalability experiments with additional locking: add locking to
-GoJournal's installer and logger to evaluate importance of that, add global
-txn lock to see how much client concurrency there is and to measure cost of
-locking on largefile performance}
-
-\tej{also should show scalability on in-memory disk}
+\begin{figure}
+  \includegraphics{daisy-nfs/fig/scale-ram.pdf}
+  \caption[Concurrent smallfile performance, with RAM disk]%
+  {Combined throughput of the \cc{smallfile} microbenchmark running on an
+    in-memory disk while varying the number of concurrent clients.}
+  \label{fig:eval:scale}
+\end{figure}
 
 \section{Testing the trusted code and spec}
 

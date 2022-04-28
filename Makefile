@@ -6,7 +6,8 @@ TEX_FILES := $(wildcard *.tex) \
 	$(wildcard daisy-nfs/*.tex \
                daisy-nfs/fig/*.tex) \
 	$(wildcard goose/*.tex)
-DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard fig/*.png) daisy-nfs/fig/bench.pdf daisy-nfs/fig/scale.pdf
+PLOTS := daisy-nfs/fig/bench.pdf daisy-nfs/fig/scale.pdf daisy-nfs/fig/scale-ram.pdf
+DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard fig/*.png) $(PLOTS)
 
 default: thesis.pdf abstract.txt
 
@@ -17,13 +18,17 @@ abstract.txt: frontmatter/abstract.tex
 	cat $< | \
 		pandoc -o $@ -f latex -t plain --wrap=none
 
-daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/bench.data
-	@echo "gnuplot daisy-nfs/fig/bench.plot"
-	@cd daisy-nfs; ./fig/bench.plot
+daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/nvme/bench.data
+	@echo "daisy-nfs bench.plot"
+	@cd daisy-nfs; ./fig/bench.plot --input data/nvme/bench.data --output fig/bench.pdf
 
-daisy-nfs/fig/scale.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/daisy-nfsd.data daisy-nfs/data/linux.data
-	@echo "gnuplot daisy-nfs/fig/scale.plot"
-	@cd daisy-nfs; gnuplot ./fig/scale.plot
+daisy-nfs/fig/scale.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/nvme/daisy-nfsd.data daisy-nfs/data/nvme/linux.data
+	@echo "daisy-nfs scale.plot (NVMe)"
+	@cd daisy-nfs; ./fig/scale.plot --input data/nvme --output fig/scale.pdf
+
+daisy-nfs/fig/scale-ram.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/daisy-nfsd.data daisy-nfs/data/linux.data
+	@echo "daisy-nfs scale.plot (RAM)"
+	@cd daisy-nfs; ./fig/scale.plot --input data --output fig/scale-ram.pdf
 
 
 spell:
