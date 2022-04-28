@@ -40,6 +40,21 @@ The file-system code interacts with GoTxn via an axiomatized interface in Dafny
 that is substituted with a real implementation that calls the GoTxn library. A
 similar approach is used to represent Go byte slices.
 
+Similar to VeriBetrKV~\cite{hance:veribetrkv}, we followed a
+discipline of identifying and addressing timeouts in the proof.
+% , which
+% hamper development by giving the developer slower feedback (because
+% proofs fail only after 30s) and less specific feedback (because Dafny
+% is unable to pinpoint which assertion or postcondition failed and
+% reports a timeout for an entire method).
+As a result, the overall
+build is fast: compiling the proofs takes only 12 minutes on a slow
+machine in continuous integration and 4 minutes on a laptop
+using eight CPU cores.
+
+% Tej: takes 10m on my laptop with just one core (no VC parallelism)
+% time make -j1 DAFNY_CORES=1 verify
+
 GoTxn is implemented using fairly standard Go code. Goose imposes some
 restrictions, but we nonetheless have fairly idiomatic code, split into modules
 and multiple files are expected. One interesting library in GoTxn is its
@@ -212,35 +227,6 @@ end | wc -l
 % 1073
 
 \tej{get lines of code for code and proofs and say something about what it does}
-
-\section{Developing DaisyNFS}
-
-Similar to VeriBetrKV~\cite{hance:veribetrkv}, we followed a
-discipline of identifying and addressing timeouts in the proof.
-% , which
-% hamper development by giving the developer slower feedback (because
-% proofs fail only after 30s) and less specific feedback (because Dafny
-% is unable to pinpoint which assertion or postcondition failed and
-% reports a timeout for an entire method).
-As a result, the overall
-build is fast: compiling the proofs takes only 12 minutes on a slow
-machine in continuous integration and 4 minutes on a laptop
-using eight CPU cores.
-
-%% Similar to
-%% VeriBetrKV~\cite{hance:veribetrkv}, when a proof took a long time,
-%% before moving on to another layer, we would hide definitions and add
-%% proof annotations to make verification fast enough for interactive
-%% development. This discipline was particularly important between
-%% layers: making the invariant of a layer opaque makes verification of
-%% the layer above predictable and fast, since the automation only sees
-%% one abstraction rather than all the lower levels.
-
-% Tej: takes 10m on my laptop with just one core (no VC parallelism)
-% time make -j1 DAFNY_CORES=1 verify
-
-% VeriBetrKV is 1.8h CPU time and 11min on 32 cloud machines (of unspecified
-% number of cores)
 
 \section{Achieving good performance for DaisyNFS}
 
