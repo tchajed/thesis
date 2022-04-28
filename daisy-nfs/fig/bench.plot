@@ -62,15 +62,15 @@ else
 fi
 
 gnuplot <<-EOF
-	set terminal pdf dashed noenhanced size 3.5in,1.5in
+	set terminal pdf dashed noenhanced size 3.5in,2.0in
 	set output "${output}"
 
 	set style data histogram
 	set style histogram cluster gap 1
 	set rmargin at screen .95
 
-	set xrange [-1:4]
-	set yrange [0:1.2]
+	set xrange [-1:3]
+	set yrange [0:1.4]
 	set grid y
 	set ylabel "Relative througput"
 	set ytics scale 0.5,0 nomirror
