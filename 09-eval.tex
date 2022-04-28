@@ -69,9 +69,6 @@ app           0.42735    0.438596      0.423729      0.436681    0.446429
   \label{fig:bench-configs}
 \end{figure}
 
-\tej{Fix setup for \cref{fig:bench-configs} to average over several runs and
-  report as a bar graph with normalized throughput}
-
 The first set of results are for the three benchmarks, run on an NVMe disk, all
 with a single client. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS
 achieves comparable performance on these benchmarks after implementing many
@@ -106,7 +103,6 @@ DaisyNFS achieves good performance on the app workload, which consists of runnin
 system, so building it requires running the usual development tools---gcc, ld,
 ar---but also running dd to generate a kernel image. Builds take about 3s,
 which are reported as a throughput number so higher is better.
-
 \section{Scalability}
 \label{sec:eval:scale}
 
@@ -130,8 +126,13 @@ transaction system is committing to disk.
 
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
-clients, comparable to the scalability of the Linux NFS server. \tej{see if we
-can explain what limits scalability, if it's the disk or due to locking}
+clients, comparable to the scalability of the Linux NFS server. These benchmarks
+eventually become bottlenecked on the disk. We ran an analogous experiment on an
+in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale-ram}.
+Linux scales much better than DaisyNFS in this experiment. There is a common
+lock between these threads for installing sub-block object writes into a full
+block; this lock is there when running on a physical disk but its effect is less
+pronounced since the system spends relatively more time in disk I/O.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/scale-ram.pdf}
@@ -140,6 +141,46 @@ can explain what limits scalability, if it's the disk or due to locking}
     in-memory disk while varying the number of concurrent clients.}
   \label{fig:eval:scale-ram}
 \end{figure}
+
+To investigate the effect of concurrency in more detail, we ran the three
+benchmarks on a variety of file-system configurations, with the results shown in
+\cref{fig:bench-configs} \tej{Fix setup for this benchmark to average over
+several runs and report as a bar graph with normalized throughput}
+The variants of DaisyNFS make changes to GoTxn to reduce concurrency: the
+\cc{dnfs-seq-wal} configuration adds locks to the write-ahead log so that the
+disk operations that normally execute lock-free --- installation, logging, and
+reading installed data --- instead happen with a common lock for all write-ahead
+log operations. This permits transactions to execute concurrently while not
+accessing GoTxn but no disk parallelism. \cc{dnfs-seq-txn} leaves the
+write-ahead log the same but changes the per-address locking in GoTxn to a
+\emph{global} transaction lock, preventing any transactions from running
+concurrently but allowing concurrency between logging and installation in the
+write-ahead log.
+
+Looking at the \cc{smallfile-1} and \cc{smallfile-25} benchmarks, we can see
+that both forms of concurrency are important for scalability, and the
+write-ahead log concurrency makes a big difference even with a single client
+since it can get higher write throughput from the disk (on an in-memory disk,
+these trends are less visible; the work outside of DaisyNFS in the Linux client
+and local network still gets parallelized to improve throughput, even though
+these configurations have little concurrency with a fast disk). On the other
+hand \cc{dnfs-seq-txn} actually performs \emph{better} on the largefile
+benchmark. This operation has many conflicting parallel operations to different
+parts of the same file, and the results shows that two-phase locking has some
+overhead compared to a simpler locking scheme.
+
+Another comparison in these results is to Linux with its default
+\cc{data=ordered} mode. This only makes a difference for asynchronous NFS
+writes, which are buffered and eventually directly to the file's data blocks
+rather than going through the journal. The smallfile benchmark has only
+synchronous writes, so unsurprisingly performance is the same, but on the
+largefile benchmark \cc{linux-ordered} gets 80\% higher throughput. An
+improvement of up to $2\times$ better throughput is expected here since unlike
+in all the other configurations, data writes are written only once rather than
+to both the journal and the data region, and the actual benefit is high since
+the benchmark is dominated by disk writes. It's worth noting that even Linux
+does not saturate the disk, which can get 500 MB/s with direct sequential
+writes, due to the overhead of running over NFS.
 
 \section{Testing the trusted code and spec}
 
