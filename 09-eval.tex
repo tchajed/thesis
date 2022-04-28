@@ -91,7 +91,7 @@ DaisyNFS gets slightly better throughput compared to Linux on the largefile benc
 intended to measure bulk data writes. Note that in this benchmark ext4 would be
 significantly faster in \cc{data=ordered} mode due to no longer writing all data
 through the journal; with that option it gets 315~MB/s even over
-NFS \tej{double-check this number}.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
+NFS.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
 syncs it. The Linux NFS client buffers the entire append process until the final
 sync, at which point it issues the writes in many chunks in parallel. This
 benchmark is challenging to support efficiently because the writes at the NFS
