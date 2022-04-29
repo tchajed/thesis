@@ -3,17 +3,20 @@ software that implements the abstraction of files and directories on top of a
 disk, which simply stores a long sequence of bytes. File systems are important
 because they are used by all applications to store data, and bugs in file
 systems are especially costly because they can lead to data loss for any of
-these applications. This thesis describes an approach towards building a
-reliable and correct file system using formal verification, in which the file
-system is developed along with a proof that it always follows a high-level
-specification of its intended behavior. The artifact of this thesis is DaisyNFS,
-a verified file system that comes with a proof of correctness and gets good
-performance.
+these applications. One approach to improve reliability is to use formal
+verification, in which the file system is developed along with a proof that it
+always follows a high-level specification of its intended behavior. This thesis
+develops new techniques to address the key challenges in a file system of
+reasoning about \emph{concurrency} and unexpected \emph{crashes} where the whole
+computer reboots, a verified transaction system that handles these concerns, and
+a file system that uses the transaction system. The final artifact is DaisyNFS,
+a verified file system that comes with a proof of correctness and that achieves
+good performance.
 
 \section{Motivation}
 \label{sec:intro:motivation}
 
-A file system is an especially critical part of the systems software stack for
+A file system is an especially critical system for
 three reasons. First, the file system is widely used --- essentially all applications have
 data that is ultimately stored in a file system. Second, implementations are
 concurrent and optimized, which increases the potential for bugs. Finally, bugs
