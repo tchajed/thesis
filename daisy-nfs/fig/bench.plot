@@ -85,8 +85,8 @@ gnuplot <<-EOF
 	set datafile separator "\t"
 
 	plot "${input}" \
-	        using (${line1}):xtic(1) title "Linux${label}" lc rgb '#b6d7a8' lt 1, \
-	     '' using (${line2}):xtic(1) title "DaisyNFS${label}" lc rgb '#3a81ba' lt 1
-         # '' using (${line3}):xtic(1) title "GoNFS${label}" lc rgb '#cc0000' lt 1, \
+	        using (${line1}):xtic(1) title "Linux${label}" lc rgb '#0071b2' lt 1, \
+	     '' using (${line2}):xtic(1) title "DaisyNFS${label}" lc rgb '#009e73' lt 1
+         # '' using (${line3}):xtic(1) title "GoNFS${label}" lc rgb '#e59c00' lt 1, \
 
 EOF

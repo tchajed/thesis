@@ -6,7 +6,8 @@ TEX_FILES := $(wildcard *.tex) \
 	$(wildcard daisy-nfs/*.tex \
                daisy-nfs/fig/*.tex) \
 	$(wildcard goose/*.tex)
-PLOTS := daisy-nfs/fig/bench.pdf daisy-nfs/fig/scale.pdf daisy-nfs/fig/scale-ram.pdf
+PLOTS := daisy-nfs/fig/bench.pdf daisy-nfs/fig/extended-bench.pdf \
+	daisy-nfs/fig/scale.pdf daisy-nfs/fig/scale-ram.pdf
 DEPS := $(TEX_FILES) $(wildcard *.bib) $(wildcard fig/*.png) $(PLOTS)
 
 default: thesis.pdf abstract.txt
@@ -21,6 +22,10 @@ abstract.txt: frontmatter/abstract.tex
 daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/nvme/bench.data
 	@echo "daisy-nfs bench.plot"
 	@cd daisy-nfs; ./fig/bench.plot --input data/nvme/bench.data --output fig/bench.pdf
+
+daisy-nfs/fig/extended-bench.pdf: daisy-nfs/fig/extended-bench.plot daisy-nfs/data/nvme/extended-bench.data
+	@echo "daisy-nfs bench.plot"
+	@cd daisy-nfs; ./fig/extended-bench.plot --input data/nvme/extended-bench.data --output fig/extended-bench.pdf
 
 daisy-nfs/fig/scale.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/nvme/daisy-nfsd.data daisy-nfs/data/nvme/linux.data
 	@echo "daisy-nfs scale.plot (NVMe)"
