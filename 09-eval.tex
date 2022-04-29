@@ -43,21 +43,6 @@ clarity.
 
 \begin{figure}
   \includegraphics{daisy-nfs/fig/extended-bench.pdf}
-  \begin{verbatim}
-running on NVMe:
-bench         dnfs       dnfs-seq-txn  dnfs-seq-wal  linux      linux-ordered
-smallfile-1   1246.8801  1283.5737     939.6287      1288.8967  1273.8772
-smallfile-25  7355.7634  1855.0557     1498.2614     6812.11    6761.91
-largefile     180.08     195.5         133.03        173.16     313.25
-app           0.413223   0.42735       0.403226      0.425532   0.444444
-
-running on tmpfs:
-bench         dnfs       dnfs-seq-txn  dnfs-seq-wal  linux       linux-ordered
-smallfile-1   1916.8068  1965.0762     1847.0014     2087.1642   1998.2383
-smallfile-25  8627.3404  3824.4177     4535.1198     13746.9026  13621.0609
-largefile     218.24     242.58        192.41        240.31      410.83
-app           0.421941   0.442478      0.42735       0.404858    0.423729
-\end{verbatim}
   \caption{Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
     parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
@@ -67,9 +52,14 @@ app           0.421941   0.442478      0.42735       0.404858    0.423729
   \label{fig:bench-configs}
 \end{figure}
 
+\begin{figure}
+  \includegraphics{daisy-nfs/fig/extended-bench-ram.pdf}
+  \caption{Performance across various file-system configurations on in-memory disk.}
+  \label{fig:bench-configs-ram}
+\end{figure}
+
 The first set of results are for the three benchmarks, run on an NVMe disk, all
-with a single client. The numbers are shown in \cref{fig:eval:bench}. \tej{graph
-is just data from a VM for debugging, please ignore} DaisyNFS achieves
+with a single client. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS achieves
 comparable performance on these benchmarks after implementing many optimizations
 (for example, parsing data structures in-place) and features (for example,
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
