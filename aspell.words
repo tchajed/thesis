@@ -1,4 +1,4 @@
-personal_ws-1.1 en 470 
+personal_ws-1.1 en 483 
 APIs
 AST
 Addr
@@ -21,6 +21,7 @@ CIVL
 CPUs
 CSL
 CSPEC
+Cap'n
 CertiKOS
 Chajed
 ChkliaevHS
@@ -58,6 +59,7 @@ FilesysData
 FinishRead
 FinishStore
 Flashix
+FlatBuffers
 ForestGreen
 Frans
 GETATTR
@@ -66,6 +68,7 @@ Gallina
 GetRequest
 GoJournal
 GoJournal's
+GoNFS
 GoTxn
 GoTxn's
 GooseLang
@@ -122,6 +125,7 @@ POG
 POSIX
 PVS
 PrepareWrite
+Proto
 READDIR
 READDIRPLUS
 READLINK
@@ -193,12 +197,14 @@ axiomatize
 axiomatized
 backend
 backends
+benchmarking
 blk
 blkno
 bool
 boolT
 boolean
 booleans
+bottlenecked
 btrfs
 buf
 caresl
@@ -228,6 +234,7 @@ deallocating
 dereference
 dereferenced
 dereferencing
+deserialization
 deterministically
 dev
 dfy
@@ -243,6 +250,7 @@ diskStart
 diskend
 disklabel
 diskstate
+dnfs
 dom
 dst
 duplicable
@@ -276,6 +284,7 @@ goout
 goroutine
 gotxn
 gsed
+hoc
 hocap
 hs
 iDestruct
@@ -363,8 +372,10 @@ num
 numbersep
 ok
 onwards
+parallelized
 parameterization
 parameterizing
+parsers
 pdftitle
 performant
 persistency
@@ -380,6 +391,7 @@ preLock
 preborrow
 pred
 printMode
+protobuf
 prover
 ptr
 ptrT
@@ -426,6 +438,7 @@ symlinks
 synonymously
 sys
 sz
+testbed
 tgt
 th
 thm
