@@ -1,34 +1,58 @@
-DaisyNFS is a verified, concurrent, crash-safe file system.
+This thesis describes an approach to verify software with a combination of
+concurrency in the implementation and crash-safety guarantees, applied to the
+DaisyNFS file system. It spans from foundations for verifying this software in
+general through the design and proof of the file system itself. The foundations
+include Perennial, a program logic for crashes and concurrency, and Goose, an
+approach for reasoning about Go code. DaisyNFS is designed around a verified
+transaction system called GoTxn, which makes it feasible to scale verification
+by enabling sequential reasoning for transactions on top.
 
 \section{Discussion}
 
-It's surprisingly hard to deal with memory safety/ownership in these systems. We
-struggled with memory safety in specifications, when we were forced to describe
-an API as a transition system, even though separation logic could handle things
-beautifully. Changing data structures to support read-only sharing was hard, if
-things weren't engineered to support sharing originally (lots of fractional
-permissions everywhere). Read-only locking was hard enough that we never did it.
-In contrast Flashix has a trick where they have a reader-writer lock over the
-entire directory structure, and at least it means read concurrency is pretty
-good.
+\paragraph{Memory safety.}
+A surprisingly difficult aspect of the proof was addressing memory safety
+considerations. These show up in two ways: describing ownership at interface
+boundaries and reasoning about read-only sharing.
 
-If I were to do this again, I would insist on zero copy wherever practical from
-the beginning. It's the last thing that seems to hurt performance (and
-measurable in all memory benchmarks), and changing things is quite painful. This
-is pretty closely related to the previous point about memory safety.
+DaisyNFS has two important interface boundaries, one between GooseLang and the
+disk, and another to describe the GoTxn interface. Both APIs involve data in the
+form of byte slices. The challenging aspect of using bytes in a method is
+specifying how \emph{ownership} transfers. For example, the \cc{DiskWrite(a, v)}
+operation passes a buffer \cc{v} to the disk. It could be that ownership of
+\cc{v} needs to be transferred to the disk, since it uses the buffer later, or
+that \cc{v} should be read-only for the duration of the call and ownership is
+returned to the caller, or that if \cc{v} is permanently read-only the disk and
+caller can share the buffer.
 
-Another aspect that could have been handled better is more explicit support for
-layered, modular proofs. We developed the specification approach alongside
-developing the proofs, so the resulting code doesn't cleanly reflect what the
-intermediate specifications and abstractions look like.
+Expressing ownership as a logical idea in the logic is relatively easy using
+separation logic, but the semantics of \cc{DiskWrite(a, v)} has to be
+axiomatized. In order to simplify expressing the ownership transfer, the
+GooseLang \cc{DiskRead} returns a freshly allocated buffer, but it would have
+been better for performance if the caller supplied a buffer that the
+\cc{DiskRead} wrote to (as in the usual \cc{read} system call). Similarly, the
+GoTxn interface to Dafny makes additional copies to simplify ownership
+reasoning, especially in the program refinement proof. A better solution would
+have been to develop a specification style for expressing ownership in the
+semantics of the operations themselves, along with associated reasoning
+principles.
 
-Hard to model interfaces with the outside world when they interact with memory,
-especially when ownership transfers are needed. Maybe we needed a library for
-this to make the assumptions more easily.
+Another challenge in the internals of GoTxn was reasoning about read-only
+sharing. Changing data structures after they were written to support read-only
+sharing was difficult, since the main logical technique is the use of fractional
+permissions. Read-only locking was challenging to retrofit support for, even
+though it may have improved read-read concurrency in GoTxn and DaisyNFS.
 
-\tej{in conclusion, expand on memory safety text}
+\paragraph{Modular proofs.}
 
-\resume
+\Cref{ch:crash-logatom} describes a style for specifying a library in Perennial.
+Modularity was essential to enable the GoTxn proof. Better support for
+modularity, perhaps formalizing some of the aspects of the specification style,
+would have more cleanly separated each library's proofs. Where this is
+particularly important is in making changes to the code that affect an
+interface, in which case it can be difficult to tell from the code exactly what
+properties the caller is assuming about the interface. The specification style
+was developed in parallel with all the proofs, which means that proofs do not
+all follow the best practices developed along the way.
 
 \section{Future work}
 
