@@ -62,7 +62,7 @@ else
 fi
 
 gnuplot <<-EOF
-	set terminal pdf dashed noenhanced font "Charter,12" size 3.5in,2.0in
+	set terminal pdf dashed noenhanced font "Charter,14" size 4in,2.0in
 	set output "${output}"
 
 	set style data histogram
@@ -72,7 +72,7 @@ gnuplot <<-EOF
 	set xrange [-1:3]
 	set yrange [0:1.4]
 	set grid y
-	set ylabel "Relative througput"
+	set ylabel "Relative throughput"
 	set ytics scale 0.5,0 nomirror
 	set xtics scale 0,0
 	set key top right
