@@ -62,7 +62,7 @@ else
 fi
 
 gnuplot <<-EOF
-	set terminal pdf dashed noenhanced size 3.5in,2.0in
+	set terminal pdf dashed noenhanced font "Charter,12" size 3.5in,2.0in
 	set output "${output}"
 
 	set style data histogram

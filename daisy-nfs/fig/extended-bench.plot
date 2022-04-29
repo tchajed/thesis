@@ -52,7 +52,7 @@ label3=$(awk 'NR==4 {printf "%.0f", $2}' "$input")
 label4=$(awk 'NR==5 {printf "%0.3f", $2}' "$input")
 
 gnuplot <<-EOF
-	set terminal pdf dashed noenhanced size 5in,2.3in
+	set terminal pdf dashed noenhanced font "Charter,12" size 5in,2.3in
 	set output "${output}"
 
 	set style data histogram
