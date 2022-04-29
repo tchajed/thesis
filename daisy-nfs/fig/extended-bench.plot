@@ -52,14 +52,14 @@ label3=$(awk 'NR==4 {printf "%.0f", $2}' "$input")
 label4=$(awk 'NR==5 {printf "%0.3f", $2}' "$input")
 
 gnuplot <<-EOF
-	set terminal pdf dashed noenhanced font "Charter,12" size 5in,2.3in
+	set terminal pdf dashed noenhanced font "Charter,14" size 5.5in,2.8in
 	set output "${output}"
 
 	set style data histogram
 	set style histogram cluster gap 1
 	set rmargin at screen .95
 
-	set xrange [-0.8:4.5]
+	set xrange [-0.8:4]
 	set yrange [0:2.2]
 	set grid y
 	set ylabel "Relative througput"

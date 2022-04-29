@@ -32,30 +32,13 @@ clarity.
 %% SINGLE-CORE EXPERIMENTS:
 %%   for n in $(seq 8 15) $(seq 24 31); do echo 0 > /sys/devices/system/cpu/cpu$n/online; done
 
-\begin{figure}
+\begin{figure}[ht]
   \includegraphics{daisy-nfs/fig/bench.pdf}
   \caption[Performance for smallfile, largefile, and app benchmarks]%
   {Performance of Linux NFS and DaisyNFS for \cc{smallfile},
     \cc{largefile}, and \cc{app} workloads, on an NVMe disk.
     DaisyNFS achieves comparable performance to ext4 in \cc{data=journal} mode.}
   \label{fig:eval:bench}
-\end{figure}
-
-\begin{figure}
-  \includegraphics{daisy-nfs/fig/extended-bench.pdf}
-  \caption{Performance across various file-system configurations. The smallfile
-    benchmark is run with a single client (\cc{smallfile-1}) and also with 25
-    parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
-    uses the \cc{data=ordered} to write data directly rather than through the
-    journal. The ``seq txn'' variant of DaisyNFS has a global transaction lock
-    while ``seq wal'' adds additional locking to the write-ahead log.}
-  \label{fig:bench-configs}
-\end{figure}
-
-\begin{figure}
-  \includegraphics{daisy-nfs/fig/extended-bench-ram.pdf}
-  \caption{Performance across various file-system configurations on in-memory disk.}
-  \label{fig:bench-configs-ram}
 \end{figure}
 
 The first set of results are for the three benchmarks, run on an NVMe disk, all
@@ -133,6 +116,24 @@ pronounced since the system spends relatively more time in disk I/O.
       out-of-date but probably hasn't changed much}}
   \label{fig:eval:scale-ram}
 \end{figure}
+
+\begin{figure}[hp]
+  \includegraphics{daisy-nfs/fig/extended-bench.pdf}
+  \caption{Performance across various file-system configurations. The smallfile
+    benchmark is run with a single client (\cc{smallfile-1}) and also with 25
+    parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
+    uses the \cc{data=ordered} to write data directly rather than through the
+    journal. The ``seq txn'' variant of DaisyNFS has a global transaction lock
+    while ``seq wal'' adds additional locking to the write-ahead log.}
+  \label{fig:bench-configs}
+\end{figure}
+
+\begin{figure}[hp]
+  \includegraphics{daisy-nfs/fig/extended-bench-ram.pdf}
+  \caption{Performance across various file-system configurations on in-memory disk.}
+  \label{fig:bench-configs-ram}
+\end{figure}
+
 
 To investigate the effect of concurrency in more detail, we ran the three
 benchmarks on a variety of file-system configurations, with the results shown in
