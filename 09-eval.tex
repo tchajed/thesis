@@ -1,5 +1,6 @@
-In this chapter we evaluate DaisyNFS and GoTxn along the dimensions of
-performance, correctness, and functionality.
+In this chapter we evaluate DaisyNFS and GoTxn in terms of performance
+(\cref{sec:eval:bench,sec:eval:scale}), correctness (\cref{sec:eval:testing}),
+and ease of change (\cref{sec:eval:incremental}).
 
 \section{Performance}
 \label{sec:eval:bench}
@@ -68,10 +69,11 @@ app           0.421941   0.442478      0.42735       0.404858    0.423729
 
 The first set of results are for the three benchmarks, run on an NVMe disk, all
 with a single client. The numbers are shown in \cref{fig:eval:bench}. \tej{graph
-is just data from a VM for debugging, please ignore} DaisyNFS
-achieves comparable performance on these benchmarks after implementing many
-optimizations and features; both CPU and I/O efficiency are important to get
-good performance.
+is just data from a VM for debugging, please ignore} DaisyNFS achieves
+comparable performance on these benchmarks after implementing many optimizations
+(for example, parsing data structures in-place) and features (for example,
+returning attributes to enable client-side caching). Both CPU and I/O efficiency
+are important to get good performance.
 
 The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
 file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. At
@@ -101,6 +103,7 @@ DaisyNFS achieves good performance on the app workload, which consists of runnin
 system, so building it requires running the usual development tools---gcc, ld,
 ar---but also running dd to generate a kernel image. Builds take about 3s,
 which are reported as a throughput number so higher is better.
+
 \section{Scalability}
 \label{sec:eval:scale}
 
@@ -127,7 +130,7 @@ achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server. These benchmarks
 eventually become bottlenecked on the disk. We ran an analogous experiment on an
 in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale-ram}.
-Linux scales much better than DaisyNFS in this experiment. There is a common
+Linux scales much better than DaisyNFS in this experiment. DaisyNFS has a common
 lock between these threads for installing sub-block object writes into a full
 block; this lock is there when running on a physical disk but its effect is less
 pronounced since the system spends relatively more time in disk I/O.
@@ -181,6 +184,7 @@ does not saturate the disk, which can get 500 MB/s with direct sequential
 writes, due to the overhead of running over NFS.
 
 \section{Testing the trusted code and spec}
+\label{sec:eval:testing}
 
 For the proof of \cref{thm:daisy-correctness} to apply to the actual server, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
@@ -206,9 +210,7 @@ found no bugs after running all supported 2-operation tests.
 
 While other experiments in the evaluation interact with DaisyNFS via the Linux
 client, these tests interact with the server directly from a hand-written
-client. That client is then tested with symbolic execution, with feedback from
-the entire machine.\footnote{The framework for this testing is part of an
-unrelated research project so we don't give details on the methodology here.}
+client. That client is then tested with symbolic execution over the entire server.
 This testing produces a wider range of requests than are possible via the Linux
 client. The process helped us find and fix several bugs in the unverified parts
 of DaisyNFS and in the specification itself, which are reported in
@@ -294,12 +296,13 @@ of sequential reasoning and proof automation.
 
 For the smallfile benchmark, as mentioned it took some work to return enough
 attribute information that Linux reliably cached everything it could, to avoid
-extra RPCs. This work primarily consisted of expanding the information
-operations return, and at the same time expanding the specifications. These
-improvements were carried out in many small steps, but they were similar to the
-incremental improvements above in terms of taking a small amount of time and
-few changes to lines of proof; most of the work went into figuring out what was
-missing in the implementation.
+extra RPCs. This work primarily consisted of expanding the attributes operations
+return (the RFC says these post-operation attributes are optional but
+encouraged), and at the same time expanding the specifications to say this
+metadata is correct. These improvements were carried out in many small steps,
+but they were similar to the incremental improvements above in terms of taking a
+small amount of time and few changes to lines of proof; most of the work went
+into figuring out what was missing in the implementation.
 
 %% \begin{itemize}
 %%   \item Directories were initially parsed into a functional data structure, then

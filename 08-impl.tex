@@ -142,19 +142,6 @@ end
 \label{fig:daisy:loc}
 \end{figure}
 
-We implemented DaisyNFS in a combination of Go and Dafny, with proofs in the
-Perennial framework (which is a library in the Coq proof assistant, heavily
-based on Iris~\cite{jung:iris-1}) and inline in Dafny. The Go side
-uses GoJournal, which we extend with a transaction system and
-concurrent allocator. The implementation is
-publicly available.\footnote{
-  %The transaction system is part of
-  %\url{github.com/mit-pdos/go-journal} while the Dafny side is at
-  %\url{github.com/mit-pdos/daisy-nfsd} (which imports the former repo).
-  URLs omitted for double-blind review.
-}
-
-
 The lines of proof, code, and specification for the layers of the system are
 summarized in \cref{fig:daisy:loc}. GoJournal is prior work but included for
 comparison purposes. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
@@ -226,9 +213,12 @@ end | wc -l
 % wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
 % 1073
 
-\tej{get lines of code for code and proofs and say something about what it does}
+\tej{describe something similar for GoTxn proof and code; some spec number would
+  be helpful, and separate program refinement and simulation transfer since
+  they're large}
 
 \section{Achieving good performance for DaisyNFS}
+\label{sec:impl:dafny-perf}
 
 An important aspect of the Dafny proof was to write code in a way that produces
 high-performance Go code.
