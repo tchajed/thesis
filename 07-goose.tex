@@ -20,11 +20,6 @@ relate to the specifics of Go.
 \input{goose/06-reasoning.tex}
 \input{goose/07-testing.tex}
 
-\section{Implementation}%
-\label{sec:goose:impl}
-
-\tej{write something here}
-
 \section{Limitations}%
 \label{sec:goose:limitations}
 
@@ -66,7 +61,10 @@ are accessed concurrently.
 
 Goose does not support mutual recursion between Go functions, and
 additionally requires the translation to be in the right order so
-definitions appear before they are used. The subtlety here is that
+definitions appear before they are used. Files in a package are especially prone
+to this issue, since they are processed in alphabetical order; we sometimes name
+files something like ``0constants.go'' to make the order works out correctly.
+The subtlety here is that
 definition management in Go, as in most imperative languages,
 conceptually treats all top-level definitions as simultaneous, whereas
 Coq processes definitions sequentially. Using Coq definition management
@@ -96,6 +94,38 @@ specification for map iteration does not expose an iteration order and would
 apply unchanged to this more non-deterministic model. All proofs go through a
 common iteration specification, so our proofs should remain unchanged if
 \cc{MapIter} started modeling non-deterministic ordering.
+
+\section{Implementation}%
+\label{sec:goose:impl}
+
+Goose is implemented in Go. It takes advantage of a family of packages in under
+\cc{go} in the Go standard library, such as \cc{go/ast} and \cc{go/types}, to
+parse and type-check Go code; the \cc{golang.org/x/tools/go/packages} package
+even makes it possible to work with Go packages and modules. These greatly
+simplify implementing Goose and also make it more trustworthy, since at least
+the source code is parsed in exactly the same way as the compiler (though we can
+still introduce bugs in interpreting what the AST means).
+The translator has an intermediate representation of the Coq source for
+GooseLang, and splits translation into generating the Go structs for this
+representation and subsequently printing this representation as a Coq file.
+
+The translator makes as much of an attempt as possible to identify and report
+errors, identifying where a feature is unsupported. Each function is translated
+almost independently, allowing translation to move on to the next function and
+report a whole batch of errors. Some issues are not checked by the translation,
+such as the topological order on definitions mentioned in limitations above (in
+section \cref{sec:goose:limitations}); in these cases the resulting Coq code
+does not compile, which preserves soundness but is a slightly worse user
+experience.
+
+GooseLang has a notion of ``external'' operations and state, which is generally
+instantiated with a disk. The translator checks that the source package imports
+only one of the allowed external imports, including through its transitive
+dependencies. It also supports code that uses no external operations,
+translating it to a form that is itself parameterized, allowing the result to be
+used as part of any other code.
+
+\tej{write something here}
 
 \section{Conclusion}
 
