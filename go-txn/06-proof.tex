@@ -339,6 +339,7 @@ force, simply considering all possible cases; this works reasonably well in Coq
 even when there are thousands of cases (but not too much more).
 
 \subsection[Lock-free reads in WAL]{Lock-free reads in \scc{wal}}
+\label{sec:txn:wal-read}
 
 \Cref{fig:walread} shows the implementation of \cc{Read} in the
 \scc{wal} layer.  This implementation is split into two parts. The first part checks

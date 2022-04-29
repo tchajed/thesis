@@ -263,8 +263,8 @@ compatible.
   \bottomrule
 \end{tabular}
 \end{center}
-\caption{Incremental improvements were implemented quickly and without much
-  code (which includes both implementation and proof).}
+\caption{Incremental improvements to the file-system code were implemented
+  quickly and without much code (which includes both implementation and proof).}
 \label{fig:features}
 \end{figure}
 
@@ -294,6 +294,21 @@ metadata is correct. These improvements were carried out in many small steps,
 but they were similar to the incremental improvements above in terms of taking a
 small amount of time and few changes to lines of proof; most of the work went
 into figuring out what was missing in the implementation.
+
+GoTxn had fewer incremental changes to the code and proof after its initial
+development. Three changes are worth noting. First, the write-ahead log was
+split into three components: the on-disk circular buffer, the in-memory data
+structure caching the log, and finally the rest of the code integrating these
+components. This organization become clear while writing the specification and
+thinking about the proof. The write-ahead log is the largest single library in
+GoTxn, with the largest lines of code even after splitting off these two data
+structures, so factoring its complexity was essential to the proof. The second
+change was a change Mark Theng made to remove some unnecessary code that
+absorbed multiple writes to the same address before installing, when
+benchmarking showed this code actually hurt performance. Finally, the
+transactional part of GoTxn implemented with two-phase locking was a later idea,
+which pleasantly enough was verified on top of the existing lifting-based
+journaling specification without any changes to the underlying proof.
 
 %% \begin{itemize}
 %%   \item Directories were initially parsed into a functional data structure, then

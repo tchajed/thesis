@@ -38,7 +38,7 @@ principles.
 
 Another challenge in the internals of GoTxn was reasoning about read-only
 sharing. Changing data structures after they were written to support read-only
-sharing was difficult, since the main logical technique is the use of fractional
+sharing was difficult, since every specification needs to incorporate fractional
 permissions. Read-only locking was challenging to retrofit support for, even
 though it may have improved read-read concurrency in GoTxn and DaisyNFS.
 
@@ -56,28 +56,68 @@ all follow the best practices developed along the way.
 
 \section{Future work}
 
-Model disk as asynchronous. Support asynchronous commit in GoTxn.  Use GoJournal
-directly in conjunction with non-transactional state. Try to take advantage of
-sequential reasoning from within Perennial --- how nice can this be, if we put
-effort into it and learn from Dafny? We never really tried.
+\paragraph{Apply the approach to Rust or C.} It would be interesting to port
+the Goose approach to Rust or C. This would not necessarily be for better
+performance but as a first step towards better systems integration. For example,
+Rust or C would be more practical for verifying critical parts of the Linux
+kernel. An important challenge for verifying in-kernel code would be modeling
+the specifications, both those assumed by the verified code and what is promised
+to the rest of the kernel.
 
-Experiment with logical logging in write-ahead log.
+\paragraph{Asynchronous model of the disk.} The disk model in Goose assumes
+writes are durable as soon as the write returns, but real disks typically buffer
+writes internally. Goose has a new asynchronous disk model, used for an
+independent example, but it would be good future work to change GoTxn to use
+this new model. Above the write-ahead log this should have no effect on the
+specifications. Going beyond asynchronous durability, it would also be
+interesting to model a different interface entirely like that of libaio where
+requests are submitted to a queue and completions are delivered separately.
 
-Apply Perennial to non-volatile memory or other storage APIs, like newer zoned
-SSDs, or an asynchronous callback-style APIs.
+\paragraph{Improve the write-ahead log.} After implementing GoTxn, we made
+relatively few changes, as reported in \cref{sec:eval:incremental}. Several
+improvements to the write-ahead log would be interesting to make, which were
+challenging due to the complexity of the existing proof.
 
-Apply these techniques to Rust or C code. This would be a first step towards
-better systems integration especially (not necessarily better performance).
-Another important step for kernel integration would be modeling the interface,
-which seems like a challenging problem.
+First, it would be worth experimenting to see if the proof of installation could
+be separated from the rest of the proof. The important task would be identifying
+the right specification for the logging code which is enough to reason about the
+combination of installation and logging.
 
-More explicit testing of interface boundaries would be interesting, between Coq
-and Dafny for example, but also disk API.
+Second, due to the future dependency in the write-ahead log's \cc{Read}
+(described in \cref{sec:txn:wal-read}), it is specified as two separate
+operations; it would be interesting to add \emph{prophecy variables} to
+Perennial, similar to the Iris implementation~\cite{jung:prophecy}, and give
+\cc{Read} a single linearizable specification.
 
-Treat NFS specification as a first-class project. Test the specification
-directly with an executable, highly non-deterministic implementation. Test
-against servers. Observe more client behavior in conjunction with exploring
-server behavior. (I didn't have a testbed for rapidly trying out different
-server behavior, other than just implementing it in DaisyNFS or at least GoNFS.)
+Finally, the write-ahead log uses physical logging where all updates represent
+full-block overwrites. It would be interesting to add more sophisticated
+operations like sub-block updates that are natively supported by the write-ahead
+log (rather than by the layer above). More ambitiously, it would be interesting
+to verify \emph{logical logging} where updates represent high-level operations
+like a file write. Logical logging would require a more sophisticated
+specification and proof because the write-ahead log's entries would be
+interpreted by the caller, resulting in a higher-order specification where the
+caller passes a function which might need to be run during recovery, and
+multiple times.
 
-\tej{describe future work with some more-complete text}
+\paragraph{Verifying a file system directly on top of GoJournal.} Dafny allows
+the DaisyNFS proof to take advantage of automation that is enabled by sequential
+reasoning. It would be interesting to do a direct comparison against a proof in
+Perennial where due to ownership the proofs would still require only sequential
+reasoning. The GoJournal paper reports verifying a subset of a file system
+directly~\cite{chajed:gojournal}, but we never attempted to apply the approach
+to a full-fledged file system. What would be especially interesting is if the
+Perennial proof started with the Dafny proof's structure and invariants; perhaps
+these invariants (developed under the constraints of Dafny and for
+automation-friendliness) would also be useful in an interactive theorem proving
+setting.
+
+\paragraph{Do more with the NFS specification.} The NFS specification for
+DaisyNFS is hand-written and integrated with the code. It would be an
+interesting project in its own right to turn this into a complete, well-tested
+formalization of the RFC. For example, the Dafny specification could make a serious
+attempt to capture all the non-determinism allowed by the RFC. As a standalone
+artifact the specification could also be used to test servers (comparing to the
+allowed behaviors). An executable version of the specification (though perhaps
+inefficient and not durable) would be valuable to test the specification itself
+and explore what clients do when faced with different server behavior.
