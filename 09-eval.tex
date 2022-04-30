@@ -113,7 +113,7 @@ especially the concurrency provided by GoTxn. The benchmark used is the smallfil
 on a physical disk, other threads have a chance to prepare transactions while the
 transaction system is committing to disk.
 
-\begin{figure}
+\begin{figure}[hp]
   \includegraphics{daisy-nfs/fig/scale.pdf}
   \caption[Concurrent smallfile performance]%
 {Combined throughput of the \cc{smallfile} microbenchmark running on
@@ -122,6 +122,14 @@ transaction system is committing to disk.
     number of cores similar to ext4; both eventually saturate the disk and scale
     sub-linearly.}
   \label{fig:eval:scale}
+\end{figure}
+
+\begin{figure}[hp]
+  \includegraphics{daisy-nfs/fig/scale-ram.pdf}
+  \caption[Concurrent smallfile performance, with RAM disk]%
+  {Combined throughput of the \cc{smallfile} microbenchmark running on an
+    in-memory disk while varying the number of concurrent clients.}
+  \label{fig:eval:scale-ram}
 \end{figure}
 
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
@@ -133,14 +141,6 @@ Linux scales much better than DaisyNFS in this experiment. DaisyNFS has a common
 lock between these threads for installing sub-block object writes into a full
 block; this lock is there when running on a physical disk but its effect is less
 pronounced since the system spends relatively more time in disk I/O.
-
-\begin{figure}
-  \includegraphics{daisy-nfs/fig/scale-ram.pdf}
-  \caption[Concurrent smallfile performance, with RAM disk]%
-  {Combined throughput of the \cc{smallfile} microbenchmark running on an
-    in-memory disk while varying the number of concurrent clients.}
-  \label{fig:eval:scale-ram}
-\end{figure}
 
 \begin{figure}[hp]
   \includegraphics{daisy-nfs/fig/extended-bench.pdf}
