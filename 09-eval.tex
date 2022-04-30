@@ -28,6 +28,44 @@ socket, disable turbo boost, and disable processor sleep states; the coefficient
 of variation for all experiments is under 5\% so we omit error bars for visual
 clarity.
 
+The three benchmarks test different aspects of file system performance:
+
+\paragraph{Smallfile.}
+The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
+file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. The
+performance reported is the throughput in terms of files/s for this whole process. At
+the NFS level this results in four RPCs per iteration: \cc{LOOKUP} for the file
+being created (which fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Getting
+the client to issue exactly these four RPCs took some work, since Linux relies
+on getting the right ``weak cache-consistency'' data from all the operations to
+maintain its local cache. Without this caching, it issues more operations like
+\cc{GETATTR} and \cc{ACCESS} in between operations to update the directory
+attributes and permissions.
+
+\paragraph{Largefile.}
+The largefile benchmark is a data-heavy benchmark that creates a file, then
+repeatedly appends to the file until it is 300 MB, and finally calls
+\cc{fsync()} and closes the file. The performance reported is the throughput in
+terms of MB/s for these appends. The Linux NFS client buffers the entire append
+process until the final sync, at which point it issues the writes in many chunks
+in parallel. This benchmark is challenging to support efficiently because the
+writes at the NFS server do not come in order, so some are past the end of the
+file and then the gap is filled in by later RPCs.
+
+\paragraph{App.}
+The application workload ``app'' consists of running \cc{git clone} on the xv6
+repository followed by \cc{make}. The performance reported converts this latency
+to a throughput number ``app/s'' so that higher is better. xv6 is an operating
+system, so building it requires running the usual development tools---gcc, ld,
+ar---but also running dd to generate a kernel image. The compilation part of
+this workload does take about 1.2s while the overall build is in the range of
+2.5s (0.4 app/s); the file system's performance has no bearing on this
+compilation time. The main purpose of the app benchmark is to demonstrate that
+DaisyNFS covers a useful range of the NFS interface, since \cc{git clone}
+especially uses a wider mix of operations and arguments than the other
+benchmarks, and also that the file system implements these operations
+efficiently enough to not slow down the workload.
+
 %% cpupower frequency-set -g performance
 %% threads=32 in the [nfsd] section of /etc/nfs.conf
 
@@ -50,34 +88,17 @@ comparable performance on these benchmarks after implementing many optimizations
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
 are important to get good performance.
 
-The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
-file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. At
-the NFS level this results in four RPCs per iteration: \cc{LOOKUP} (which
-fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Getting the client to issue
-exactly these four RPCs took some work, since Linux relies on getting the right
-``weak cache-consistency'' data from all the operations to maintain its local
-cache. Without this caching, it would issue more operations to retrieve and
-re-retrieve the directory attributes and permissions.
-
-DaisyNFS gets slightly better throughput compared to Linux on the largefile benchmark, which is
-intended to measure bulk data writes. Note that in this benchmark ext4 would be
-significantly faster in \cc{data=ordered} mode due to no longer writing all data
-through the journal; with that option it gets 315~MB/s even over
-NFS.\@ The largefile benchmark creates a 300~MB file by appending repeatedly, then
-syncs it. The Linux NFS client buffers the entire append process until the final
-sync, at which point it issues the writes in many chunks in parallel. This
-benchmark is challenging to support efficiently because the writes at the NFS
-server do not come in order, so some are past the end of the file. The semantics
-of such a write are to fill the gap with zeros, but both DaisyNFS and Linux get good
+DaisyNFS gets slightly better throughput compared to Linux on the largefile
+benchmark. Note that in this benchmark ext4 would be significantly faster in
+\cc{data=ordered} mode due to no longer writing all data through the journal;
+with that option it gets 315~MB/s even over NFS.\@ The NFS client's behavior on
+this benchmark means it has writes past the end of the file; the semantics of
+such a write are to fill the gap with zeros. DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
-allocating a block. DaisyNFS gets comparable performance on this benchmark because
-GoTxn is good at handling concurrent synchronous writes.
+allocating a block. DaisyNFS gets comparable performance on this benchmark
+because GoTxn is good at handling concurrent synchronous writes.
 
-DaisyNFS achieves good performance on the app workload, which consists of running
-\cc{git clone} on the xv6 repository followed by \cc{make}. xv6 is an operating
-system, so building it requires running the usual development tools---gcc, ld,
-ar---but also running dd to generate a kernel image. Builds take about 3s,
-which are reported as a throughput number so higher is better.
+DaisyNFS achieves good performance on the app workload.
 
 \section{Scalability}
 \label{sec:eval:scale}
