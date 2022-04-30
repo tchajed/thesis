@@ -55,15 +55,15 @@ file and then the gap is filled in by later RPCs.
 \paragraph{App.}
 The application workload ``app'' consists of running \cc{git clone} on the xv6
 repository followed by \cc{make}. The performance reported converts this latency
-to a throughput number ``app/s'' so that higher is better. xv6 is an operating
-system, so building it requires running the usual development tools---gcc, ld,
-ar---but also running dd to generate a kernel image. The compilation part of
-this workload does take about 1.2s while the overall build is in the range of
-2.5s (0.4 app/s); the file system's performance has no bearing on this
-compilation time. The main purpose of the app benchmark is to demonstrate that
-DaisyNFS covers a useful range of the NFS interface, since \cc{git clone}
-especially uses a wider mix of operations and arguments than the other
-benchmarks, and also that the file system implements these operations
+to a throughput number ``app/s'' so that higher is better. The compilation part
+of this workload does take about 1.2s, out of an overall build that typically
+takes about 2.5s under Linux NFS. These 1.2s are unaffected by the file system's
+performance. The xv6 code being compiled is an operating system, so building it
+requires running the usual development tools---gcc, ld, ar---but also running dd
+to generate a kernel image. The main purpose of the app benchmark is to
+demonstrate that DaisyNFS covers a useful range of the NFS interface, since
+\cc{git clone} especially uses a wider mix of operations and arguments than the
+other benchmarks, and also that the file system implements these operations
 efficiently enough to not slow down the workload.
 
 %% cpupower frequency-set -g performance
