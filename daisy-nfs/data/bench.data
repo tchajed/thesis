@@ -1,0 +1,4 @@
+bench	linux	daisy-nfsd
+smallfile	2092.11011	1929.69218
+largefile	241.128	217.777
+app	0.433138	0.42923419999999995

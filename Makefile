@@ -21,9 +21,13 @@ abstract.txt: frontmatter/abstract.tex
 	cat $< | \
 		pandoc -o $@ -f latex -t plain --wrap=none
 
-daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/nvme/bench.data
+#daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/nvme/bench.data
+#	@echo "daisy-nfs bench.plot"
+#	@cd daisy-nfs; ./fig/bench.plot --input data/nvme/bench.data --output fig/bench.pdf
+
+daisy-nfs/fig/bench.pdf: daisy-nfs/fig/bench.plot daisy-nfs/data/bench.data
 	@echo "daisy-nfs bench.plot"
-	@cd daisy-nfs; ./fig/bench.plot --input data/nvme/bench.data --output fig/bench.pdf
+	@cd daisy-nfs; ./fig/bench.plot --input data/bench.data --output fig/bench.pdf
 
 daisy-nfs/fig/extended-bench.pdf: daisy-nfs/fig/extended-bench.plot daisy-nfs/data/nvme/extended-bench.data
 	@echo "daisy-nfs extended-bench.plot"

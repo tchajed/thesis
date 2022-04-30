@@ -76,22 +76,25 @@ efficiently enough to not slow down the workload.
   \includegraphics{daisy-nfs/fig/bench.pdf}
   \caption[Performance for smallfile, largefile, and app benchmarks]%
   {Performance of Linux NFS and DaisyNFS for \cc{smallfile},
-    \cc{largefile}, and \cc{app} workloads, on an NVMe disk.
+    \cc{largefile}, and \cc{app} workloads, on an in-memory disk.
     DaisyNFS achieves comparable performance to ext4 in \cc{data=journal} mode.}
   \label{fig:eval:bench}
 \end{figure}
 
-The first set of results are for the three benchmarks, run on an NVMe disk, all
-with a single client. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS achieves
+The first set of results are for the three benchmarks, run on an in-memory disk, all
+with a single client. These benchmarks are challenging to support efficiently
+since an in-memory disk means performance isn't dominated by slow I/O, and a
+single client demands single-core efficiency and not just parallelizing
+overhead. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS achieves
 comparable performance on these benchmarks after implementing many optimizations
 (for example, parsing data structures in-place) and features (for example,
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
 are important to get good performance.
 
 DaisyNFS gets slightly better throughput compared to Linux on the largefile
-benchmark. Note that in this benchmark ext4 would be significantly faster in
-\cc{data=ordered} mode due to no longer writing all data through the journal;
-with that option it gets 315~MB/s even over NFS.\@ The NFS client's behavior on
+benchmark. Note that in this benchmark ext4 is significantly faster in
+\cc{data=ordered} mode due to no longer writing all data through the journal, as
+discussed shortly in \cref{sec:eval:scale}. The NFS client's behavior on
 this benchmark means it has writes past the end of the file; the semantics of
 such a write are to fill the gap with zeros. DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
