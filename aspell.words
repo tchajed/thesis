@@ -1,4 +1,4 @@
-personal_ws-1.1 en 486 
+personal_ws-1.1 en 487 
 APIs
 AST
 Addr
@@ -375,6 +375,7 @@ numbersep
 ok
 onwards
 parallelized
+parallelizing
 parameterization
 parameterizing
 parsers
