@@ -149,13 +149,14 @@ disk.
   \label{fig:eval:scale:ram}
   \end{subfigure}
 
+  \vspace{0.5\baselineskip}
+
   \caption[Concurrent smallfile performance]%
   {Combined throughput of the \cc{smallfile} microbenchmark, varying the number
     of concurrent clients. DaisyNFS's performance scales with the number of
     cores similar to ext4, but both eventually scale sub-linearly. Linux
     is disk bandwidth-limited in the NVMe experiment, while DaisyNFS is limited by lock
-    contention before hitting this I/O bottleneck.
-    \tej{add lines for DaisyNFS with seq txn/wal directly to this graph}}
+    contention before hitting this I/O bottleneck.}
   \label{fig:eval:scale}
 \end{figure}
 
@@ -186,10 +187,9 @@ DaisyNFS.
 The DaisyNFS seq wal and seq txn variants evaluate where the concurrency in the
 system is important for performance with a concurrent workload. Even though in
 both of these configurations the server cannot process more than one request at
-a time, performance improves with multiple clients since the work outside of the
-file system can be parallelized across multiple cores. This work includes
-the NFS client processing, sending and receiving packets on the local loopback
-device, and sending and parsing the NFS RPCs.
+a time, performance improves slightly with more than one client since a request
+can be received while another is being processed. Beyond just two clients the
+improvement is negligible.
 
 \begin{figure}[hp]
   \begin{subfigure}[b]{\textwidth}
