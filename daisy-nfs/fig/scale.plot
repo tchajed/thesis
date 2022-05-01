@@ -35,7 +35,7 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 gnuplot <<-EOF
-    set terminal pdf dashed noenhanced font "Charter,12" size 3.5in,2.3in
+    set terminal pdf dashed noenhanced font "Charter,14" size 3.3in,2.3in
     set output "${output}"
 
     set auto x
@@ -44,7 +44,7 @@ gnuplot <<-EOF
     set ylabel "files / sec"
     set format y '%.0s%c'
     set xlabel "\# clients"
-    set key top left
+    set key inside bottom right
 
     set style data line
 

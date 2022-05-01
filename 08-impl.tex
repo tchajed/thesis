@@ -57,7 +57,7 @@ using eight CPU cores.
 
 GoTxn is implemented using fairly standard Go code. Goose imposes some
 restrictions, but we nonetheless have fairly idiomatic code, split into modules
-and multiple files are expected. One interesting library in GoTxn is its
+and multiple files as expected. One interesting library in GoTxn is its
 \cc{lockmap} library, which logically implements per-address locking but does
 not materialize all of these locks for better memory usage (this is similar to
 Guava's ``striped'' locking library~\cite{guava-striped}). The specification for

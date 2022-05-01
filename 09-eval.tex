@@ -1,29 +1,33 @@
 In this chapter we evaluate DaisyNFS and GoTxn in terms of performance
-(\cref{sec:eval:bench,sec:eval:scale}), correctness (\cref{sec:eval:testing}),
+(\cref{sec:eval:perf}), correctness (\cref{sec:eval:testing}),
 and ease of change (\cref{sec:eval:incremental}).
 
-\tej{add evaluation questions answered by each section}
-
 \section{Performance}
-\label{sec:eval:bench}
+\label{sec:eval:perf}
+
+The first question answered by the evaluation is, can DaisyNFS and GoTxn achieve
+good performance? This section evaluates performance both with a single and
+multiple clients.
+
+\subsection{Experimental setup}
 
 To evaluate the performance of DaisyNFS, we ran three benchmarks: the LFS smallfile
 and largefile benchmarks, and a development workload that consists of \cc{git
 clone} from a local repository followed by running \cc{make}. These are the same
 benchmarks used by DFSCQ~\cite{chen:dfscq} (a state-of-the art sequential
-verified file system). As a baseline, this evaluation uses a Linux
+verified file system). As a baseline, this evaluation compares against a Linux
 NFS server exporting an ext4 file system mounted with \cc{data=journal} mode.
 The NFS server lets us compare fairly since both go through the Linux NFS client
 and use the same underlying protocol. Using \cc{data=journal} forces all data to
-go through the journal and disables log-bypass writes, which ensures that
-ext4 and DaisyNFS both guarantee NFS RPCs are committed durably when they
-return, and makes the designs more comparable. In
+go through the journal and disables log-bypass writes, which gives the same
+crash-safety guarantees and makes the designs more comparable. In its default
 \cc{data=ordered} mode Linux achieves better performance but can
-lose recently written data if the system crashes.
+lose recently written data if the system crashes; we present some results
+to show the benefit of providing this weaker guarantee.
 
-All of these benchmarks were run using Linux~5.13, Dafny~3.5.0, Go~1.18 on an Amazon
-EC2 i3.metal instance, which has 72 cores running at 2.7~GHz, 512~GB of RAM, and a local 1.9~TB
-NVMe SSD.\@ To reduce variability we limit the experiment to a single 36-core
+All of these benchmarks were run using Linux~5.13, Dafny~3.5.0, Go~1.18.1 on an Amazon
+EC2 i3.metal instance, which has two 36-core Xeon processors running at 2.7~GHz, 512~GB of RAM, and a local 1.9~TB
+NVMe SSD.\@ To reduce variability we use a bare-metal instance, limit experiments to a single 36-core
 socket, disable turbo boost, and disable processor sleep states; the coefficient
 of variation for all experiments is under 5\% so we omit error bars for visual
 clarity.
@@ -41,6 +45,16 @@ on getting the right ``weak cache-consistency'' data from all the operations to
 maintain its local cache. Without this caching, it issues more operations like
 \cc{GETATTR} and \cc{ACCESS} in between operations to update the directory
 attributes and permissions.
+
+The smallfile benchmark is also used to measure the scalability of the file
+system. We run several concurrent clients, each repeatedly running the
+create-write-delete sequence above, for several seconds, then report the
+aggregate throughput of all of these clients. A concurrent file system should be
+able to process these RPCs simultaneously --- concurrent threads have a chance
+to prepare new transactions while the system is committing older transactions.
+Furthermore on a physical disk the journaling for simultaneous operations can be
+combined (an optimization called \emph{group commit}), resulting in less I/O
+than separate commits.
 
 \paragraph{Largefile.}
 The largefile benchmark is a data-heavy benchmark that creates a file, then
@@ -66,6 +80,19 @@ demonstrate that DaisyNFS covers a useful range of the NFS interface, since
 other benchmarks, and also that the file system implements these operations
 efficiently enough to not slow down the workload.
 
+To evaluate the importance of DaisyNFS's concurrency, we compare against two
+other configurations with reduced concurrency. The ``seq wal'' configuration
+adds locks to the write-ahead log so that the disk operations that normally
+execute lock-free --- installation, logging, and reading installed data ---
+instead happen under the write-ahead log's in-memory lock. This permits
+transactions to execute concurrently while not accessing GoTxn but does not
+allow any parallel disk access. The ``seq txn'' variant leaves the write-ahead
+log the same but changes the per-address locking in GoTxn to a \emph{global}
+transaction lock, preventing any transactions from running concurrently but
+allowing concurrency between logging and installation in the write-ahead log.
+
+\subsection{Single-client performance}
+
 %% cpupower frequency-set -g performance
 %% threads=32 in the [nfsd] section of /etc/nfs.conf
 
@@ -77,7 +104,7 @@ efficiently enough to not slow down the workload.
   \caption[Performance for smallfile, largefile, and app benchmarks]%
   {Performance of Linux NFS and DaisyNFS for \cc{smallfile},
     \cc{largefile}, and \cc{app} workloads, on an in-memory disk.
-    DaisyNFS achieves comparable performance to ext4 in \cc{data=journal} mode.}
+    DaisyNFS achieves comparable performance to Linux across these benchmarks.}
   \label{fig:eval:bench}
 \end{figure}
 
@@ -85,70 +112,99 @@ The first set of results are for the three benchmarks, run on an in-memory disk,
 with a single client. These benchmarks are challenging to support efficiently
 since an in-memory disk means performance isn't dominated by slow I/O, and a
 single client demands single-core efficiency and not just parallelizing
-overhead. The numbers are shown in \cref{fig:eval:bench}. DaisyNFS achieves
+overhead. The results are shown in \cref{fig:eval:bench}. DaisyNFS achieves
 comparable performance on these benchmarks after implementing many optimizations
 (for example, parsing data structures in-place) and features (for example,
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
 are important to get good performance.
 
-DaisyNFS gets slightly better throughput compared to Linux on the largefile
-benchmark. Note that in this benchmark ext4 is significantly faster in
-\cc{data=ordered} mode due to no longer writing all data through the journal, as
-discussed shortly in \cref{sec:eval:scale}. The NFS client's behavior on
-this benchmark means it has writes past the end of the file; the semantics of
+DaisyNFS gets slightly lower throughput compared to Linux on the largefile
+benchmark. The NFS client's behavior on
+this benchmark means it issues writes past the end of the file; the semantics of
 such a write are to fill the gap with zeros. DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
 allocating a block. DaisyNFS gets comparable performance on this benchmark
 because GoTxn is good at handling concurrent synchronous writes.
 
-DaisyNFS achieves good performance on the app workload.
+\subsection{Scalability}
 
-\section{Scalability}
-\label{sec:eval:scale}
+The next experiment evaluates DaisyNFS's scalability by measuring the throughput
+when clients issue operations concurrently. The benchmark used is the smallfile
+benchmark with a varying number of concurrent clients, all running in separate
+directories. Because this experiment runs on a physical disk, other threads have
+a chance to prepare transactions while the transaction system is committing to
+disk.
 
-DaisyNFS executes NFS operations concurrently to achieve better performance with
-multiple cores. This section evaluates the scalability of the whole system,
-especially the concurrency provided by GoTxn. The benchmark used is the smallfile benchmark from
-\cref{sec:eval:bench}, with a varying number of cores. Because this experiment runs
-on a physical disk, other threads have a chance to prepare transactions while the
-transaction system is committing to disk.
+\begin{figure}[ht]
+  \begin{subfigure}[b]{0.5\textwidth}
+    \centering
+  \includegraphics[width=\textwidth]{daisy-nfs/fig/scale.pdf}
+  \caption{On an NVMe disk}
+  \label{fig:eval:scale:nvme}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.5\textwidth}
+    \centering
+  \includegraphics[width=\textwidth]{daisy-nfs/fig/scale-ram.pdf}
+  \caption{On an in-memory disk}
+  \label{fig:eval:scale:ram}
+  \end{subfigure}
 
-\begin{figure}[hp]
-  \includegraphics{daisy-nfs/fig/scale.pdf}
   \caption[Concurrent smallfile performance]%
-{Combined throughput of the \cc{smallfile} microbenchmark running on
-    an NVMe drive while
-    varying the number of concurrent clients. DaisyNFS's performance scales with the
-    number of cores similar to ext4; both eventually scale
-    sub-linearly due to lock contention. \tej{add lines for DaisyNFS with seq
-      txn/wal directly to this graph}}
+  {Combined throughput of the \cc{smallfile} microbenchmark, varying the number
+    of concurrent clients. DaisyNFS's performance scales with the number of
+    cores similar to ext4, but both eventually scale sub-linearly. Linux
+    is disk bandwidth-limited in the NVMe experiment, while DaisyNFS is limited by lock
+    contention before hitting this I/O bottleneck.
+    \tej{add lines for DaisyNFS with seq txn/wal directly to this graph}}
   \label{fig:eval:scale}
 \end{figure}
 
-\begin{figure}[hp]
-  \includegraphics{daisy-nfs/fig/scale-ram.pdf}
-  \caption[Concurrent smallfile performance, with RAM disk]%
-  {Combined throughput of the \cc{smallfile} microbenchmark running on an
-    in-memory disk while varying the number of concurrent clients.}
-  \label{fig:eval:scale-ram}
-\end{figure}
+% \begin{figure}[hp]
+%   \includegraphics{daisy-nfs/fig/scale-ram.pdf}
+%   \caption[Concurrent smallfile performance, with RAM disk]%
+%   {Combined throughput of the \cc{smallfile} microbenchmark running on an
+%     in-memory disk while varying the number of concurrent clients.}
+%   \label{fig:eval:scale-ram}
+% \end{figure}
 
+The scalability experiment varies the number of concurrent smallfile clients,
+measuring the aggregate throughput of the whole system for each number of
+clients. Each data point is the result of averaging 5 separate runs, each for 10 seconds.
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server. These benchmarks
 don't have perfect scalability due to lock contention. We ran an analogous experiment on an
-in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale-ram}.
+in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale:ram}.
 Linux scales much better than DaisyNFS in this experiment, indicating that its
-scalability in \cref{fig:eval:scale} is limited by disk throughput. DaisyNFS has a common
+scalability in \cref{fig:eval:scale:nvme} is limited by disk throughput. DaisyNFS has a common
 lock between these threads for installing sub-block object writes into a full
 block; this lock is there when running on a physical disk but its effect is less
 pronounced since the system spends relatively more time in disk I/O. The Go
 mutex profile points to this lock as being the biggest source of contention in
 DaisyNFS.
 
+The DaisyNFS seq wal and seq txn variants evaluate where the concurrency in the
+system is important for performance with a concurrent workload. Even though in
+both of these configurations the server cannot process more than one request at
+a time, performance improves with multiple clients since the work outside of the
+file system can be parallelized across multiple cores. This work includes
+the NFS client processing, sending and receiving packets on the local loopback
+device, and sending and parsing the NFS RPCs.
+
 \begin{figure}[hp]
-  \includegraphics{daisy-nfs/fig/extended-bench.pdf}
-  \caption{Performance across various file-system configurations. The smallfile
+  \begin{subfigure}[b]{\textwidth}
+    \includegraphics{daisy-nfs/fig/extended-bench.pdf}
+    \caption{On an NVMe disk}
+    \label{fig:bench-configs:nvme}
+  \end{subfigure}
+
+  \begin{subfigure}[b]{\textwidth}
+    \includegraphics{daisy-nfs/fig/extended-bench-ram.pdf}
+    \caption{On an in-memory disk}
+    \label{fig:bench-configs:ram}
+  \end{subfigure}
+  \caption[Benchmarks across file-system configurations]%
+  {Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
     parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
     uses the \cc{data=ordered} to write data directly rather than through the
@@ -157,36 +213,22 @@ DaisyNFS.
   \label{fig:bench-configs}
 \end{figure}
 
-\begin{figure}[hp]
-  \includegraphics{daisy-nfs/fig/extended-bench-ram.pdf}
-  \caption{Performance across various file-system configurations on in-memory disk.}
-  \label{fig:bench-configs-ram}
-\end{figure}
+The final set of experiments aims to understand the performance of DaisyNFS on
+the largefile and app benchmarks as well. We compare against the same variants
+of DaisyNFS with reduced concurrency, as well as against Linux with its
+log-bypass optimization. The results are presented in \cref{fig:bench-configs},
+on both an NVMe disk and an in-memory disk. The results for the NVMe disk have
+most of the interesting trends and the in-memory numbers are mostly included for
+completeness, but there are a few interesting differences worth noting.
 
-
-To investigate the effect of concurrency in more detail, we ran the three
-benchmarks on a variety of file-system configurations, with the results shown in
-\cref{fig:bench-configs}.
-The variants of DaisyNFS make changes to GoTxn to reduce concurrency: the
-``seq wal'' configuration adds locks to the write-ahead log so that the
-disk operations that normally execute lock-free --- installation, logging, and
-reading installed data --- instead happen with a common lock for all write-ahead
-log operations. This permits transactions to execute concurrently while not
-accessing GoTxn but no disk parallelism. The ``seq txn'' variant leaves the
-write-ahead log the same but changes the per-address locking in GoTxn to a
-\emph{global} transaction lock, preventing any transactions from running
-concurrently but allowing concurrency between logging and installation in the
-write-ahead log.
-
-The \cc{smallfile-25} benchmark measures the importance of both forms of
-concurrency for scalability, showing much lower performance. Comparing the
-absolute numbers, these workloads are still not entirely sequential, since the
-work outside of DaisyNFS in the Linux client and local network still gets
-parallelized. DaisyNFS can coalesce concurrent operations and journal them
-together to reduce total I/O, which is important on the physical disk but hardly
-helps with an in-memory disk. There the lock contention for preparing a
-transaction dominates performance and results in lower throughput than Linux,
-although comparable absolute performance.
+The \cc{smallfile-25} and \cc{smallfile-1} numbers repeat individual points from
+the \cref{fig:eval:scale}, but presented as throughput relative to Linux so that
+it is easier to compare across file systems. DaisyNFS can coalesce concurrent
+operations and journal them together to reduce total I/O, which is important on
+the physical disk but hardly helps with an in-memory disk. The relative
+performance for DaisyNFS is much worse on an in-memory disk because the lock
+contention for preparing a transaction dominates performance, although DaisyNFS
+gets almost the same absolute performance as on the NVMe disk.
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
 operation at a time, and yet seq wal performs noticeably worse. This is because
@@ -205,7 +247,7 @@ scheme. The seq wal case gets lower performance for similar reasons to with
 smallfile-1, since it again alternates logging and installation rather than
 issues them concurrently.
 
-The \cc{app} benchmark is less heavy on writes, and we find that its performance
+The \cc{app} benchmark is less heavy on writes, and its performance
 is barely affected by concurrency in DaisyNFS.
 
 Another comparison shown in the same figure is to Linux with its log bypass
@@ -224,6 +266,10 @@ throughput, due to the overhead of running over NFS.
 
 \section{Testing the trusted code and spec}
 \label{sec:eval:testing}
+
+This section answers the question, what are the trusted (assumed correct)
+aspects of the DaisyNFS correctness theorem? It also discusses what we did to
+use testing to improve confidence in these components.
 
 For the proof of \cref{thm:daisy-correctness} to apply to the actual server, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
@@ -298,23 +344,9 @@ compatible.
 \section{Incremental improvements}
 \label{sec:eval:incremental}
 
-\begin{figure}
-\begin{center}
-\begin{tabular}{lrr}
-  \toprule
-  \textbf{Feature} & \textbf{Time} & \textbf{Lines} \\
-  \midrule
-  In-place directory updates & 2 days & 600\\
-  Multi-block directories & 5 days & 800 \\
-  NFS attributes & 4 days & 500 \\
-  Freeing space (\cref{sec:dafny:freeing}) & 3 days & 1400\\
-  \bottomrule
-\end{tabular}
-\end{center}
-\caption{Incremental improvements to the file-system code were implemented
-  quickly and without much code (which includes both implementation and proof).}
-\label{fig:features}
-\end{figure}
+This section answers the question, how difficult was it to make improvements to
+the code and update the proofs? Put more broadly, what is the experience of
+making incremental changes to the proof?
 
 DaisyNFS was implemented and verified over the course of three months by
 one of the authors, until it had support for enough of NFS to run. We
@@ -332,6 +364,24 @@ whole stack (but by design no changes to the file-system invariant).
 We believe additional features such as symbolic links
 could be added incrementally with modest effort because
 of sequential reasoning and proof automation.
+
+\begin{figure}[h!]
+\begin{center}
+\begin{tabular}{lrr}
+  \toprule
+  \textbf{Feature} & \textbf{Time} & \textbf{Lines} \\
+  \midrule
+  In-place directory updates & 2 days & 600\\
+  Multi-block directories & 5 days & 800 \\
+  NFS attributes & 4 days & 500 \\
+  Freeing space (\cref{sec:dafny:freeing}) & 3 days & 1400\\
+  \bottomrule
+\end{tabular}
+\end{center}
+\caption{Incremental improvements to the file-system code were implemented
+  quickly and without much code (which includes both implementation and proof).}
+\label{fig:features}
+\end{figure}
 
 For the smallfile benchmark, as mentioned it took some work to return enough
 attribute information that Linux reliably cached everything it could, to avoid
