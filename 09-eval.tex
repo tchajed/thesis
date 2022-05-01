@@ -119,8 +119,8 @@ transaction system is committing to disk.
 {Combined throughput of the \cc{smallfile} microbenchmark running on
     an NVMe drive while
     varying the number of concurrent clients. DaisyNFS's performance scales with the
-    number of cores similar to ext4; both eventually saturate the disk and scale
-    sub-linearly.}
+    number of cores similar to ext4; both eventually scale
+    sub-linearly due to lock contention.}
   \label{fig:eval:scale}
 \end{figure}
 
@@ -135,12 +135,15 @@ transaction system is committing to disk.
 The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
 achieves both good absolute performance and gets higher throughput with more
 clients, comparable to the scalability of the Linux NFS server. These benchmarks
-eventually become bottlenecked on the disk. We ran an analogous experiment on an
+don't have perfect scalability due to lock contention. We ran an analogous experiment on an
 in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale-ram}.
-Linux scales much better than DaisyNFS in this experiment. DaisyNFS has a common
+Linux scales much better than DaisyNFS in this experiment, indicating that its
+scalability in \cref{fig:eval:scale} is limited by disk throughput. DaisyNFS has a common
 lock between these threads for installing sub-block object writes into a full
 block; this lock is there when running on a physical disk but its effect is less
-pronounced since the system spends relatively more time in disk I/O.
+pronounced since the system spends relatively more time in disk I/O. The Go
+mutex profile points to this lock as being the biggest source of contention in
+DaisyNFS.
 
 \begin{figure}[hp]
   \includegraphics{daisy-nfs/fig/extended-bench.pdf}
@@ -174,30 +177,49 @@ write-ahead log the same but changes the per-address locking in GoTxn to a
 concurrently but allowing concurrency between logging and installation in the
 write-ahead log.
 
-Looking at the \cc{smallfile-1} and \cc{smallfile-25} benchmarks, we can see
-that both forms of concurrency are important for scalability, and the
-write-ahead log concurrency makes a big difference even with a single client
-since it can get higher write throughput from the disk (on an in-memory disk,
-these trends are less visible; the work outside of DaisyNFS in the Linux client
-and local network still gets parallelized to improve throughput, even though
-these configurations have little concurrency with a fast disk). On the other
-hand a global transaction lock actually performs \emph{better} on the largefile
-benchmark. This operation has many conflicting parallel operations to different
-parts of the same file, and the results shows that two-phase locking has some
-overhead compared to a simpler locking scheme.
+The \cc{smallfile-25} benchmark measures the importance of both forms of
+concurrency for scalability, showing much lower performance. Comparing the
+absolute numbers, these workloads are still not entirely sequential, since the
+work outside of DaisyNFS in the Linux client and local network still gets
+parallelized. DaisyNFS can coalesce concurrent operations and journal them
+together to reduce total I/O, which is important on the physical disk but hardly
+helps with an in-memory disk. There the lock contention for preparing a
+transaction dominates performance and results in lower throughput than Linux,
+although comparable absolute performance.
 
-Another comparison in these results is to Linux with its log bypass optimization
-(the default \cc{data=ordered} mode), where writes can be written directly to a
-file's data blocks rather than going through the log. This only makes a difference for asynchronous NFS
-writes, since synchronous writes are journaled even with this option. The smallfile benchmark has only
+The \cc{smallfile-1} benchmark is interesting because the client issues a single
+operation at a time, and yet seq wal performs noticeably worse. This is because
+the write-ahead log is parallelizing logging writes and installing them to the
+disk (rather than alternating between logging and installation), and the disk is
+able to get better throughput by doing these concurrently.
+
+The \cc{largefile} benchmark is interesting because the client issues many
+concurrent operations, but they all conflict since they write to the same file.
+Linux and DaisyNFS handle this contention fine, still getting good throughput
+given that all writes have to be written to both the journal and data region in
+both systems. However, we can see that a global txn lock actually performs
+\emph{better} than the per-address locking, showing a case where with enough
+conflicts two-phase locking has some overhead compared to a simpler locking
+scheme. The seq wal case gets lower performance for similar reasons to with
+smallfile-1, since it again alternates logging and installation rather than
+issues them concurrently.
+
+The \cc{app} benchmark is less heavy on writes, and we find that its performance
+is barely affected by concurrency in DaisyNFS.
+
+Another comparison shown in the same figure is to Linux with its log bypass
+optimization (the default \cc{data=ordered} mode), where writes can be written
+directly to a file's data blocks rather than going through the journal. This
+only makes a difference for asynchronous NFS writes, since synchronous writes
+are journaled even with this option. The smallfile benchmark has only
 synchronous writes, so unsurprisingly performance is the same, but on the
 largefile benchmark Linux with log bypass achieves 80\% higher throughput. An
 improvement of up to $2\times$ better throughput is expected here since unlike
 in all the other configurations, data writes are written only once rather than
 to both the journal and the data region, and the actual benefit is high since
 the benchmark is dominated by disk writes. It's worth noting that even Linux
-does not saturate the disk, which can get 500 MB/s with direct sequential
-writes, due to the overhead of running over NFS.
+does not saturate the disk, which can achieve 500 MB/s in sequential write
+throughput, due to the overhead of running over NFS.
 
 \section{Testing the trusted code and spec}
 \label{sec:eval:testing}
