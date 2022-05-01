@@ -80,6 +80,6 @@ gnuplot <<-EOF
 	     '' using (${line2}):xtic(1) title "Linux (log bypass)" lc rgb '#80b8d8' lt 1, \
 	     '' using (${line3}):xtic(1) title "DaisyNFS" lc rgb '#009e73' lt 1, \
 	     '' using (${line4}):xtic(1) title "DaisyNFS (seq txn)" lc rgb '#4cbb9d' lt 1, \
-	     '' using (${line5}):xtic(1) title "DaisyNFS (seq wal)" lc rgb '#b2e2d5' lt 1
+	     '' using (${line5}):xtic(1) title "DaisyNFS (seq WAL)" lc rgb '#b2e2d5' lt 1
 
 EOF

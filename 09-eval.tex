@@ -81,7 +81,7 @@ other benchmarks, and also that the file system implements these operations
 efficiently enough to not slow down the workload.
 
 To evaluate the importance of DaisyNFS's concurrency, we compare against two
-other configurations with reduced concurrency. The ``seq wal'' configuration
+other configurations with reduced concurrency. The ``seq WAL'' configuration
 adds locks to the write-ahead log so that the disk operations that normally
 execute lock-free --- installation, logging, and reading installed data ---
 instead happen under the write-ahead log's in-memory lock. This permits
@@ -184,7 +184,7 @@ pronounced since the system spends relatively more time in disk I/O. The Go
 mutex profile points to this lock as being the biggest source of contention in
 DaisyNFS.
 
-The DaisyNFS seq wal and seq txn variants evaluate where the concurrency in the
+The DaisyNFS seq WAL and seq txn variants evaluate where the concurrency in the
 system is important for performance with a concurrent workload. Even though in
 both of these configurations the server cannot process more than one request at
 a time, performance improves slightly with more than one client since a request
@@ -209,7 +209,7 @@ improvement is negligible.
     parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
     uses the \cc{data=ordered} to write data directly rather than through the
     journal. The ``seq txn'' variant of DaisyNFS has a global transaction lock
-    while ``seq wal'' adds additional locking to the write-ahead log.}
+    while ``seq WAL'' adds additional locking to the write-ahead log.}
   \label{fig:bench-configs}
 \end{figure}
 
@@ -231,7 +231,7 @@ contention for preparing a transaction dominates performance, although DaisyNFS
 gets almost the same absolute performance as on the NVMe disk.
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
-operation at a time, and yet seq wal performs noticeably worse. This is because
+operation at a time, and yet seq WAL performs noticeably worse. This is because
 the write-ahead log is parallelizing logging writes and installing them to the
 disk (rather than alternating between logging and installation), and the disk is
 able to get better throughput by doing these concurrently.
@@ -243,7 +243,7 @@ given that all writes have to be written to both the journal and data region in
 both systems. However, we can see that a global txn lock actually performs
 \emph{better} than the per-address locking, showing a case where with enough
 conflicts two-phase locking has some overhead compared to a simpler locking
-scheme. The seq wal case gets lower performance for similar reasons to with
+scheme. The seq WAL case gets lower performance for similar reasons to with
 smallfile-1, since it again alternates logging and installation rather than
 issues them concurrently.
 

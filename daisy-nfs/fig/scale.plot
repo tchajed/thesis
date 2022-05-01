@@ -57,7 +57,7 @@ if [ -f "${input}/daisy-nfsd-seq-txn.data" ]; then
     plot_cmd+=", \"${input}/daisy-nfsd-seq-txn.data\" using 1:(\$2) with linespoints ls 4 title 'DaisyNFS (seq txn)'"
 fi
 if [ -f "${input}/daisy-nfsd-seq-wal.data" ]; then
-    plot_cmd+=", \"${input}/daisy-nfsd-seq-wal.data\" using 1:(\$2) with linespoints ls 3 title 'DaisyNFS (seq wal)'"
+    plot_cmd+=", \"${input}/daisy-nfsd-seq-wal.data\" using 1:(\$2) with linespoints ls 3 title 'DaisyNFS (seq WAL)'"
 fi
 
 gnuplot <<-EOF
