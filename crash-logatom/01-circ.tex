@@ -65,7 +65,7 @@ the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
 addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
 deletes by merely writing a new, higher start position to the trim header. Since
 these operations touch disjoint parts of disk, they can be performed
-concurrently. Recovery uses the header blocks do determine what subset of the
+concurrently. Recovery uses the header blocks to determine what subset of the
 circular buffer holds complete multiwrites; partially-appended
 updates are ignored for atomicity.
 

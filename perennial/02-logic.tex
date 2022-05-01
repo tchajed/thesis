@@ -181,7 +181,7 @@ commonly coordinates between threads using locks. A lock guarantees that no two
 threads own the lock at the same time. This is expressed in separation logic by
 associating a \emph{lock invariant} $P$ with each lock when it is created, which
 we think of as something the lock ``protects''. When a thread acquires the lock, it obtains
-ownership of $P$, and when it release the lock, it gives up the same ownership.
+ownership of $P$, and when it releases the lock, it gives up the same ownership.
 This is sound precisely because either a single thread holds the lock, or it is
 free (in which case intuitively we can think of the lock as holding ownership).
 
@@ -316,8 +316,10 @@ the user will separately prove that $e$ is safe to run from an initial state
 with an all-zero disk.
 
 The recovery code sets up the global invariants and appropriate crash locks for
-the whole system and thus cancels all of these assertions from its crash
-condition; the separating conjunction of all of these invariants will be
+the whole system and thus ``cancels'' all of these assertions from its crash
+condition (formally, these assertions are guaranteed at crash time by the
+invariants or crash locks, and the rest of the recovery proof no longer needs to
+prove them as part of the crash condition). The separating conjunction of all of these invariants will be
 $P_{c}$. Then the proof rules in Perennial guarantee that recovery can assume
 $P_{c}$ holds if the system crashes and reboots at any time, as given by the
 idempotence rule.
@@ -336,7 +338,11 @@ of the logic. The soundness theorem establishes what an end-to-end theorem about
 the system \emph{means} without trusting the interpretation and implementation
 of these features.
 
-The basic version of the soundness theorem says:
+Most of Perennial makes no assumptions about the programming language or state,
+but the soundness theorem has one aspect specific to verifying code running on a
+disk. It uses the assertion $a \dmapsto v$, a ``disk points-to'' assertion that
+says the disk has value $v$ at address $a$, analogous to $p \mapsto v$. The
+basic version of the soundness theorem says:
 
 \newcommand{\bigast}{\mathop{\scalebox{3}{\raisebox{-0.3ex}{$\ast$}}}}
 
@@ -352,7 +358,7 @@ The basic version of the soundness theorem says:
   terminates with an expression $e'$ in state $\sigma'$ (possibly
   with additional forked threads), then
   \begin{enumerate}
-    \item If this execution is a normal termination and $e'$ is a value, then
+    \item If this execution is a normal termination with the value $e'$, then
     $\phi(e')$ holds.
     \item If this execution is a crash and recovery execution and $e'$ is a
     value produced by $e_{r}$, then $\phi_{r}(e')$ holds.
@@ -362,7 +368,8 @@ The basic version of the soundness theorem says:
 To satisfy the premise of the soundness theorem, the user gets to assume points-to
 facts for all of the addresses in the initial disk (the assertion $\bigast\limits_{a \mapsto v \in d} a \dmapsto v$). In return the theorem has
 several postconditions. First, the theorem promises
-that $e$ runs ``safely'' in the sense of not getting stuck. This immediately
+that $e$ runs ``safely'' in the sense of encountering an irreducible expression;
+the semantics uses stuckness to indicate an expression that has hit an error. This immediately
 rules out a number of errors, including any calls to Go's built-in \cc{panic()}
 function and lower-level issues like reading slices out-of-bounds and data
 races.  Second, the properties (1) and (2) state that the normal postcondition and
@@ -375,7 +382,8 @@ This soundness theorem is machine-checked in the Perennial implementation. Its
 proof hides complexity in the definitions of $\wpcw$ and $\wprw$, and in the
 definitions of all the Perennial mechanisms using lower-level Iris primitives.
 
-The reader might observe that this theorem doesn't say much about intermediate
+The reader might observe that this theorem is about the return value of an
+expression, but it doesn't say much about intermediate
 results of the program. For a system like a server, which has no interesting
 return value, the main outcome of this theorem is the safety statement.
 It is possible to go beyond this soundness theorem to a \emph{refinement}
@@ -400,9 +408,9 @@ Perennial re-uses the Iris base logic with no changes, and builds a custom
 program logic on top with $\wpc{e}{Q}{Q_{c}}$ and $\wpre{e}{Q}$. The non-crash
 part of these definitions are similar to Iris, but the crash aspects required
 significant implementation work. This thesis aims only to explain how the logic
-is used, at a high level of abstraction; the code is currently the only
-source of truth for how the logic is actually implemented in the base logic (the
-\emph{model} of Perennial's \wpcw).
+is used, at a high level of abstraction, while the code documents exactly how
+the logic is implemented in the Iris base logic (for example, the definition of
+Perennial's \wpcw).
 
 One aspect of the implementation that should be noted is that the rules as
 presented in this thesis have been simplified for exposition and are not sound
@@ -433,20 +441,22 @@ where the crash condition must often be re-proven at intermediate steps of the
 proof, and \emph{crash framing} simplifies the mechanics of framing away
 resources that are needed for the crash condition but not being used otherwise.
 
-\subsection{Named predicates in separation logic}
+\subsection{Named propositions in separation logic}
 
 To prove a large system requires writing down many invariants (one for each
 layer of the system) and then proving these invariants are preserved by the
 code. Coming up with these invariants is a challenging part of
 the proof, and requires frequent cycles of finding an invariant doesn't work,
 editing it, and then revising the proofs. The proof will typically need to
-\emph{destruct} the invariant, which breaks it into separate hypotheses for each
-conjunct; for example if we have an invariant \cc{P * Q * R}, we might
-need to write \cc{iDestruct "H" as "(HA & HB & HC)"} to turn it into three
-hypotheses. The problem is that updating proofs when the invariant changes is
-tedious and error-prone. If we add \cc{* S} to the end, then ``HC'' will now be
-\cc{R * S}; the situation is worse if a conjunct is added to the middle of the
-invariant.
+\emph{destruct} the invariant, a proof step which breaks an assumption into separate hypotheses for each
+conjunct. For example if an invariant \cc{inv := P * Q * R} appears
+as hypothesis ``H'' in the proof, the next proof step would be
+\cc{iDestruct "H" as "(HA & HB & HC)"} which would produce hypotheses ``HA'',
+``HB'', and ``HC'' for the propositions \cc{P}, \cc{Q}, and \cc{R} respectively.
+The problem is that updating this proof step when the invariant changes is tedious and
+error-prone. For example, adding \cc{* S} to the end of the invariant will mean
+``HC'' is now \cc{R * S} rather than \cc{R}, and the situation is worse if a
+conjunct is added to the middle of the invariant.
 
 \emph{Named propositions} help solve this problem. With this feature, the
 invariant is written combining the logical statement with names for each conjunct:

@@ -62,7 +62,7 @@ As an example, the frame rule becomes
 the assumptions include $F$
 and separately $\wpre{e}{Q}$, then the proof can move $F$ to the postcondition because
 separation logic guarantees the proof of the WP does not affect or invalidate
-the resources in the frame $F$.
+the part of the heap covered by the frame $F$.
 
 \begin{figure}
 \begin{mathpar}
@@ -184,10 +184,16 @@ and updates only appear in the proof.
 
 So far, we've explained ghost state in terms of ghost variables, with the familiar
 API where they can be read and written. Iris ghost state is a bit more
-sophisticated in order to support concurrency reasoning. First, Iris has
+sophisticated in order to support concurrency reasoning. Iris has
 separation logic assertions for \emph{ownership} of ghost state, which can be
-split and divided among threads. Second, ghost state can have restrictions on
-how it may be updated.
+split and divided among threads. In conjunction with this analogy to ownership,
+in concurrent separation logic a piece of ghost state is also referred to as a
+\emph{resource} that a thread can own by having an assertion over the ghost
+state in its precondition.  A key principle in concurrent separation logic is that in
+a proof about a thread of interest, any resources or ownership in that proof's
+precondition can never be invalidated by the actions of other threads. Ghost
+state can have restrictions on how it may be updated to reason about a shared
+protocol that all threads respect.
 
 \newcommand{\dashedbox}[1]{\boxedassert[densely dashed]{#1}[]}
 \newcommand{\ghostvar}[2][]{\dashedbox{\gamma \mapsto_{#1} #2}}
@@ -222,7 +228,7 @@ using this fractional ghost state:
   {\upd P \proves \wpre{e}{Q}}
 \end{mathpar}
 
-The new notation $\upd P$ is an Iris \emph{update modality}. The assertion
+The new notation $\upd$ is an Iris \emph{update modality}. The assertion
 $\upd P$ expresses ownership of resources which could be used to become $P$ with
 some update to ghost state. As an example of proving an update modality,
 \ruleref{frac-alloc} shows that starting with no assertions it is possible to
@@ -240,6 +246,9 @@ split into smaller pieces with \ruleref{frac-split}; these pieces can no longer
 be updated (since this would invalidate the rest of the assertions), but two
 assertions for the same ghost variable must be for equal values
 (\ruleref{frac-agree}) since the underlying variable has only one value.
+Fractional ownership expresses a simple protocol among threads where when a
+thread owns a fraction less than one, it can read but not write, and full
+ownership is sufficient to write to a ghost variable.
 
 This thesis describes a few constructions for ghost state to carry out parts of
 the GoTxn proof, such as the example of fractional ghost state described above. In reality all
@@ -276,11 +285,11 @@ the same time.
 A fundamental reasoning principle for concurrency is the notion of an
 \emph{invariant}. Threads eventually do share state, and invariants
 are the main way to reason about how threads coordinate on that shared state.
-Invariants in Iris are another resource: we write $\knowInv{}{I}$ for the
-assertion that says $I$ is an invariant. Once this invariant is established, the
+The assertion $\knowInv{}{I}$ expresses the knowledge that
+$I$ is an invariant. Once this invariant is established, the
 proof rules in Iris guarantee that $I$ holds at all steps of the program. A
 thread that has $\knowInv{}{I}$ in its precondition can make use of the
-invariant by ``opening'' it, but only for a single program step; it must be
+invariant by ``opening'' it to obtain ownership over $I$, but only for a single program step; it must be
 returned afterward to guarantee the invariant holds for other threads. Finally,
 invariants are freely \emph{duplicable} --- that is,
 $\knowInv{}{I} \proves \knowInv{}{I} \sep \knowInv{}{I}$ --- reflecting that
@@ -291,7 +300,7 @@ The formal rules for using invariants in Iris (which are all valid rules in
 Perennial) are given in \cref{fig:invariants}. To create an invariant
 $\knowInv{}{R}$, a thread gives up $R$, as given in \ruleref{wp-inv-alloc}. The
 rule for using an invariant is \ruleref{inv-atomic}, which can only be used over
-an atomic instruction $e$. Perennial is defined for a general language, as in
+an ``atomic'' instruction $e$. Perennial is defined for a general language, as in
 Iris, and the semantics of the language defines what is modeled to be atomic.
 Formally $\atomic(e)$ says that the expression $e$ reduces to a value in a
 single reduction step, so that other threads cannot run in between. See
