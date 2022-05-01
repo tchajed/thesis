@@ -1,4 +1,4 @@
-personal_ws-1.1 en 487 
+personal_ws-1.1 en 489 
 APIs
 AST
 Addr
@@ -181,6 +181,7 @@ WPs
 WebAssembly
 WriteBit
 XDR
+Xeon
 Zeldovich
 ZeroFreeSpace
 addr
@@ -328,6 +329,7 @@ locking's
 lockmap
 logatom
 logics
+loopback
 lr
 lrcl
 lrr
