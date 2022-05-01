@@ -242,8 +242,7 @@ verified, concurrent file system:
         proof.
   \item GoTxn has a new \textbf{lifting-based specification} for its journaling
         layer to reason about concurrent transactions separately, which is
-        challenging since the logical disk can change during a transaction to a
-        concurrently committed transaction. Its proof uses a novel
+        challenging since the logical disk can change in the middle of a transaction. Its proof uses a novel
         \textbf{history-based abstract state} for the write-ahead log. This model allowed us to carry
         out a modular proof where the write-ahead logging library hides most of
         its internal complexity, simplifying reasoning about the rest of the GoTxn
