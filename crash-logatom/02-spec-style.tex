@@ -144,10 +144,11 @@ relating the old and new instances in the form of the predicate. The circular bu
 particular does not have an interesting exchanger predicate, but this feature of
 the specification pattern shows up in the GoTxn proof.
 
-In general, each layer supplies a post-recovery init theorem. All of these
-theorems are called after running all the recovery code just
-before starting the system (that is, this would be just after line 4 in the
-\cc{RunSystem()} code above). Calling these view shifts allocates all the layers'
+In general, each layer supplies a post-recovery init theorem. The view shift for
+each of these
+theorems is invoked in the proof of a program like \cc{RunSystem()} after
+running all the recovery code and just
+before normal processing (after line 4 in the code above). Firing these view shifts allocates all the layers'
 invariants while simultaneously getting ``credit'' for this allocation in the
 form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
 Prior to calling this initialization, the recovery procedure has access to the
@@ -173,9 +174,9 @@ resources are used locally by a thread and we would like a way to retain
 ownership across a crash, into that thread's crash condition. This is exactly
 what happens with GoTxn's lifting-based specification for the journaling layer, explained in greater
 detail in \cref{sec:txn:lifting}. Exchanging gives threads a way to ``trade''
-ownership prior to a crash, associated with the old $\gamma$ instance, for
-ownership after a crash, associated with $\gamma'$; this ownership can also be
-exclusive, because the process destroys the old ownership and thus can only be
+ownership during a crash, trading ownership associated with the old $\gamma$ instance for
+associated with $\gamma'$; both forms of ownership can be
+exclusive because the process destroys the old ownership and thus can only be
 performed once.
 
 \newcommand{\mapstoDisk}{\mapsto_d}
@@ -187,8 +188,8 @@ To make this a bit more concrete, let us look at a part of the GoTxn lifting
 specification. This specification issues three related resources: the two more important
 ones are $a \mapstoDisk o$ and $a \mapstoOp o$. Both represent exclusive
 access to address $a$. $a \mapstoDisk o$ is a durable statement about the
-logical disk, while $a \mapstoOp o$ gives the value at address $a$ from the
-perspective of an in-progress operation $op$. The lifting-based specification
+logical disk, while $a \mapstoOp o$ gives the value at address $a$ that
+an in-progress operation $op$ would observe. The lifting-based specification
 gets its name from a logical ``lift'' operation that trades $a \mapstoDisk o$
 for $a \mapstoOp o \sep a \mapstoLftd o$. This brings us to the
 third type of GoJournal resource, $a \mapstoLftd o$, which is
@@ -286,7 +287,7 @@ every layer of the system:
         resource to relate the old state to the new one.
 \end{itemize}
 
-When layers are composed, the upper layer will generally subsume the lower level
+When layers are composed, the upper layer proof generally hide the lower level
 in its own proofs --- for example, the write-ahead log's crash predicate
 includes the circular buffer's crash predicate as a sub-term, and subsumes the
 circular buffer's recovery and post-recovery init theorems.
