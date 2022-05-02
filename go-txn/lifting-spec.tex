@@ -12,8 +12,7 @@ the two-phase locking code, whose proof is described in \cref{sec:txn:refinement
 
 In the lifting specification, there is a global, logical disk representing the
 state of the journaling system, and within each ongoing operation there is a
-durable and operation-local view of the disk. The local views are both
-initialized from the global disk, and the operation-local view is like the disk
+durable and operation-local view of the disk. The operation-local view is like the disk
 view but also incorporates buffered writes. The durable views are disjoint, so
 that an address is either in the global disk or ``lifted'' into a particular
 operation. Disjointness is what guarantees that the views are really local and
@@ -43,8 +42,8 @@ to lifting and explained below.
 The first step in using the journaling specification is to initialize the whole
 system. Initialization is somewhat complicated by some restrictions GoTxn places
 on how sub-block objects are used. The proof requires the caller to fix ahead of
-time (when the whole journaling system is initialized) what size the objects
-within each block is. Currently our proofs assume that objects are either a single bit, 128
+time (when the whole journaling system is initialized) for each block a size for
+the objects within. Currently our proofs assume that objects are either a single bit, 128
 bytes, or a full block, but supporting an arbitrary power of two should be a
 straightforward extension. To initialize the system, the caller supplies a
 ``schema'' which gives the size of every disk address (that is, every 4KB
@@ -81,7 +80,7 @@ even required at runtime for the code. It creates \cc{is_txn_crash_condition},
 which is the precondition and crash condition for the transaction system's
 recovery procedure. The journal objects in this lemma's conclusion are initially
 fully owned by recovery, which then shares them with threads. The journaling
-system's proof does not impose how access to these resources is mediated; it
+system's proof does not fix a particular mechanism for \emph{how} access to these resources is mediated; it
 simply requires exclusive access to an address in the form of a
 $a \mapstoDisk o$ resource. In practice, GoTxn mediates access to
 $a \mapstoDisk o$ by protecting it with a per-address lock. In our paper on the

@@ -86,9 +86,10 @@ locking. As a result, a transaction acquires a per-address lock on every address
 it reads or writes along the way. Acquiring multiple locks during a transaction
 creates the possibility for deadlocks, if two threads acquire a pair of locks in
 the opposite order, and the specification does not forbid
-deadlocks.\footnote{Liveness reasoning in general is quite challenging when
+deadlocks.\footnote{Liveness reasoning is quite challenging when
 combined with concurrency. However, it would be interesting to specify and
-verify deadlock freedom without verifying full liveness.} The two-phase locking
+verify deadlock freedom, a safety property, without verifying liveness of the
+whole system.} The two-phase locking
 implementation does not implement a specific lock acquisition order, leaving it
 to the calling code to avoid deadlock --- for example, in DaisyNFS the
 implementation of \cc{RENAME} makes sure to lock the smaller inode number first

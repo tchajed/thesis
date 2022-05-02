@@ -28,8 +28,10 @@ a formalization of \emph{safe transactions}, described in \cref{sec:txn:program-
 which obey some restrictions that the specification assumes the caller follows.
 
 The second challenge is supporting an in-memory allocator, which is necessary
-for the file system to get good performance but would be illegal according to
-GoTxn's restrictions on shared memory. To address this challenge we include an
+for the file system to get good performance but appears to violate GoTxn's rule
+that transactions do not access shared memory --- a transactions allocations and
+free operations affect other transactions immediately, not at commit time.
+To address this challenge we include an
 allocator in the GoTxn API and proof. A non-deterministic,
 \emph{under-specification} of the allocator makes its behavior serializable, and
 \cref{ch:daisy-nfs} demonstrates that this allocator is usable by using it in

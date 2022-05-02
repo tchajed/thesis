@@ -58,13 +58,12 @@ machine for DaisyNFS, as described in \cref{sec:daisy:refinement-spec}.
 The Txn layer allows the operations of the GoTxn API, with reads and writes over a logical
 disk and the ability to wrap these into an atomic transaction. The
 Disk transition system is formalized in Coq as part of the GoTxn proof,
-and assumes reads and writes of 4KB blocks are atomic. All layers
-include c.
+and assumes reads and writes of 4KB blocks are atomic.
 
 The concept of a layer is part of how GooseLang formalizes Go. The definition of
 GooseLang is parameterized by some ``external'' operations and state, as
 described in \cref{sec:goose:lang}. Regardless of layer, the type
-$\gooselayer{X}$ includes a statement to spawn a thread, basic heap operations
+$\gooselayer{X}$ includes a $\goosekw{Fork}$ expression to spawn a thread, heap operations
 on pointers, slices, and maps, and computation on primitives like integers and
 structs. A program $p : \gooselayer{X}$ represents a Go program which uses any
 of these Go primitives and only imports additional operations from the layer
@@ -137,6 +136,9 @@ The correctness of the transaction system is expressed by the following theorem:
 What the theorem says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
+Unlike standard refinement, which is between two complete programs, program
+refinement is a \emph{contextual refinement} property about a library that is
+stated in terms of all callers of that library.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.
 
 The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code
@@ -152,7 +154,9 @@ protection over such variables.
 
 Safety also requires that transactions follow the preconditions of the \cc{Read}
 and \cc{Write} operations, which require a discipline of accessing each object
-with a fixed size. Finally, safe programs can only \cc{Abort} or \cc{Commit} a
+with a fixed size --- this is a limitation of the current GoTxn implementation
+and proof, which does not handle concurrency between overlapping addresses.
+Finally, safe programs can only \cc{Abort} or \cc{Commit} a
 given transaction once. The notion of safe program will be important when
 linking this proof with the Dafny proofs, since the transaction system's proof
 only applies to a safe caller.

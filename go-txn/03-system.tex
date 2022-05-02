@@ -10,7 +10,7 @@ Reads and writes still operate on 4KB blocks, but a multiwrite appears to update
 multiple disk blocks simultaneously even if the system crashes. Next, the
 \scc{jrnl} layer implements \emph{journaling}, persisting a whole operation with
 reads and writes to disk atomically. Concurrent operations must access disjoint
-addresses for safety; concurrency control is left to the caller in this layer.
+sets of addresses for safety; concurrency control is left to the caller in this layer.
 Operations can manipulate objects smaller than a block (``sub-block'' objects),
 which improves concurrency by making more operations disjoint. Finally, the
 \scc{txn} layer exports the complete transactional interface in
@@ -48,7 +48,7 @@ the circular buffer (which is cached for efficiency) and then access the data
 region.
 
 The object system maintains a list of buffers of data read or written by each journal operation.
-Reads first check the write-ahead log's cache since
+Reads first check the log (which is always cached in memory) since
 they must observe committed operations. To commit, the object
 layer gathers all the dirty buffers and submits them as a multiwrite to the
 write-ahead log. To allow reading and writing objects that are smaller than a
@@ -77,11 +77,11 @@ reading requires checking the log's in-memory cache and then falling back to the
 but the disk read happens without a lock. If a multiwrite commits after the read
 misses in the cache, then the disk read will not observe the latest value. The
 write-ahead log specification specifies that reading the installed value might return an
-old view of the disk, and the object layer can handle this weak specification with
+old view of the disk, and the \scc{obj} layer can handle this weak specification with
 an invariant that guarantees the object being read has not been modified since
 that old view.
 
-The object layer implements sub-block access on top of the write-ahead
+The \scc{obj} or object layer implements sub-block access on top of the write-ahead
 log's block-level multiwrites. Objects accessed by an operation must be locked,
 so supporting fine-grained access is necessary to allow operations to run
 concurrently even if they happen to access the same disk block. For example, a
