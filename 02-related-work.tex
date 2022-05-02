@@ -283,11 +283,12 @@ semantics for crashes and concurrency. Flashix also effectively has crash
 reasoning throughout the system, whereas DaisyNFS factors out this reasoning to
 GoTxn and then layers sequential proofs on top.
 
-The Flashix project found that components in the stack intertwine due to the
-realism of the system; modularity helped but the interfaces still had many
-dependencies \tej{rewrite this sentence after double-checking the Flashix paper}. We had a similar experience within the transaction system, where
+The Flashix project reports that components ``intertwined'' and could not be
+separated as cleanly for reasoning purposes as they would have
+liked~\cite[\S 8]{bodenmuller:concurrent-flashix}.
+We had a similar experience within the transaction system, where
 performance constrained the APIs of internal layers and forced us to export
-complicated APIs. GoTxn was perhaps trickier than the components of Flashix
+complicated APIs. The  GoTxn was perhaps trickier than the components of Flashix
 because we model code at a lower level of abstraction, so even issues like
 concurrency and memory safety show up in each interface. We were inspired to
 develop the DaisyNFS design to get truly sequential reasoning from the
