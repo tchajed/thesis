@@ -4,19 +4,22 @@
 
 Lifting is defined at an intermediate layer, \scc{jrnl} (for journaling), rather
 than for \scc{txn} which is the top-level API of GoTxn. Journaling uses what we
-call ``operations'' to distinguish them from ``transactions'' --- an operation
-supports reads and writes, and like a transaction can be committed atomically to
+call ``operations'' to distinguish them from ``transactions'' --- reads and
+writes are performed from within the context of an operation, and like a
+transaction the writes can be committed atomically to
 disk, but the difference is that the calling library is responsible for guaranteeing
-operations manipulate disjoint addresses. In the case of GoTxn, that caller is
+concurrent operations manipulate disjoint sets of addresses. In the case of GoTxn, that caller is
 the two-phase locking code, whose proof is described in \cref{sec:txn:refinement}.
 
+\tej{add the GoJournal API here}
+
 In the lifting specification, there is a global, logical disk representing the
-state of the journaling system, and within each ongoing operation there is a
-durable and operation-local view of the disk. The operation-local view is like the disk
+state of the journaling system, and within each ongoing operation there is an
+operation-local view of the disk. The operation-local view is like the disk
 view but also incorporates buffered writes. The durable views are disjoint, so
 that an address is either in the global disk or ``lifted'' into a particular
-operation. Disjointness is what guarantees that the views are really local and
-don't change due to concurrent threads.
+operation. Disjointness is what guarantees that every operation-local view is really local and
+doesn't change due to concurrent threads.
 
 The lifting-based specification uses a logical concept of ownership to keep all
 of these views disjoint and consistent. The state of each view is defined using ghost state
@@ -34,20 +37,21 @@ operation-local view associated with an in-memory operation $\mathit{op}$; it
 mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
 buffered write with the value $o$ to address $a$. The last resource,
 $a \mapstoLftd o$ is similar to $a \mapstoDisk o$, but the details are related
-to lifting and explained below.
+to lifting and explained below. \tej{maybe add a small figure showing the
+lifecycle, similar to GoJournal talk}
 
 
 \subsubsection{Initialization}
 
 The first step in using the journaling specification is to initialize the whole
-system. Initialization is somewhat complicated by some restrictions GoTxn places
+system. Initialization is somewhat complicated by restrictions GoTxn places
 on how sub-block objects are used. The proof requires the caller to fix ahead of
 time (when the whole journaling system is initialized) for each block a size for
 the objects within. Currently our proofs assume that objects are either a single bit, 128
 bytes, or a full block, but supporting an arbitrary power of two should be a
 straightforward extension. To initialize the system, the caller supplies a
-``schema'' which gives the size of every disk address (that is, every 4KB
-aligned address, not the journal's logical sub-block addresses); this enforces
+``schema'' which gives a size for the objects in each disk offset (that is, every 4KB
+aligned offset, not the journal's logical sub-block addresses); this enforces
 that all the objects within a block are of the same size, which also simplifies
 the proof.
 
@@ -55,7 +59,7 @@ The journal's initialization is specified by giving the caller a lemma that
 transform ownership over the entire physical disk into the precondition for the
 journal's recovery procedure; from this point forward the usual crash and
 recovery reasoning in Perennial applies. For each offset $i$ and block size $k$, the initial ownership for that disk
-block is just all the objects within that block:
+block consists of the address $(i, k \times o)$ within that block:
 \[
   \operatorname{zeroObjects}(i, k) \defeq \bigast_{0 \leq k \times o < 4096} (i, k \times o) \mapstoDisk 0
 \]
@@ -83,13 +87,11 @@ fully owned by recovery, which then shares them with threads. The journaling
 system's proof does not fix a particular mechanism for \emph{how} access to these resources is mediated; it
 simply requires exclusive access to an address in the form of a
 $a \mapstoDisk o$ resource. In practice, GoTxn mediates access to
-$a \mapstoDisk o$ by protecting it with a per-address lock. In our paper on the
-journaling system itself we wrote a proof of a simple file system where the
-locks were instead per inode, so that one lock protected more than one journal
-resource; see the GoJournal paper for details on that use
-case~\cite{chajed:gojournal}.
+$a \mapstoDisk o$ by protecting it with a per-address lock.
 
 \subsubsection{Preparing operations}
+
+\newcommand{\isop}{\cc{is_op}(\mathit{op})}
 
 The specification for \cc{Begin()} is straightforward, since the operation has
 not yet interacted with the disk:
@@ -98,14 +100,14 @@ not yet interacted with the disk:
 \begin{align*}
   \hoareV{\TRUE}%
   {\cc{Begin}()}%
-  {\Ret{op} \cc{is_op}(\mathit{op})}
+  {\Ret{op} \isop}
    %\tagH{BeginSpec}
 \end{align*}
 The specification has a trivial precondition of $\TRUE$ and its postcondition
 returns an assertion \cc{is_op}, which says that $\mathit{op}$ is a valid
 \cc{*Op} object that represents a journaling operation.  (This is different from
-the \cc{*Txn} object that represents for a transaction, which has additional
-state to track locking.) The operation starts out with an empty operation-local
+the \cc{*Txn} struct that represents an ongoing transaction, which has additional
+state to track the locks acquired so far.) The operation starts out with an empty operation-local
 view and ownership over no addresses; the ghost state for this operation's view
 is initialized by the proof of this theorem and represented as part of
 $\cc{is_op}(\mathit{op})$.
@@ -115,24 +117,24 @@ requires the caller to start with $a \mapstoDisk o$ and then \emph{lift} it to
 obtain an operation-local resource, where lifting is the following purely
 logical operation:
 \[
-  a \mapstoDisk o \vs a \mapstoOp o \sep a \mapstoLftd o
+  \isop \sep a \mapstoDisk o \vs \isop \sep a \mapstoOp o \sep a \mapstoLftd o
 \]
 
 Notice that the result of lifting is both an operation-local assertion and
 $a \mapstoLftd o$; this latter assertion is much like $a \mapstoDisk o$ in that
 it asserts the on-disk value of address $a$, but it cannot be lifted again. This
 is required for soundness; only one of $a \mapstoDisk o$ and $a \mapstoOp o$ is
-allowed for ownership to actually be exclusive. Not shown is that lifting does
-also require $\cc{is_op}(\mathit{op})$ which reflects that the ghost state has
+allowed for ownership to actually be exclusive. Lifting takes and preserves
+$\cc{is_op}(\opv)$, which reflects that the ghost state for $\opv$ has
 been set up.
 
 The specification for \cc{OverWrite} describes the effect of writing to the
 local memory of a buffered journal operation:
 %
 \begin{align*}
-  \hoareV{\cc{is_op}(\mathit{op}) \sep a \mapstoOp o \sep \cc{buf_obj}(buf, o')}%
+  \hoareV{\isop \sep a \mapstoOp o \sep \cc{buf_obj}(buf, o')}%
         {\mathit{op}.\cc{OverWrite}(a, buf)}%
-        {\cc{is_op}(\mathit{op}) \sep a \mapstoOp o'}
+        {\isop \sep a \mapstoOp o'}
   %\tagH{OverWriteSpec}
 \end{align*}
 
@@ -148,13 +150,13 @@ returns a buffer that points into the \cc{op} struct, so it has a more
 sophisticated spec:
 %
 \begin{align*}
-  \hoareV{\cc{is_op}(\mathit{op}) \sep a \mapsto_{\mathit{op}} o}%
+  \hoareV{\isop \sep a \mapsto_{\mathit{op}} o}%
         {op.\cc{ReadBuf}(a)}%
         {\Ret{buf}
   \begin{aligned}
   &\cc{buf_obj}(\mathit{buf}, o) \sep \phantom{} \\
   &\quad( \cc{buf_obj}(\mathit{buf}, o) \wand \\
-  &\quad\quad \cc{is_op}(\mathit{op}) \sep a \mapsto_{\mathit{op}} o )
+  &\quad\quad \isop \sep a \mapsto_{\mathit{op}} o )
     \end{aligned}}
     %\tagH{ReadBufSpec}
 \end{align*}
@@ -192,7 +194,7 @@ has the new values buffered in the operation.
 \end{align*}
 
 The precondition in this specification requires ownership over a subset of the
-logical disk given by $\dom(m) = \dom(m')$, both its durable values and the
+logical disk, the addresses in $\dom(m)$, both on disk and within the
 operation-local view. If the system does not crash and returns
 $\mathit{ok} = \goosetrue$, \cc{Commit} returns ownership over the new values
 on disk. It returns full disk points-to assertions $a \mapstoDisk o'$ because

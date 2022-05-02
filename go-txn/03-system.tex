@@ -12,7 +12,9 @@ multiple disk blocks simultaneously even if the system crashes. Next, the
 reads and writes to disk atomically. Concurrent operations must access disjoint
 sets of addresses for safety; concurrency control is left to the caller in this layer.
 Operations can manipulate objects smaller than a block (``sub-block'' objects),
-which improves concurrency by making more operations disjoint. Finally, the
+which improves concurrency by making more operations disjoint. Support for
+sub-block objects is implemented in the \scc{obj} layer between the \scc{wal}
+and \scc{jrnl}. Finally, the
 \scc{txn} layer exports the complete transactional interface in
 \cref{fig:txn-api}. This layer implements automatic concurrency control so that
 the caller can freely read and write any addresses.
@@ -45,7 +47,8 @@ fixed-size circular buffer and a remaining data region. Data is first atomically
 \emph{logged} to the circular buffer and then eventually \emph{installed}
 to the data region, to free space in the circular buffer. Reads first go through
 the circular buffer (which is cached for efficiency) and then access the data
-region.
+region. The circular buffer's implementation is described in greater detail in
+\cref{sec:circ-api}.
 
 The object system maintains a list of buffers of data read or written by each journal operation.
 Reads first check the log (which is always cached in memory) since
@@ -70,16 +73,6 @@ block multiple times, only the most recent update of that disk block is
 written to the log (``absorption''). Concurrency makes these optimizations
 useful even for synchronous operations, which can be committed together and
 absorbed if they are issued concurrently.
-
-Concurrency in the write-ahead log complicates not just its internals but also
-reasoning about the multiwrite abstraction built on top. One difficulty is that
-reading requires checking the log's in-memory cache and then falling back to the disk,
-but the disk read happens without a lock. If a multiwrite commits after the read
-misses in the cache, then the disk read will not observe the latest value. The
-write-ahead log specification specifies that reading the installed value might return an
-old view of the disk, and the \scc{obj} layer can handle this weak specification with
-an invariant that guarantees the object being read has not been modified since
-that old view.
 
 The \scc{obj} or object layer implements sub-block access on top of the write-ahead
 log's block-level multiwrites. Objects accessed by an operation must be locked,

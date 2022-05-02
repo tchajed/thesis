@@ -171,10 +171,11 @@ possible concurrent interference. In particular the specification for \cc{Alloc}
 merely promises to return an in-bounds address, and GoTxn's specification does
 not even track the set of allocated/free addresses for each in-memory allocator.
 
-In practice the way the caller uses this specification is to store the
-ground-truth allocator state in the transaction system and then to use the
-in-memory allocator as an efficient way to find a free bit. Without some in-memory
-allocator, searching for a free bit would be difficult to do in an efficient
+In practice the way the caller uses this specification for a given allocator is
+to store the ground-truth allocated/free state in the on-disk state of the
+transaction system, then use an in-memory allocator as an efficient way to find
+a free bit. Without some in-memory
+allocator, searching for a free bit over the on-disk state would be difficult to do in an efficient
 way. The return value of \cc{Alloc} must be checked against the durable bitmap,
 which is easily done since GoTxn supports accessing an individual bit with
 \cc{ReadBit}. There is a chance that \cc{Alloc} returns a used address, if it was

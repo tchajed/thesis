@@ -60,15 +60,14 @@ when the operation logically takes effect by executing $o$ in the ghost code.
 
 These refinement triples imply a refinement between programs in $\gooselayer{S}$
 and $\gooselayer{I}$. Refinement triples encode this refinement property into
-per-operation specifications, which raises the question of whether the encoding
-is correct. To address this concern, the Coq development uses Perennial to prove
-refinement, stated directly, using the refinement triples. This involves using
+per-operation specifications. The Coq development uses Perennial's soundness
+theorem to prove that these refinement triples imply refinement. This involves using
 the classic technique of \emph{logical relations} and using a low-level
 soundness theorem from Perennial to derive a refinement theorem between the two
 programs rather than the usual Hoare triple soundness theorem about a single
-program's executions. The resulting theorem only requires trusting the statement
-of the soundness theorem (which does not involve the Perennial logic) while its
-proof has access to the full range of Perennial's features.
+program's executions. The resulting theorem statement expresses refinement
+directly (without referencing the Perennial logic), while its proof has access
+to the full range of Perennial's features.
 
 In the particular case of the transaction system, the key refinement triple to
 prove is for a block of code $f$ enclosed in transaction \cc{Begin} and
@@ -166,10 +165,7 @@ allocations could be implicitly observed by other concurrent transactions from
 the fact that an allocated address is no longer free. As described in
 \cref{sec:txn:program-refinement}, GoTxn under-specifies the allocator's behavior so that it
 atomically follows its (non-deterministic) specification even though it is not
-protected by the 2PL locking discipline. Correspondingly, in the
-proof, the footprint $J$ of a transaction does not describe the allocator state
-and at the ghost-execution linearization point the addresses returned by the
-allocator may no longer be free.
+protected by the 2PL locking discipline.
 
 % Suppose the transaction being simulated is $\operatorname{Atomically}{f}$, and the implementation
 % has executed $n$ steps of $f$, accessing addresses in the set $\sigma$.
