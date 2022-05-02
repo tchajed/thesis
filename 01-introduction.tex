@@ -32,7 +32,17 @@ expected to preserve data from before the crash. The second big challenge is
 concurrency in the implementation, which complicates approaches for improving
 reliability, including both testing and verification.
 
-\tej{find a real file-system bug example to explain (or at least point to)}
+Bugs are still discovered in widely used file systems like ext4 and btrfs,
+despite a long history of developing, testing, and using these file systems. A
+recent approach for fuzzing file systems~\cite{kim:hydra} found new crash-safety
+issues in both ext4 and btrfs, despite not testing for concurrency issues. A
+study conducted in 2013 looked at all patches for Linux file systems from
+2005--2013~\cite{lu:fsstudy}, finding hundreds of these patches were to fix bugs
+(for example, 450 for ext4 and 358 for btrfs). About 60\% of these bugs lead to
+data loss or crash the kernel (and as the study points out, these are much more
+serious consequences than most bugs in application software). File systems have
+a lot of internal concurrency for performance reasons, which both leads to bugs
+and makes testing and fuzzing more challenging.
 
 The approach in this thesis to make a reliable file system is to use formal
 verification. In this approach, we write the code, then a specification of the
