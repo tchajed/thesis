@@ -10,5 +10,28 @@ crashes and recovery. Some knowledge of Iris is needed to fully appreciate this
 chapter as well as \cref{ch:crash-logatom}, but we aim to give enough background
 in \cref{sec:perennial:iris} to understand Perennial at a high level.
 
+\tej{explain the Perennial chapter's audience and purpose in more detail}
+
 \input{perennial/01-iris}
 \input{perennial/02-logic}
+
+\section{Take-aways beyond formal verification}
+
+\paragraph{Crash-aware locks.} One of the benefits of concurrent separation
+logic that is useful even without verification is that it crystallizes the idea
+of a ``lock invariant'' as a way to think about the \emph{purpose} of locks.
+Rust's \cc{sync::Mutex} API implements a basic version of the lock invariant
+idea by allowing the programmer to at least express what data is protected by
+the lock, but the idea of a separation logic invariant is more general (for
+example, locks can protect just a part of a data structure). Perennial's
+crash-aware lock specification formalizes an idea that is not well-known, of how
+locking lock invariants interact with durable state: such a locks should have
+both the usual lock invariant and a weaker crash invariant.
+
+\paragraph{Invariants for crash reasoning.} Perennial has a rule where
+allocating an invariant gives ``credit'' for it on crash. This idea formalizes
+an intuition about how ownership flows between threads and on crash. \tej{cite
+RECIPE paper as an example of trying to get at this idea}
+
+\tej{think of more ideas in Perennial to explain? more on local crash conditions
+with concurrency maybe?}

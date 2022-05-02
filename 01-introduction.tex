@@ -242,7 +242,7 @@ the transactions and exactly what crash safety guarantees are achieved.
 \section{What is the value of verifying a file system?}
 
 The reader might wonder what the value of this kind of large verification effort
-is. There are several aspects to this question.
+is.
 
 \paragraph{Cost versus benefit.} There are many less formal ways to make
 software more reliable, including testing, fuzzing, and code auditing. Formal
@@ -251,6 +251,41 @@ testing, model checking, or symbolic execution to parts of the code. Rather than
 verifying the implementation, we could instead attempt to model and specify key
 parts of the algorithms or system design, then verify those. What is the
 additional value of fully machine-checked proofs, all the way down to the code?
+
+Verification in the real world needs to have benefits that outweigh the costs.
+The benefit of reliability for file systems is hopefully clear, from the
+exposition above. I see this work as lowering the cost of verifying crash-safe
+and concurrent systems: formerly, there simply didn't exist techniques for this
+kind of proof, and now it is possible (and at least the cost is bounded by a PhD
+thesis and not something much larger). Building on these foundations, I hope the
+costs come down to make verification an appealing alternative to verification
+for the next generation of storage systems.
+
+The real ideal for verification is not just it is worth paying the costs but
+that verification enables something that would otherwise not be doable. With
+file systems I believe this is possible, since verification might enable a new
+file system with more daring optimizations to gain confidence faster than would
+otherwise be possible. There aren't that many widely-used file systems --- most
+people use one of ext4, btrfs, or XFS on Linux, NTFS on Windows, and APFS on
+macOS --- and new file systems are generally adopted very slowly. APFS was
+surprising for having only a 3-year development period before Apply widely
+deployed it, and this was probably only possible because of Apple's tight
+vertical integration. Ext4 is the other ``new'' file system, introduced in 2008
+(by extending ext3, which was first released in 2001).
+
+% ext4: 2008
+% ext3: 2001
+% XFS: 1994 (first released on IRIX OS for SGI)
+% NTFS: 1993
+% APFS: 2017
+
+\paragraph{Verification guides debugging.} With a verified system, bugs are
+still inevitable since there is unverified code surrounding the verified code,
+the assumptions of the proof can be violated, and the specification can be
+wrong. However, an advantage of formal verification, particularly fully
+machine-checked proofs, is that when bugs are discovered it's safe to start
+debugging with all the code outside the verification as well as looking at the
+specification.
 
 \resume
 

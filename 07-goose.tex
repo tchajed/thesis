@@ -7,11 +7,24 @@ code, and finally the reasoning principles for proving properties of translated
 Go. (We will also use ``Goose'' in some places to refer to the subset of Go
 supported by the translation tool.)
 
-This chapter is intentionally fairly independent of the rest of the thesis for a
-reader interested in verifying Go code but not crash safety or the specifics of
-the GoTxn and DaisyNFS proofs. Crashes are modeled simply by stopping
-execution and wiping out all of the state except for the disk, which does not
-relate to the specifics of Go.
+This description of Goose is written to be accessible to someone relatively new
+to verification or systems research. The hope is that others can learn from this
+approach to modeling and verifying code, and apply it to other languages and
+domains. Some familiarity reading programming language semantics will be helpful
+to appreciate \cref{sec:goose:lang}, but fully understanding this section is not
+needed to understand the overall idea and reasoning principles in the other
+sections. \Cref{sec:goose:reasoning} gives specifications in separation logic,
+starting with enough introduction to understand their intuitive meaning.
+
+The chapter is intentionally fairly independent of the rest of the thesis, in
+case the reader is not interested in the specifics of the file system or the
+Perennial logic, and since there is no published paper describing the details of
+how Goose works or its reasoning principles. Concurrency is an important part of
+the Goose model, though pleasantly enough it doesn't complicate the sequential
+parts of Goose. Crash-safety concerns do not show up here since crashes are
+modeled simply by stopping execution and wiping out all of the state except for
+the disk, which does not relate to the specifics of Go. Goose is not specific to
+GoTxn and can handle a much broader range of Go than that single codebase.
 
 \input{goose/01-goals.tex}
 \input{goose/02-related.tex}

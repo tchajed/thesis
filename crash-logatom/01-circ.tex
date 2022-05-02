@@ -53,22 +53,24 @@ new start position to \cc{pos}. A more formal specification is given in
 
 The circular buffer supports atomic and concurrent \cc{Append} and \cc{TrimTill}
 with a careful on-disk layout. It consists of two header blocks and 511 data
-blocks, depicted graphically in \cref{fig:circ:phys}. The first header block (the ``trim'' block, since it is used for
-trimming) holds the logical start position of the queue, while the second header
-(the ``append'' block, since it is used for appending) holds the logical end
-position and 511 addresses; the data blocks for these addresses are in the
-remaining data blocks. This append block has 4096 bytes, or enough space for 512
-64-bit numbers; one is used for the end position, and the remainder for update
-addresses. To append atomically, \cc{c.Append(end, upds)} first writes the data
+blocks, depicted graphically in \cref{fig:circ:phys}. The first header block
+(the ``trim'' block, since it is used for trimming) holds the logical start
+position of the queue, while the second header (the ``append'' block, since it
+is used for appending) holds the logical end position and 511 addresses; the
+data blocks for these addresses are in the remaining data blocks. This append
+header has 4096 bytes, or enough space for 512 64-bit numbers; one is used for
+the end position, and the remainder for update addresses. Recovery uses the
+header blocks to determine what subset of the circular buffer holds complete
+multiwrites; partially-appended updates are ignored for atomicity.
+
+To append atomically, \cc{c.Append(end, upds)} first writes the data
 (using \cc{end} to know where to start writing), and then writes the append
 header block to atomically incorporate the writes, and simultaneously to write
 the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
 addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
 deletes by merely writing a new, higher start position to the trim header. Since
 these operations touch disjoint parts of disk, they can be performed
-concurrently. Recovery uses the header blocks to determine what subset of the
-circular buffer holds complete multiwrites; partially-appended
-updates are ignored for atomicity.
+concurrently. \tej{explain lower-bound reasoning intuitively here}
 
 \begin{figure}[ht]
 \begin{minted}{coq}
