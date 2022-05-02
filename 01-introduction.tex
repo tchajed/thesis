@@ -208,7 +208,8 @@ abstract specification. However, the GoTxn theorem formalizes precisely what
 conditions are required for the simulation transfer, including restrictions on
 the transactions and exactly what crash safety guarantees are achieved.
 
-\Cref{fig:overview} depicts how the artifacts of this thesis combine. GoTxn is
+\Cref{fig:overview} depicts how the artifacts of this thesis combine. \tej{refer
+to this figure earlier in this section} GoTxn is
 implemented in Go and verified using Perennial in Coq. Goose is the system that
 connects the code to a model suitable for reasoning in Perennial. Separately,
 DaisyNFS implements the file-system operations in Dafny, which has integrated
@@ -223,6 +224,21 @@ overall correctness theorem for the whole server.
 \caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
 \label{fig:overview}
 \end{figure}
+
+\section{What is the value of verifying a file system?}
+
+The reader might wonder what the value of this kind of large verification effort
+is. There are several aspects to this question.
+
+\paragraph{Cost versus benefit.} There are many less formal ways to make
+software more reliable, including testing, fuzzing, and code auditing. Formal
+verification also has a spectrum; we could potentially apply property-based
+testing, model checking, or symbolic execution to parts of the code. Rather than
+verifying the implementation, we could instead attempt to model and specify key
+parts of the algorithms or system design, then verify those. What is the
+additional value of fully machine-checked proofs, all the way down to the code?
+
+\resume
 
 \section{Contributions}
 \label{sec:intro:contributions}
