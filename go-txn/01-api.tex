@@ -25,7 +25,7 @@ func (a *Allocator) Alloc() uint64
 func (a *Allocator) Free(n uint64)
 func (a *Allocator) MarkUsed(n uint64)
 \end{minted}
-  \caption{The API for the transaction system and allocator. Reads and writes
+  \caption[GoTxn API]{The API for the transaction system and allocator. Reads and writes
     between \cc{Begin} and \cc{Commit} appears to execute atomically on disk and
     for other threads, while \cc{Abort} guarantees the transaction has no
     effect. The allocator's \cc{Alloc} and \cc{Free} operations are safe to call
