@@ -1,19 +1,23 @@
-The file system is an important service of the operating system, yet
-implementations still occasionally have bugs that can lead to incorrect results
+The file system is an important service of the operating system, yet bugs are
+still occasionally found in
+implementations that can lead to incorrect results
 or even data loss. What makes it difficult to write a correct file system is
 that even simple operations can execute in many ways due to concurrency and
-power failures, making it challenging to think through or test all
+system crashes (after which the file system should still preserve data). Crashes
+and concurrency make it challenging to correctly handle and test all
 possibilities. Formal verification offers a promising solution by using a proof
 to show the file-system code always meets its specification.
 
-This thesis develops DaisyNFS, a verified, concurrent, and performant file
-system. The first contribution is new verification foundations for crashes and
-concurrency that make it possible to reason about high-performance, realistic
-storage systems at all. The second contribution is the design and implementation
-of the file system on top. DaisyNFS has a verification-friendly design based on
-transactions so that most of the code enjoys sequential reasoning. Underlying
-the file system is a verified, high-performance transaction system with
-sophisticated concurrency. The overall file system is performant compared to
-Linux NFS exporting ext4 over a range of benchmarks --- at least 75\% the
-throughput with a single client and in-memory disk, and comparable performance
-when multiple clients are writing concurrently. \tej{revise abstract}
+This thesis develops DaisyNFS, a verified, concurrent, file system that achieves
+good performance. Several contributions make this possible. The first set of
+techniques provide new foundations for verification of systems with concurrent
+implementations and crash guarantees: a program logic, a specification pattern
+to make proofs modular, and an approach for applying these techniques to
+executable code. The file system is built on top of a verified transaction
+system called GoTxn. The second set of techniques enables this design, which
+allows an efficient design due to the concurrency in GoTxn while using the
+guarantees afforded by transactions to verify the rest of the file system with
+much simpler sequential reasoning. The overall file system is performant
+compared to Linux NFS exporting ext4 over a range of benchmarks --- at least
+90\% the throughput in a setting with a single client and in-memory disk, and
+comparable scalability from multiple concurrent clients.

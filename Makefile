@@ -1,4 +1,5 @@
 TEX_FILES := $(wildcard *.tex) \
+	$(wildcard frontmatter/*.tex) \
 	$(wildcard perennial/*.tex) \
 	$(wildcard crash-logatom/*.tex) \
 	$(wildcard go-txn/*.tex \
