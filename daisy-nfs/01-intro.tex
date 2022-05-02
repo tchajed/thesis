@@ -102,10 +102,12 @@ deadlocks in the transaction system.
 
 The design of DaisyNFS does impose limitations. The proof approach relies on
 transactions appearing to run sequentially, which prevents modifying state
-outside the transaction system. There are cases where that would get better
-performance in exchange for a more difficult proof. The transaction system does
-not have a proof of liveness, and the file-system proof does not show that
-transactions avoid deadlock. Our NFS implementation does not cover some
-features, such as symbolic links, hard links, and paginated \cc{READDIR}; we
-believe all of these could be implemented and specified with the same approach
-but have not done so in our prototype.
+outside the transaction system. This can be useful if verifying a system like a
+persistent key-value store where some small metadata is manipulated with transactions, but
+the bulk of the data is stored separately --- the proof of such a system would
+require explicit crash and concurrency reasoning for the data reads and writes,
+but GoTxn would still be useful for managing the metadata. GoTxn does not have a proof of liveness, and the file-system proof
+does not show that transactions avoid deadlock. Our NFS implementation does not
+cover some features, such as symbolic links, hard links, and paginated
+\cc{READDIR}; we believe all of these could be implemented and specified with
+the same approach but have not done so in our prototype.

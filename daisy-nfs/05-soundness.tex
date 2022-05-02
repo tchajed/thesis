@@ -31,8 +31,10 @@ implementation of layer $S$ using operations from $T$. Note that all the proofs
 about the transaction system are for an arbitrary system with operations in $S$. The implementation $i$
 consists of a function $i(\opv) : \gooselayer{T}$ for each operation $op \in S$. The statement
 $\seqrefinement \targ{T, S}(i)$ says that $i$ is a correct sequential
-implementation of $S$ using $T$. To specify correctness under crashes, this
-definition refers to $\operatorname{crash}(\sigma, \sigma')$, which is a
+implementation of $S$ using $T$. The effect of each operation is given by a
+transition relation $\sigma \overset{\opv}{\leadsto}$ that is part of the layer
+$S$. To specify correctness under crashes, the
+definition of sequential refinement refers to $\operatorname{crash}(\sigma, \sigma')$, which is a
 layer-specific crash transition that models, for example, clearing the
 contents of memory.
 
@@ -44,7 +46,7 @@ contents of memory.
 (1) for every operation
   $op \in S$, the following sequential Hoare triple holds:
   \[
-    \hoare{R(\sigma)}{i(\opv)}{\exists \sigma'.\, R(\sigma') \land \sigma \overset{op}{\leadsto} \sigma'},
+    \hoare{R(\sigma)}{i(\opv)}{\exists \sigma'.\, R(\sigma') \land \sigma \overset{\opv}{\leadsto} \sigma'},
   \]
 (2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ implies
 $R(\sigma_{S}, \sigma_{T})$, and \\
@@ -263,9 +265,10 @@ themselves are correct.
   \end{center}
   \caption[Overall DaisyNFS proof strategy]{Illustration of the DaisyNFS proof
     strategy in terms of one
-    possible execution of DaisyNFS, receiving parallel MKDIR and LOOKUP
+    possible execution of DaisyNFS, receiving parallel \cc{MKDIR} and \cc{LOOKUP}
     operations, at its three abstraction levels. Operations in each row are
-    color-coded according to which operation they correspond to. The refinement proof first
+    color-coded green or orange according to which operation they correspond to
+    (the top-level \cc{MKDIR} or \cc{LOOKUP} respectively). The refinement proof first
     shows that for every code execution (bottom row), there exists an atomic
     execution at the Txn layer (middle row), as proven in
     \cref{thm:gotxn-program-refinement}. This justifies sequential reasoning to
