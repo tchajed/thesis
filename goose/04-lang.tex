@@ -25,8 +25,7 @@ GooseLang, and the reasoning principles for those models.
 
 The basic unit of GooseLang is the expression $e$, which supports recursive
 functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. GooseLang has
-a semantics for
-these expressions a semantics in terms of the reduction relation
+a semantics for these expressions in terms of the reduction relation
 $(\sigma, e) \reduces (\sigma', e')$ which says that $e$ reduces to (or executes
 to) $e'$ in the state $\sigma$, and the resulting state is $\sigma'$. This
 reduction relation is lifted to describe not just a single expression but to a
@@ -48,7 +47,7 @@ Languages}~\cite[Chapter~5]{pierce:tapl}.
 The syntax for GooseLang programs is given in \cref{fig:goose:syntax}. The
 important top-level definition is $e \in \textdom{Exp}$, giving expressions in
 GooseLang. Before getting to the expressions, it's worth noting that the values
-in GooseLang are designed for Go's primitive data, in particular with
+in GooseLang are designed for Go's primitive data types, in particular with
 first-class support for bytes and 32-bit and 64-bit unsigned integers. Our code does
 not use signed integers and so Goose does not model them, but adding them would simply
 require extending the type of literals and adding several pure operations to
@@ -198,10 +197,9 @@ though the Go code takes no arguments, the GooseLang expression takes an unused
 argument; this is so that $\goosedef{NewPtr}$ is syntactically a function, a
 requirement of the way GooseLang is encoded in Coq.\footnote{For expert readers,
 GooseLang functions are actually \emph{values} and not expressions.} Second,
-this definition allocates a pointer with $\goosekw{ref}$, using
-$\goosekw{AllocN}$ which more generally allocates $n$ contiguous pointers. The
-initial value of 0 is the ``zero value'' of the \cc{uint64} type, a promise made
-by Go.
+this definition allocates a pointer with $\goosekw{ref}$ and gives it an initial
+value of 0. Go promises that this initial value is the ``zero value'' of the
+appropriate type, \cc{uint64} in this case.
 
 The $\goosekw{CmpXchg}$ operation in GooseLang is special in that it is not
 directly exposed by the translator. It is used to model locks, since it is the
@@ -210,13 +208,12 @@ explains how locks are modeled, including the implementation of the lock model
 that uses $\goosekw{CmpXchg}$.
 
 The Goose syntax includes an $\external$ alternative. The language, both syntax
-and semantics, are parameterized over an external interface of operations, for
+and semantics, are parameterized by an external interface of operations for
 interacting with the outside world. For example, in GoTxn the code uses an
 interface of external disk operations, presented separately in
 \cref{fig:goose:disk-ffi}. The parameterization is primarily useful for
-refinement proofs that relate Goose with one set of external operations to
-another (for example, we use this to specify GoTxn). Other than that use case,
-the reader can imagine that the external rules are simply part of the definition
+refinement proofs that relate two instantiations of Goose with different sets of external operations (for example, we use this to specify GoTxn). Other than that use case,
+the reader can imagine that the disk's external rules are simply part of the definition
 of expressions and the semantics.
 
 \subsection{Semantics of GooseLang}%
@@ -272,8 +269,8 @@ it, indicating where the next reduction should take place. The entire expression
 might be a hole $\square$. As an example, the pair of contexts $E \binop e$ and
 $v \binop E$ determine how all binary operators work (for example, $\binop$
 might be $+$). These say that in an expression $e_{1} \binop e_{2}$, the first argument
-$e_{1}$ can always be reduced (due to the first context), but it must execute
-to a value before any reduction steps that reduce the second argument (due to
+$e_{1}$ can always be reduced (due to the first context), but it must reduce
+to a value before any reduction steps can take place over the second argument (due to
 the second context). Once both are values, the pure reduction for binary
 operators will apply. The result is a left-to-right evaluation order for binary
 operators.
@@ -288,7 +285,7 @@ reduction step it can both read \emph{and} set single location $h(\ell)$, which
 other operations do not do.
 
 Atomicity is also important for the disk. The fact that $\goosekw{DiskWrite}$
-take a single transition in the semantics is what makes the disk atomic on
+take a single transition in the semantics is what makes the model of the disk atomic on
 crash, since a crash also stops the system only between the reduction steps of
 the semantics.
 

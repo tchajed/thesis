@@ -59,9 +59,8 @@ Verified compilation is used in a way similar to VST in
 Vale~\cite{bond:vale,fromherz:vale-fstar}. Code is written in a specialized
 assembly-like language called Vale, with proof annotations. This is then
 compiled to Dafny or \fstar (Vale has two backends) where the proofs are carried
-out before finally being printed back down to assembly. Vale supports highly
-efficient code because it is written in assembly, but this code pays a price in
-being harder to verify.
+out before finally being printed back down to assembly. Vale supports verifying highly
+efficient assembly code, but this code pays a price in being harder to verify.
 
 Cogent~\cite{amani:cogent,oconnor:cogent-lang} also uses a form of verified
 compilation known as translation validation to make proofs easier without compromising on sounds. Code
@@ -104,9 +103,9 @@ RustBelt is to prove properties about \emph{all} \lambdarust programs, whereas
 we only prove correctness of \emph{particular} GooseLang programs. As a result
 it is important for \lambdarust, together with its type system, to rule out
 programs that Rust does not allow, whereas GooseLang is more expressive than Go
-with unsafe features like pointer arithmetic. Due to different goals, RustBelt
-also does not have an automatic translation from Rust to \lambdarust, though
-some libraries have been translated by hand and verified using Iris.
+with unsafe features like pointer arithmetic. Because it has different goals, RustBelt
+also does not have an automatic translation from Rust to \lambdarust; instead,
+some important libraries have been translated by hand and verified using Iris.
 
 Finally, WebAssembly is a rare example of a production language with a formal
 semantics~\cite{haas:wasm}, and moreover it was designed with the formal

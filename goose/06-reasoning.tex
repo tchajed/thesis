@@ -79,6 +79,8 @@ pointers, stores are translated to a non-atomic store while loads are translated
 use GooseLang's atomic Load. GooseLang has support for non-atomic
 reads as well in order to model map iteration.
 
+\tej{change $\goosekw{Reading} \app 0 \app v$ notation to use parentheses and
+  lower-case (and no color); spacing doesn't actually work in LaTeX}
 Ordinarily values in the heap are of the form $\goosekw{Reading} \app 0 \app v$,
 to indicate no readers or writers. Writes are split into
 $\goosekw{PrepareWrite}(\ell)$, which sets the value of $\ell$ to
@@ -480,7 +482,7 @@ append to the slice prefix but stop using the old slice, or if it will use both
 $s[:i]$ and $s[i:]$.
 
 Concretely, GooseLang has two theorems for reasoning about taking a prefix of a
-list. Both of these theorems require $i < \len(s)$.
+slice. Both of these theorems require $i < \len(s)$.
 \begin{mathpar}
   \inferH{slice-take-full}{}{%
 {\begin{array}{ll}
@@ -503,7 +505,7 @@ list. Both of these theorems require $i < \len(s)$.
 The rule \ruleref{slice-take-full} captures that the program proof can get full ownership of
 $s[:i]$, in exchange for dropping any ownership over the rest of $s$.
 The second rule \ruleref{slice-split} instead allows the program proof to split $s$ into two
-parts at the $i$th index, but in exchange lose $\sliceCap{s[:i]}$, the right
+parts at the $i$th index, but in exchange lose $\sliceCap(s[:i))$, the right
 to append to the first half.
 
 There is one more fact that is sometimes useful, which is that
