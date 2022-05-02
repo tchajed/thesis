@@ -73,19 +73,17 @@ $x \gets v$, the primitive store operation, \emph{non-atomic} by splitting it
 into two operations. The GooseLang semantics tracks the behavior of these
 operations by augmenting the heap with extra information; each address in the
 semantics has a $\textdom{NonAtom}$ which can be
-$\goosekw{Reading} \app n \app v$ if there are $n$ readers and the value is $v$,
-or $\goosekw{Writing} \app v$ if a thread is currently writing. For most
+$\nareading{n}{v}$ if there are $n$ readers and the value is $v$,
+or $\nawriting{v}$ if a thread is currently writing. For most
 pointers, stores are translated to a non-atomic store while loads are translated
 use GooseLang's atomic Load. GooseLang has support for non-atomic
 reads as well in order to model map iteration.
 
-\tej{change $\goosekw{Reading} \app 0 \app v$ notation to use parentheses and
-  lower-case (and no color); spacing doesn't actually work in LaTeX}
-Ordinarily values in the heap are of the form $\goosekw{Reading} \app 0 \app v$,
+Ordinarily values in the heap are of the form $\nareading{0}{v}$,
 to indicate no readers or writers. Writes are split into
 $\goosekw{PrepareWrite}(\ell)$, which sets the value of $\ell$ to
-$\goosekw{Writing} \app v_{0}$, and $\goosekw{FinishStore}(\ell, v)$ which sets
-it to $\goosekw{Reading} \app 0 \app v$. A concurrent write will be undefined
+$\nawriting{v_{0}}$, and $\goosekw{FinishStore}(\ell, v)$ which sets
+it to $\nareading{0}{v}$. A concurrent write will be undefined
 since $\goosekw{PrepareWrite}(\ell)$ requires no concurrent writers, and
 similarly for a concurrent read which is undefined if the address is being
 written. Non-atomic reads are similar with $\goosekw{StartRead}$ and
@@ -616,7 +614,7 @@ In order to ensure iterator invalidation is undefined behavior, the model marks 
 reference as being read for the entire duration of iteration, using the
 $\goosekw{StartRead}$ and $\goosekw{FinishRead}$ GooseLang primitives at the
 beginning and end of $\cc{MapIter}$. If the map value in the heap is
-$\goosekw{Reading} \app n \app v$, these operations increment and decrement
+$\nareading{n}{v}$, these operations increment and decrement
 (respectively) the reader count $n$, so that any writes within the body have
 undefined behavior.
 

@@ -14,6 +14,9 @@
 \newcommand{\reduces}{\rightsquigarrow}
 \newcommand{\purereduction}{\overset{\mathrm{pure}}{\reduces}}
 
+\newcommand{\nareading}[2]{\mathsf{reading}(#1, #2)}
+\newcommand{\nawriting}[1]{\mathsf{writing}(#1)}
+
 GooseLang is an effectful, untyped lambda calculus, with mutable references and
 concurrency. Defining the language involves defining a \emph{syntax} in the form
 of expressions (\cref{sec:goose:syntax}), and a \emph{semantics} for how those expressions execute in the
@@ -309,11 +312,11 @@ the semantics.
   \begin{mathpar}
     \infer{\forall 0 \leq i < 4096,\, \ell + i \notin \dom(h) \\ w[a] = b}%
     {((h, w), \goosekw{DiskRead}(a)) \reduces%
-      ((h[\ell + i \mapsto \goosekw{Reading} \app 0 \app b[i] %
+      ((h[\ell + i \mapsto \nareading{0}{b[i]} %
       \mid 0 \leq i < 4096], w), \ell)}
 
     \infer{\forall 0 \leq i < 4096,\, \exists k.\, h[\ell + i] =
-      \goosekw{Reading} \app k \app b[i] }
+      \nareading{k}{b[i]} }
     {((h, w), \goosekw{DiskWrite}(a, \ell)) \reduces %
       ((h, w[a \mapsto b]), ())}
 
