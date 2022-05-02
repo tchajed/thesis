@@ -289,7 +289,7 @@ liked~\cite[\S 8]{bodenmuller:concurrent-flashix}.
 We had a similar experience within the transaction system, where
 performance constrained the APIs of internal layers and forced us to export
 complicated APIs. The  GoTxn was perhaps trickier than the components of Flashix
-because we model code at a lower level of abstraction, so even issues like
+because Goose models the implementation at a lower level of abstraction, so even issues like
 concurrency and memory safety show up in each interface. We were inspired to
 develop the DaisyNFS design to get truly sequential reasoning from the
 experience of working in Perennial compared to automated verification in \fstar
@@ -303,7 +303,7 @@ being reused. A flash file system works around this limitation with \emph{garbag
 collection}, where occasionally the system identifies a mostly-unused block,
 moves its valid data elsewhere, and then erases it to reclaim space. This is
 implemented by maintaining a logical-to-physical block mapping, similar to
-virtual memory. DaisyNFS does not require any of this code, since we run on
+virtual memory. DaisyNFS does not require any of this code, since it runs on
 devices that internally implement these features.
 
 
@@ -333,8 +333,8 @@ key-value store, we have so far only used it in combination with DaisyNFS.\@
 IsoFS has a similar design to DaisyNFS: it factors out isolation and atomicity to the transaction
 system, making it easy to handle crashes and concurrency. Unlike GoTxn and
 DaisyNFS, Isotope is still prone to subtle concurrency bugs in the transaction
-system and bugs in the IsoFS code, whereas we use this split design to verify
-both the transaction system and file-system code. The transaction API provided
+system and bugs in the IsoFS code, whereas DaisyNFS uses the split design to
+verify both the transaction system and the transactions themselves. The transaction API provided
 by Isotope has an interesting performance optimization that GoTxn could support:
 the API includes a \cc{please_cache} call that keeps an address in the
 transaction system's cache, used for small but frequently-accessed metadata like
