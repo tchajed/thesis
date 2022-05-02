@@ -122,7 +122,8 @@ enough that this section describes them separately.
 In Coq, the core feature is proofs based on dependent type theory, which is
 expressive enough to represent essentially any math. A first step when using Coq
 is to connect the code to the reasoning in the proof assistant. The particular
-approach in this thesis translates executable code to a model in Coq. The model
+approach in this thesis translates executable code to a model in Coq,
+implemented by a tool called Goose. The model
 and its semantics encodes the
 assumptions the proof makes about how the program behaves. The semantics is typically structured as a transition
 system, where an execution is a sequence of states the program goes through
@@ -135,7 +136,6 @@ where the specification describes the allowed behaviors of the program. The
 specifications in this work forbid universally incorrect behavior, like reading an
 out-of-bounds address in an array, but more precisely specify what the program
 is supposed to do, for example how it responds to user requests.
-
 
 A common structure to tame the complexity of reasoning about a program is to use
 a \emph{program logic}. In principle it might be possible to prove a theorem
@@ -185,6 +185,27 @@ generally fewer annotations are needed than lines of proof for Coq. The main
 downside to this approach is that it fixes a sequential programming language, so
 unlike in Coq, it isn't possible to reason about concurrency and crashes.
 
+\Cref{fig:overview} depicts how all of the components of DaisyNFS and its proof
+fit together. The left-hand side depicts the implementation, split between GoTxn
+and the file-system implemented in Dafny. The Dafny code is compiled to Go and
+then the two parts are linked together into one \cc{daisy-nfsd} binary in the
+usual Go build process. GoTxn is translated to a model using a tool called
+Goose. The right-hand side of the figure depicts all aspects related to the
+proof, which is written using the Perennial program logic. All of this happens
+in the Coq proof assistant, which checks that the proofs are valid. Meanwhile
+the DaisyNFS file-system code is verified in Dafny, which integrates
+implementing, specifying, and verifying code. This proof is checked by the Dafny
+verifier. Finally, the proof of GoTxn is written in such a way that it can be
+composed with the proof of DaisyNFS for a theorem about the whole
+\cc{daisy-nfsd} binary. This is a conceptual composition, not one in either
+Dafny or Coq.
+
+\begin{figure}[ht]
+\includegraphics{fig/overview.png}
+\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
+\label{fig:overview}
+\end{figure}
+
 One of the contributions of this thesis is that the file-system design isolates
 concurrency and crash safety into the transaction system. This structure leaves
 the rest of the implementation only to \emph{sequentially} implement the
@@ -207,23 +228,6 @@ sequential simulation proof shows those atomic transactions implement the
 abstract specification. However, the GoTxn theorem formalizes precisely what
 conditions are required for the simulation transfer, including restrictions on
 the transactions and exactly what crash safety guarantees are achieved.
-
-\Cref{fig:overview} depicts how the artifacts of this thesis combine. \tej{refer
-to this figure earlier in this section} GoTxn is
-implemented in Go and verified using Perennial in Coq. Goose is the system that
-connects the code to a model suitable for reasoning in Perennial. Separately,
-DaisyNFS implements the file-system operations in Dafny, which has integrated
-support for code and proofs. On the left-hand side of the figure,
-\cc{daisy-nfsd} uses the verified code for DaisyNFS (compiled from Dafny to Go)
-and GoTxn to implement a complete NFS server. On the right-hand side, the GoTxn
-simulation transfer theorem takes the DaisyNFS Dafny proof and turns it into an
-overall correctness theorem for the whole server.
-
-\begin{figure}
-\includegraphics{fig/overview.png}
-\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
-\label{fig:overview}
-\end{figure}
 
 \section{What is the value of verifying a file system?}
 
