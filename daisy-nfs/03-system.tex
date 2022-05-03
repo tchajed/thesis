@@ -62,23 +62,11 @@ the Dafny proof.
 %% is built up by calling methods through several abstraction layers before
 %% eventually producing a sequence of transactional reads and writes.
 
-\tej{fix this paragraph}
-The proof requires that each 4KB block be accessed with a consistent size. We
-represent that in the specification with a fixed ``schema'' specifying the
-size of every block address, which is fixed by the caller while calling the
-file-system initialization. The schema is never passed to the code and only used
-to enforce the consistent-size restriction in the precondition of \cc{Read}
-and \cc{Write}. These restrictions are reflected by representing the
-transaction system not as an array of bytes but as a mapping from
-``addresses'' specifying a block number and offset to ``objects'' which can be
-either a boolean or a list of bytes. The schema is a static mapping from block
-number to size such that all the objects are of that size.
-
-In practice the file system uses three kinds of objects: full blocks are used
-for data (both for directories and data files), bit objects comprise the inode
-and block allocators, and 128-byte objects are used to represent inodes. The
-file-system statically allocates regions for the inodes, allocator bitmaps,
-and data blocks, so that object sizes never change.
+Recall that GoTxn supports accessing objects smaller than a block. DaisyNFS uses
+three sizes of objects: bit objects comprise the inode and block allocators,
+128-byte objects are used to represent inodes, and full 4KB blocks are used for
+file and directory data (including indirect blocks). The file system statically
+allocates regions for these three kinds of blocks, much like ext4.
 
 Acquiring multiple locks during a transaction creates the possibility
 for deadlocks, for example if two threads acquire a pair of locks in the opposite

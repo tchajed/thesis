@@ -30,8 +30,12 @@ both the usual lock invariant and a weaker crash invariant.
 
 \paragraph{Invariants for crash reasoning.} Perennial has a rule where
 allocating an invariant gives ``credit'' for it on crash. This idea formalizes
-an intuition about how ownership flows between threads and on crash. \tej{cite
-RECIPE paper as an example of trying to get at this idea}
-
-\tej{think of more ideas in Perennial to explain? more on local crash conditions
-with concurrency maybe?}
+an intuition about how ownership flows between threads and on crash. A system
+called RECIPE has an insight along these lines, observing that a lock-free data
+structure should work on persistent memory~\cite{lee:recipe}. Intuitively this
+is true because the code already maintains an invariant at all intermediate
+steps due to other threads, and thus the same invariant should hold of the
+persistent memory on crash, but some more conditions are required for the
+intuition to hold up. RECIPE has no proof of correctness, and a mechanized proof
+would be challenging, but the ideas in this thesis could be used to think about
+its correctness and the required conditions with greater precision.
