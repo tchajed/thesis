@@ -145,7 +145,7 @@ and its semantics encodes the
 assumptions the proof makes about how the program behaves. The semantics is typically structured as a transition
 system, where an execution is a sequence of states the program goes through
 along with some notion of observable behavior, like external I/O or return
-values. \tej{maybe add a figure of an execution trace}
+values.
 
 Once we have a program in Coq, we can reason about it. The goal of
 verification is to prove that all possible behaviors of the program are allowed
@@ -248,103 +248,6 @@ the transactions and exactly what crash safety guarantees are achieved. Note
 that the simulation-transfer theorem is a general property of GoTxn that this
 thesis applies to DaisyNFS but which could also be applied to other verified
 storage systems.
-
-\section{What is the value of verifying a file system?}
-
-The reader might wonder what the value of this kind of large verification effort
-is.
-
-\paragraph{Cost versus benefit.} There are many less formal ways to make
-software more reliable, including testing, fuzzing, and code auditing. Formal
-verification also has a spectrum; we could potentially apply property-based
-testing, model checking, or symbolic execution to parts of the code. Rather than
-verifying the implementation, we could instead attempt to model and specify key
-parts of the algorithms or system design, then verify those. What is the
-additional value of fully machine-checked proofs, all the way down to the code?
-
-Verification in the real world needs to have benefits that outweigh the costs.
-The benefit of reliability for file systems is hopefully clear, from the
-exposition above. I see this work as lowering the cost of verifying crash-safe
-and concurrent systems: formerly, there simply didn't exist techniques for this
-kind of proof, and now it is possible (and at least the cost is bounded by a PhD
-thesis and not something much larger). Building on these foundations, I hope the
-costs come down to make verification an appealing alternative to verification
-for the next generation of storage systems.
-
-A real achievement for verification would be to use verification not just as
-alternative to testing, but to build something with more daring optimizations,
-features, or speed then would otherwise be possible. I think file systems (or
-more generally, some storage system that holds persistent state) have the
-potential to be just such an application. There aren't that many widely-used
-file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
-Windows, and APFS on macOS --- and new file systems are generally adopted very
-slowly. APFS was surprising for having only a 3-year development period before
-Apple widely deployed it. Ext4 is the next newest of that list, introduced in
-2008 (by extending ext3, which was first released in 2001).
-
-% ext4: 2008
-% ext3: 2001
-% XFS: 1994 (first released on IRIX OS for SGI)
-% NTFS: 1993
-% APFS: 2017
-
-\paragraph{Verification guides debugging.} With a verified system, bugs are
-still inevitable since there is unverified code surrounding the verified code,
-the assumptions of the proof can be violated, and the specification can be
-wrong. However, an advantage of formal verification, particularly fully
-machine-checked proofs, is that when bugs are discovered it's safe to start
-debugging with all the code outside the verification as well as looking at the
-specification.
-
-\paragraph{Working out the details gives confidence in the methodology.} One
-reason to go through the trouble of mechanizing the proofs is to validate new
-techniques in a way that gives confidence. This is like the confidence in a
-verified system, but at a higher level of abstraction: it applies to the theory
-behind the reasoning as well. \tej{an example of something where there are
-plausible but wrong versions would be great} For example, the formalism helps
-work out a specification for crash safety and concurrency, one that the
-mechanized proof shows has the right meaning (due to the soundness theorem) and
-is usable (due to the verified reasoning principles in the logic). With this
-confidence in the meaning of a specification and intuition for how they can be
-soundly manipulated, now it is possible to carry out reasoning informally, or
-implement the logic in an automated system. Concurrency makes this especially
-important, since specifications can be quite subtle to use. \tej{find some
-old subtle concurrent program logic, like the one with the anti-frame rule}
-
-\paragraph{Mechanized proofs force the reasoning to be complete.} On-paper
-reasoning about a system gains much of the value of formal reasoning, that of
-forcing the author of a system to think through the cases systematically. While
-it works to a degree, it is easy to delude oneself into thinking that a proof is
-complete while actually having neglected an important corner case.
-
-\paragraph{Interactive theorem proving is a great way to prototype.} I do not
-anticipate that busy engineers trying to write production code will write proofs
-in Coq, much less develop a custom program logic. However, this workflow is
-excellent for prototyping the right reasoning principles, some reasons for which
-are outlined above. Working out proofs interactively gives a good feel for how
-the logic works, from which automation can be designed bit by bit (some of it as
-Coq automation itself). In Perennial (as in Iris), proof steps are at a
-sufficiently high level of abstraction to make the proofs doable for prototyping
-purpose, even though it has no search-based automation, sophisticated
-algorithms, or use of an SMT solver.
-
-\paragraph{Verification is valuable for critical systems.} It will never be cost
-effective to verify all software; at a minimum software needs a specification
-that is more likely to be correct than the implementation to be verified.
-Instead, the aim is to use verification for critical systems, \emph{critical}
-because failures are especially bad, and \emph{systems} that have well-defined
-guarantees to make to other systems and applications running on top. It is also
-helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
-used by many other pieces of software, since then the impact of bugs is felt to
-a greater extent. Finally, alongside the need for a specification it is also
-important that the verification respond to changes in both specification and
-implementation. If both change rapidly and the proofs cannot be re-done, then
-verification won't keep up with the pace of development. File systems fit all of
-these criteria: bugs can lead to data loss which the application cannot
-mitigate, the interface is stable and relatively standard, and essentially all
-applications go through the file system to store persistent state.
-
-\resume
 
 \section{Contributions}
 \label{sec:intro:contributions}
