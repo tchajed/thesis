@@ -1,30 +1,37 @@
-One crucial service in an operating system is its \emph{file system}, the
-software that implements the abstraction of files and directories on top of a
-disk, which simply stores a long sequence of bytes. File systems are important
-because they are used by all applications to store data, and bugs in file
-systems are especially costly because they can lead to data loss for any of
-these applications. One approach to improve reliability is to use formal
-verification, in which the file system is developed along with a proof that it
-always follows a high-level specification of its intended behavior. This thesis
-develops new techniques to address the key challenges in a file system of
-reasoning about \emph{concurrency} and unexpected \emph{crashes} where the whole
-computer reboots, a verified transaction system that handles these concerns, and
-a file system that uses the transaction system. The final artifact is DaisyNFS,
-a verified file system that comes with a proof of correctness and that achieves
+Formal verification is a promising approach for improving reliability, in which
+a system is developed along with a proof that it always follows a high-level
+specification of its intended behavior. The first contribution in this
+thesis develop ideas and techniques for proving the correctness of a class of
+systems that store persistent data and thus make guarantees about \emph{crashes}
+where the whole computer stops and reboots, and also have \emph{concurrency} for
 good performance.
+
+Next, the thesis applies these verification techniques to a \emph{file system},
+the service in an operating system that implements the abstraction of files and
+directories. File systems are important because they are used by all
+applications to store data, and bugs in file systems are especially costly
+because they can lead to data loss for any of these applications. The next
+contribution is a system design that enables verifying something with the
+complexity of a file system.
 
 \section{Motivation}
 \label{sec:intro:motivation}
 
+Systems that store persistent data are challenging to make correct; concurrency
+on its own is hard to reason about, and the possibility of a crash at any time
+makes it more difficult. File systems are a good instance of such a system where
+handling concurrency and crashes is important for correctness.
+
 A file system is an especially critical system for
 three reasons. First, the file system is widely used --- essentially all applications have
 data that is ultimately stored in a file system. Second, implementations are
-concurrent and optimized, which increases the potential for bugs. Finally, bugs
-are particularly costly since they can lead to permanent data loss for any
-application running on top.
+concurrent and optimized to improve performance, which increases the potential
+for bugs. Finally, bugs are particularly costly since they can lead to permanent
+data loss for any application running on top.
 
-Two challenges make implementing a correct file system challenging: crashes and
-concurrency. A file system is generally expected to keep application data safe
+Crashes and
+concurrency are the key challenges in writing a correct file system.
+A file system is generally expected to keep application data safe
 even if the system stops running at any time, say due to a power failure or
 kernel panic. This thesis uses ``crash'' to refer to any of these circumstances
 where the computer stops and is rebooted. After a reboot, the file system is
@@ -33,7 +40,8 @@ concurrency in the implementation, which complicates approaches for improving
 reliability, including both testing and verification.
 
 Bugs are still discovered in widely used file systems like ext4 and btrfs,
-despite a long history of developing, testing, and using these file systems. A
+despite a long history of developing, testing, and using these file systems. For
+example, a
 recent approach for fuzzing file systems~\cite{kim:hydra} found new crash-safety
 issues in both ext4 and btrfs, despite not testing for concurrency issues. A
 study conducted in 2013 looked at all patches for Linux file systems from
@@ -269,7 +277,7 @@ potential to be just such an application. There aren't that many widely-used
 file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
 Windows, and APFS on macOS --- and new file systems are generally adopted very
 slowly. APFS was surprising for having only a 3-year development period before
-Apply widely deployed it. Ext4 is the next newest of that list, introduced in
+Apple widely deployed it. Ext4 is the next newest of that list, introduced in
 2008 (by extending ext3, which was first released in 2001).
 
 % ext4: 2008
