@@ -1,4 +1,4 @@
-\section{Motivation and approach}%
+\section{Verification approach}%
 \label{sec:daisy:motivation}
 
 DaisyNFS is an implementation of the Network File System (NFS) API.\@ This is a
@@ -10,26 +10,25 @@ Windows Server, macOS, and Linux each include an implementation of both an NFS
 server and client.\footnote{Windows 10 and 11 can act as NFS clients but do not
 include an NFS server.}
 
-In order to verify DaisyNFS, we first need a specification. A natural starting
-point is RFC 1813, which prescribes what a valid NFSv3 server
-does. However, the RFC is a prose document with about 130 pages of English text,
+RFC 1813 is a good starting point for DaisyNFS's specification.
+However, the RFC is a prose document with about 130 pages of English text,
 which is unsuitable for a mathematical proof. Thus the first step is
-to turn the RFC into something more precise. Our NFS specification (described in
+to turn the RFC into something more precise. DaisyNFS's specification (described in
 \cref{sec:daisy:nfs}) uses a
-transition system defined in Dafny for this purpose, with an abstract state that
-can capture the state of the server at all times, and transitions that define
+transition system defined in Dafny for this purpose, defining the behavior of
+the protocol with an abstract state and transitions that define
 for each NFS operation how the state evolves and what the return value is. The
 transition system allows non-determinism in the specification to give the
 implementation some flexibility.
 
 The transition system describes the abstraction of an NFS server, but what does
-it mean for the \cc{daisy-nfsd} binary to implement this protocol? To formalize
+it mean for the \cc{daisy-nfsd} binary to implement this specification? To formalize
 DaisyNFS's correctness we use \emph{refinement}, as used in the GoTxn
 specification as well. The server binary is a refinement of the NFS transition
-system (the specification transition system) if every execution of the code has
+system if every execution of the code has
 user-visible behavior that the specification could also produce (also phrased as
-a behavior that the specification allows). In our specification the visible
-behavior of both systems is defined to be network requests and responses. This
+a behavior that the specification allows). In DaisyNFS's specification the visible
+behavior is defined to be network requests and responses. This
 notion of refinement also considers crashing executions (where the server
 suddenly stops, the machine reboots, and the server resumes), and concurrent NFS
 requests.
@@ -110,7 +109,7 @@ There still remains a challenge of actually implementing the file system using
 transactions. \Cref{sec:daisy:design} discusses some key challenges to address,
 in particular how to ensure transactions are bounded in size (since GoTxn
 transactions cannot exceed the size of the on-disk circular buffer) and avoiding
-deadlocks in the transaction system.
+deadlocks in transactions.
 
 The design of DaisyNFS does impose limitations. The proof approach relies on
 transactions appearing to run sequentially, which prevents modifying state
@@ -119,7 +118,7 @@ persistent key-value store where some small metadata is manipulated with transac
 the bulk of the data is stored separately --- the proof of such a system would
 require explicit crash and concurrency reasoning for the data reads and writes,
 but GoTxn would still be useful for managing the metadata. GoTxn does not have a proof of liveness, and the file-system proof
-does not show that transactions avoid deadlock. Our NFS implementation does not
-cover some features, such as symbolic links, hard links, and paginated
-\cc{READDIR}; we believe all of these could be implemented and specified with
-the same approach but have not done so in our prototype.
+does not show that transactions avoid deadlock. Our NFS implementation lacks
+some features, such as symbolic links, hard links, and paginated \cc{READDIR};
+we believe all of these could be implemented and specified with the same
+approach but have not done so in our prototype.

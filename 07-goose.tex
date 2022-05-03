@@ -1,11 +1,19 @@
 This chapter is about Goose, which solves a practical
-problem of reasoning about efficient code. To use Goose, a developer writes
-code in Go, uses an automatic translator to convert the code to a model in the Coq proof
-assistant, then carries out the proof on top of the model in the Perennial logic. Goose encompasses
+problem of reasoning about efficient code. The developer writes
+code in Go, uses the \cc{goose} translator to convert the code to a model in the Coq proof
+assistant, then carries out the proof on top of the model in the Perennial
+logic. Goose encompasses
 the entire process: it includes the translation tool itself, the way it models Go
 code, and finally the reasoning principles for proving properties of translated
 Go. (We will also use ``Goose'' in some places to refer to the subset of Go
 supported by the translation tool.)
+
+Previously \cref{ch:txn} discussed the GoTxn proof. GoTxn is implemented in Go;
+Goose is the system that allows us to verify its implementation. The proof is
+carried out in the Perennial logic, described in way in \cref{ch:perennial}.
+Both the description and implementation of Perennial are language-independent.
+To verify GoTxn, we instantiate Perennial with GooseLang, the language that
+Goose provides to model Go code.
 
 This description of Goose is written to be accessible to someone relatively new
 to verification or systems research. The hope is that others can learn from this
