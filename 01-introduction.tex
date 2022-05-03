@@ -52,8 +52,7 @@ serious consequences than most bugs in application software). File systems have
 a lot of internal concurrency for performance reasons, which both leads to bugs
 and makes testing and fuzzing more challenging.
 
-The approach in this thesis to make a reliable file system is to use formal
-verification. In this approach, we write the code, then a specification of the
+This thesis develops techniques to apply formal verification to a file system. In this approach, we write the code, then a specification of the
 intended behavior of the code, and finally a mathematical proof that shows the
 code always meets the specification. For confidence in the proof itself, the
 proof is carried out in a computer and a piece of software called a proof
@@ -67,25 +66,25 @@ practice, but it does help since the specification is smaller than the
 implementation, and it isolates debugging to identifying where the specification
 is wrong or an assumption was violated.
 
+% The key to verifying a system with the complexity of DaisyNFS is a design
+% that splits the file system into two main parts: a transaction system called
+% GoTxn that makes it easy to get atomicity over the disk, and then the rest of
+% the file system implemented using a transaction per operation. GoTxn must face
+% the key challenges of crash safety and concurrency, but it handles them in such
+% a way that the code on top is verified using comparatively much simpler
+% sequential reasoning. The file-system code then focuses on implementing features
+% like the details of the NFS semantics, large files, and efficient data
+% structures.
+
+\section{State of the art}
+\label{sec:intro:related}
+
 While the idea of formal verification is not new, there was essentially no
 support for reasoning about the combination of crashes and concurrency when this
 thesis work started (in 2015). Thus this thesis develops new techniques to
 reason about the combination in the first place. We apply these techniques to
 DaisyNFS, a verified implementation of the Network File System (NFS) protocol, a
 standard file-system interface.
-
-The key to verifying a system with the complexity of DaisyNFS is a design
-that splits the file system into two main parts: a transaction system called
-GoTxn that makes it easy to get atomicity over the disk, and then the rest of
-the file system implemented using a transaction per operation. GoTxn must face
-the key challenges of crash safety and concurrency, but it handles them in such
-a way that the code on top is verified using comparatively much simpler
-sequential reasoning. The file-system code then focuses on implementing features
-like the details of the NFS semantics, large files, and efficient data
-structures.
-
-\section{State of the art}
-\label{sec:intro:related}
 
 Production file systems are generally validated by testing. While testing is
 indispensable for development, the nature of a file system makes it difficult to
@@ -132,10 +131,10 @@ checks the proof against the implementation and specification, ensuring that the
 proof is complete.
 
 This thesis integrates interactive, foundational proofs using custom
-infrastructure (in Coq) as well as automated verification using a
-verification-aware programming language (Dafny). These are both machine-checked,
-formal proofs, but the interaction models of the two systems are different
-enough that this section describes them separately.
+infrastructure (in Coq~\cite{coq}) as well as automated verification using a
+verification-aware programming language (Dafny~\cite{leino:dafny}). These are
+both machine-checked, formal proofs, but the interaction models of the two
+systems are different enough that this section describes them separately.
 
 In Coq, the core feature is proofs based on dependent type theory, which is
 expressive enough to represent essentially any math. A first step when using Coq
@@ -149,11 +148,12 @@ along with some notion of observable behavior, like external I/O or return
 values. \tej{maybe add a figure of an execution trace}
 
 Once we have a program in Coq, we can reason about it. The goal of
-verification is to prove that the program meets its specification, and
-where the specification describes the allowed behaviors of the program. The
+verification is to prove that all possible behaviors of the program are allowed
+by its specification, where behavior might be the return values of a library, or
+the network I/O for a server. The
 specifications in this work forbid universally incorrect behavior, like reading an
 out-of-bounds address in an array, but more precisely specify what the program
-is supposed to do, for example how it responds to user requests.
+is supposed to do.
 
 A common structure to tame the complexity of reasoning about a program is to use
 a \emph{program logic}. In principle it might be possible to prove a theorem
@@ -169,12 +169,11 @@ recently have they reached the maturity to give completely mechanized proofs of
 moderate-sized programs. There are few logics that also can reason about crash
 safety. Our approach in this thesis is to build a new program logic called Perennial with all the
 concurrency-reasoning features of a modern program logic, plus new features for
-reasoning about crashes. What makes this feasible is Iris, a modular framework
-for concurrency. Iris includes a concurrent program logic which we are able to
-extend with crash-safety reasoning while preserving the concurrency reasoning
-features, without reimplementing them from scratch.
+reasoning about crashes. Perennial builds upon Iris, a modular framework for
+concurrency, preserving its concurrency features while extending it with
+crash-safety reasoning.
 
-Using our new program logic, we verified GoTxn, a concurrent transaction system.
+Using the new Perennial program logic, we verified GoTxn, a concurrent transaction system.
 The transaction system's correctness theorem says that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
@@ -225,12 +224,11 @@ Dafny or Coq.
 \end{figure}
 
 One of the contributions of this thesis is that the file-system design isolates
-concurrency and crash safety into the transaction system. This structure leaves
-the rest of the implementation only to \emph{sequentially} implement the
-file-system logic and data structures. Because this is sequential, crash-free
-execution, we use Dafny to implement and verify each operation, then run this
-code wrapped in a transaction. Intuitively what the file-system proof shows is
-that it correctly implements the NFS protocol.
+concurrency and crash safety into the transaction system. The rest of the system
+implements the file-system logic and data structures. Because each operation is
+wrapped in a transaction that appears to run sequentially and without crashes,
+we use Dafny for this implementation and proof. Intuitively what the file-system
+proof shows is that it correctly implements the NFS protocol.
 
 In order to connect the file system's sequential proofs to its concurrent
 execution, we prove a general theorem about the transaction system's
