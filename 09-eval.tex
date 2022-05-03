@@ -6,8 +6,8 @@ and ease of change (\cref{sec:eval:incremental}).
 \label{sec:eval:perf}
 
 The first question answered by the evaluation is, can DaisyNFS and GoTxn achieve
-good performance? This section evaluates performance both with a single and
-multiple clients.
+good performance, compared to an unverified baseline? This section evaluates
+performance both with a single and multiple clients.
 
 \subsection{Experimental setup}
 
@@ -16,14 +16,15 @@ and largefile benchmarks, and a development workload that consists of \cc{git
 clone} from a local repository followed by running \cc{make}. These are the same
 benchmarks used by DFSCQ~\cite{chen:dfscq} (a state-of-the art sequential
 verified file system). As a baseline, this evaluation compares against a Linux
-NFS server exporting an ext4 file system mounted with \cc{data=journal} mode.
+NFS server exporting the widely-used ext4 file system.
 The NFS server lets us compare fairly since both go through the Linux NFS client
-and use the same underlying protocol. Using \cc{data=journal} forces all data to
+and use the same underlying protocol. The ext4 file system is run in the
+non-default \cc{data=journal} mode, forces all data to
 go through the journal and disables log-bypass writes, which gives the same
 crash-safety guarantees and makes the designs more comparable. In its default
-\cc{data=ordered} mode Linux achieves better performance but can
-lose recently written data if the system crashes; we present some results
-to show the benefit of providing this weaker guarantee.
+\cc{data=ordered} mode Linux achieves better performance on some benchmarks but
+can lose recently written data if the system crashes; we present some results to
+show the benefit of providing this weaker guarantee.
 
 All of these benchmarks were run using Linux~5.13, Dafny~3.5.0, Go~1.18.1 on an Amazon
 EC2 i3.metal instance, which has two 36-core Xeon processors running at 2.7~GHz, 512~GB of RAM, and a local 1.9~TB
@@ -38,13 +39,9 @@ The three benchmarks test different aspects of file system performance:
 The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
 file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. The
 performance reported is the throughput in terms of files/s for this whole process. At
-the NFS level this results in four RPCs per iteration: \cc{LOOKUP} for the file
-being created (which fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Getting
-the client to issue exactly these four RPCs took some work, since Linux relies
-on getting the right ``weak cache-consistency'' data from all the operations to
-maintain its local cache. Without this caching, it issues more operations like
-\cc{GETATTR} and \cc{ACCESS} in between operations to update the directory
-attributes and permissions.
+the NFS level each iteration results in four RPCs issued to the server: \cc{LOOKUP} for the file
+being created (which fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Because
+both systems run the same RPCs, the comparison is meaningful.
 
 The smallfile benchmark is also used to measure the scalability of the file
 system. We run several concurrent clients, each repeatedly running the
@@ -68,28 +65,17 @@ file and then the gap is filled in by later RPCs.
 
 \paragraph{App.}
 The application workload ``app'' consists of running \cc{git clone} on the xv6
-repository followed by \cc{make}. The performance reported converts this latency
-to a throughput number ``app/s'' so that higher is better. The compilation part
-of this workload does take about 1.2s, out of an overall build that typically
-takes about 2.5s under Linux NFS. These 1.2s are unaffected by the file system's
-performance. The xv6 code being compiled is an operating system, so building it
-requires running the usual development tools---gcc, ld, ar---but also running dd
-to generate a kernel image. The main purpose of the app benchmark is to
+repository followed by \cc{make}. The main purpose of including this workload is to
 demonstrate that DaisyNFS covers a useful range of the NFS interface, since
 \cc{git clone} especially uses a wider mix of operations and arguments than the
 other benchmarks, and also that the file system implements these operations
-efficiently enough to not slow down the workload.
-
-To evaluate the importance of DaisyNFS's concurrency, we compare against two
-other configurations with reduced concurrency. The ``seq WAL'' configuration
-adds locks to the write-ahead log so that the disk operations that normally
-execute lock-free --- installation, logging, and reading installed data ---
-instead happen under the write-ahead log's in-memory lock. This permits
-transactions to execute concurrently while not accessing GoTxn but does not
-allow any parallel disk access. The ``seq txn'' variant leaves the write-ahead
-log the same but changes the per-address locking in GoTxn to a \emph{global}
-transaction lock, preventing any transactions from running concurrently but
-allowing concurrency between logging and installation in the write-ahead log.
+efficiently enough to not slow down the workload. The performance reported for
+app converts this latency to a throughput number ``app/s'' so that higher is
+better. The compilation part of this workload does take about 1.2s, out of an
+overall build that typically takes about 2.5s under Linux NFS, and this time is
+unaffected by the file system's performance.\@ The xv6 code being compiled is an
+operating system, so building it requires running the usual development
+tools---gcc, ld, ar---but also running dd to generate a kernel image.
 
 \subsection{Single-client performance}
 
@@ -135,6 +121,17 @@ directories. Because this experiment runs on a physical disk, other threads have
 a chance to prepare transactions while the transaction system is committing to
 disk.
 
+To evaluate the importance of DaisyNFS's concurrency, we compare against two
+other configurations of DaisyNFS with reduced concurrency. The ``seq WAL'' configuration
+adds locks to the write-ahead log so that the disk operations that normally
+execute lock-free --- installation, logging, and reading installed data ---
+instead happen under the write-ahead log's in-memory lock. This permits
+transactions to execute concurrently while not accessing GoTxn but does not
+allow any parallel disk access. The ``seq txn'' variant leaves the write-ahead
+log the same but changes the per-address locking in GoTxn to a \emph{global}
+transaction lock, preventing any transactions from running concurrently but
+allowing concurrency between logging and installation in the write-ahead log.
+
 \begin{figure}[ht]
   \begin{subfigure}[b]{0.5\textwidth}
     \centering
@@ -170,19 +167,19 @@ disk.
 
 The scalability experiment varies the number of concurrent smallfile clients,
 measuring the aggregate throughput of the whole system for each number of
-clients. Each data point is the result of averaging 5 separate runs, each for 10 seconds.
-The results are shown in \cref{fig:eval:scale}. The graph shows that DaisyNFS
-achieves both good absolute performance and gets higher throughput with more
-clients, comparable to the scalability of the Linux NFS server. These benchmarks
-don't have perfect scalability due to lock contention. We ran an analogous experiment on an
-in-memory disk to reduce this bottleneck, shown in \cref{fig:eval:scale:ram}.
-Linux scales much better than DaisyNFS in this experiment, indicating that its
-scalability in \cref{fig:eval:scale:nvme} is limited by disk throughput. DaisyNFS has a common
-lock between these threads for installing sub-block object writes into a full
-block; this lock is there when running on a physical disk but its effect is less
-pronounced since the system spends relatively more time in disk I/O. The Go
-mutex profile points to this lock as being the biggest source of contention in
-DaisyNFS.
+clients. Each data point is the result of averaging 5 separate runs, each for 10
+seconds. The results are shown in \cref{fig:eval:scale}. The graph shows that
+DaisyNFS achieves both good absolute performance and gets higher throughput with
+more clients, comparable to the scalability of the Linux NFS server, though
+Linux has better scalability. These benchmarks don't have perfect scalability
+primarily due to lock contention.
+
+We ran an analogous experiment on an in-memory disk to reduce the I/O
+bottleneck, shown in \cref{fig:eval:scale:ram}; scalability is similar,
+demonstrating that lock contention is still relevant. DaisyNFS has a common lock
+for installing sub-block object writes into a full block, which all operations
+go through to commit. The Go mutex profile points to this lock as being the
+biggest source of contention in DaisyNFS.
 
 The DaisyNFS seq WAL and seq txn variants evaluate where the concurrency in the
 system is important for performance with a concurrent workload. Even though in
@@ -243,7 +240,7 @@ given that all writes have to be written to both the journal and data region in
 both systems. However, we can see that a global txn lock actually performs
 \emph{better} than the per-address locking, showing a case where with enough
 conflicts two-phase locking has some overhead compared to a simpler locking
-scheme. The seq WAL case gets lower performance for similar reasons to with
+scheme. The seq WAL case achieves lower performance for similar reasons to
 smallfile-1, since it again alternates logging and installation rather than
 issues them concurrently.
 
@@ -252,7 +249,7 @@ is barely affected by concurrency in DaisyNFS.
 
 Another comparison shown in the same figure is to Linux with its log bypass
 optimization (the default \cc{data=ordered} mode), where writes can be written
-directly to a file's data blocks rather than going through the journal. This
+directly to a file's data blocks rather than going through the journal. This optimization
 only makes a difference for asynchronous NFS writes, since synchronous writes
 are journaled even with this option. The smallfile benchmark has only
 synchronous writes, so unsurprisingly performance is the same, but on the
@@ -263,6 +260,9 @@ to both the journal and the data region, and the actual benefit is high since
 the benchmark is dominated by disk writes. It's worth noting that even Linux
 does not saturate the disk, which can achieve 500 MB/s in sequential write
 throughput, due to the overhead of running over NFS.
+
+\tej{explain the DFSCQ implemented the optimization, it is not out-of-reach for
+  verification, but it breaks the GoTxn abstraction}
 
 \section{Testing the trusted code and spec}
 \label{sec:eval:testing}
@@ -348,8 +348,8 @@ This section answers the question, how difficult was it to make improvements to
 the code and update the proofs? Put more broadly, what is the experience of
 making incremental changes to the proof?
 
-DaisyNFS was implemented and verified over the course of three months by
-one of the authors, until it had support for enough of NFS to run. We
+DaisyNFS was implemented and verified over the course of three months by the
+thesis author, until it had support for enough of NFS to run. We
 added several features incrementally after the initial prototype
 worked, both to improve performance and to support more
 functionality. Some of the interesting changes are listed in
@@ -383,15 +383,26 @@ of sequential reasoning and proof automation.
 \label{fig:features}
 \end{figure}
 
-For the smallfile benchmark, as mentioned it took some work to return enough
-attribute information that Linux reliably cached everything it could, to avoid
-extra RPCs. This work primarily consisted of expanding the attributes operations
-return (the RFC says these post-operation attributes are optional but
-encouraged), and at the same time expanding the specifications to say this
-metadata is correct. These improvements were carried out in many small steps,
-but they were similar to the incremental improvements above in terms of taking a
-small amount of time and few changes to lines of proof; most of the work went
-into figuring out what was missing in the implementation.
+Getting
+the client to issue exactly these four RPCs took some work, since Linux relies
+on getting the right ``weak cache-consistency'' data from all the operations to
+maintain its local cache. Without this caching, it issues more operations like
+\cc{GETATTR} and \cc{ACCESS} in between operations to update the directory
+attributes and permissions.
+
+For the smallfile benchmark, it took some work to ensure that the Linux NFS
+client issued exactly four RPCs per iteration. What this involved was returning
+the write ``weak cache-consistency'' data from all operations, so that the
+client reliably caches attribute information. The RFC says these post-operation
+attributes are optional but encouraged for the server, but without this
+information in practice the Linux client issues additional \cc{GETATTR} and
+\cc{ACCESS} RPCs, significantly slowing down DaisyNFS. A big part of the
+performance improvement while developing the system involved returning more
+attribute information, and at the same time expanding the specifications to say
+the additional metadata is correct. These improvements were carried out in many
+small steps, but they were similar to the incremental improvements above in
+terms of taking a small amount of time and few changes to lines of proof; most
+of the work went into figuring out what was missing in the implementation.
 
 GoTxn had fewer incremental changes to the code and proof after its initial
 development. Three changes are worth noting. First, the write-ahead log was
@@ -401,10 +412,12 @@ components. This organization become clear while writing the specification and
 thinking about the proof. The write-ahead log is the largest single library in
 GoTxn, with the largest lines of code even after splitting off these two data
 structures, so factoring its complexity was essential to the proof. The second
-change was a change Mark Theng made to remove some unnecessary code that
-absorbed multiple writes to the same address before installing, when
-benchmarking showed this code actually hurt performance. Finally, the
-transactional part of GoTxn implemented with two-phase locking was a later idea,
+change was an optimization Mark Theng made to improve performance. Installation
+absorbed multiple writes to the same address before installing as a way of
+simplifying the proof, but Mark found this hurt performance and was able to
+eliminate it and fix the proof; notably this change incrementally changed an
+already-complete proof. Finally, the transactional part of GoTxn implemented
+with two-phase locking was a later idea,
 which pleasantly enough was verified on top of the existing lifting-based
 journaling specification without any changes to the underlying proof.
 
