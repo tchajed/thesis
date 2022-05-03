@@ -178,7 +178,8 @@ The transaction system's correctness theorem says that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
 specification includes some important details in order to formalize the
-intuition behind atomicity.
+intuition behind atomicity. GoTxn is a general-purpose library for transactions,
+and could be used independently for another storage system.
 
 Next, because transactions appear to run sequentially, and write to disk all at
 once, it is no longer necessary to use a sophisticated program logic like
@@ -243,7 +244,10 @@ execution of the GoTxn transactions appears to be atomic, and then the
 sequential simulation proof shows those atomic transactions implement the
 abstract specification. However, the GoTxn theorem formalizes precisely what
 conditions are required for the simulation transfer, including restrictions on
-the transactions and exactly what crash safety guarantees are achieved.
+the transactions and exactly what crash safety guarantees are achieved. Note
+that the simulation-transfer theorem is a general property of GoTxn that this
+thesis applies to DaisyNFS but which could also be applied to other verified
+storage systems.
 
 \section{What is the value of verifying a file system?}
 
@@ -345,47 +349,53 @@ applications go through the file system to store persistent state.
 \section{Contributions}
 \label{sec:intro:contributions}
 
-This thesis makes the following contributions that enable its overall goal of a
-verified, concurrent file system:
+This thesis makes the following contributions:
 
-\begin{itemize}
-  \item \textbf{Perennial} is a program logic for crash safety
-        and concurrency using specifications based on crash weakest
-        preconditions. These include crash conditions combined with concurrency
-        and reasoning principles for moving ownership to a recovery procedure
-        following a crash. \textbf{Logically atomic crash specifications} are a
-        pattern using Perennial's crash weakest preconditions for specifying
-        libraries that have both concurrent behavior and involve persistent
-        state. These are implemented using Perennial and used in the GoTxn
-        proof.
-  \item GoTxn has a new \textbf{lifting-based specification} for its journaling
-        layer to reason about concurrent transactions separately, which is
-        challenging since the logical disk can change in the middle of a transaction. Its proof uses a novel
-        \textbf{history-based abstract state} for the write-ahead log. This model allowed us to carry
-        out a modular proof where the write-ahead logging library hides most of
-        its internal complexity, simplifying reasoning about the rest of the GoTxn
-        code that uses it. Finally, GoTxn exports a \textbf{program refinement}
-        specification that captures how transactions appear to run atomically.
-  \item DaisyNFS uses a \textbf{simulation-transfer theorem}, proven on top of
-        GoTxn's program refinement specification, which shows that sequential
-        reasoning for each transaction in a system implies correctness for the
-        whole system when run on top of GoTxn. This justifies using Dafny, a
-        sequential verification language, to verify the DaisyNFS implementation.
-        The specification for DaisyNFS uses a mathematical formulation of RFC
-        1813, the document that (in prose) specifies what a NFSv3 server should
-        do.
-  \item \textbf{Goose} connects efficient code implemented in Go to a model of
-        that code in Perennial. A general contribution here is a design for
-        systems verification that enables efficient code and convenient
-        reasoning. Goose includes reasoning principles for the models that it
-        outputs, to support verifying the translated code.
-\end{itemize}
+\paragraph{New verification foundations.}
+\textbf{Perennial} is a program logic for crash safety
+and concurrency using specifications based on crash weakest
+preconditions. These include crash conditions combined with concurrency
+and reasoning principles for moving ownership to a recovery procedure
+following a crash. \textbf{Logically atomic crash specifications} are a
+pattern using Perennial's crash weakest preconditions for specifying
+libraries that have both concurrent behavior and involve persistent
+state. These are implemented using Perennial and used in the GoTxn
+proof.
+
+\paragraph{Reasoning about storage systems.}
+GoTxn has a new \textbf{lifting-based specification} for its journaling
+layer to reason about concurrent transactions separately, which is
+challenging since the logical disk can change in the middle of a transaction. Its proof uses a novel
+\textbf{history-based abstract state} for the write-ahead log. This model allowed us to carry
+out a modular proof where the write-ahead logging library hides most of
+its internal complexity, simplifying reasoning about the rest of the GoTxn
+code that uses it. Finally, GoTxn exports a \textbf{program refinement}
+specification that captures how transactions appear to run atomically.
 
 The ideas in Perennial and Goose are applied to GoTxn, but they could be used
 for reasoning about other concurrent storage systems. Similarly,
-this thesis applied GoTxn to a verified file system, but it could also be used
+this thesis uses GoTxn to build a verified file system, but it could also be used
 as the basis for other verified storage systems, like a persistent key-value
 store.
+
+\paragraph{Verifying efficient code.}
+\textbf{Goose} connects efficient code implemented in Go to a model of that code
+in Perennial. A general contribution here is a design for systems verification
+that enables efficient code and convenient reasoning. Goose includes reasoning
+principles for the models that it outputs, to support verifying the translated
+code.
+
+\paragraph{System design.}
+DaisyNFS is verified using sequential code despite having a concurrent
+implementation. The formal justification for this approach is a
+\textbf{simulation-transfer theorem}, proven on top of GoTxn's program
+refinement specification, which shows that sequential reasoning for each
+transaction in a system implies correctness for the whole system when run on top
+of GoTxn. Sequential reasoning means DaisyNFS can be verified using Dafny, a
+sequential verification language, with much lower proof burden than would
+otherwise be possible. The specification for DaisyNFS uses a mathematical
+formulation of RFC 1813, the document that (in prose) specifies what a NFSv3
+server should do.
 
 \tej{describe limitations at a high level}
 
