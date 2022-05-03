@@ -40,6 +40,9 @@ disk.
 
 \subsection[Write-ahead logging (WAL)]{Write-ahead logging (\scc{wal})}
 
+\tej{Joe points out that this transition from the earlier, much more detailed
+  sections is jarring. It also jumps down to the lowest abstraction level.}
+
 The write-ahead log layer is responsible for updating multiple disk
 blocks (a multiwrite) atomically.
 Each multiwrite is a list
