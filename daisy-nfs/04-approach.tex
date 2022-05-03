@@ -30,7 +30,8 @@ example, we allow returning an out-of-space error in many operations,
 and the specification allows any timestamp to be picked for the
 current time. The RFC is precise about arguments and allowed return
 values, and the text is good about explaining the intended behavior,
-but it does not describe the state an NFS server maintains.  We define
+but it does not separately describe an abstract state to make that behavior
+mathematically precise.  We define
 the NFS server state as shown in \cref{fig:dafny-state}.
 
 \begin{figure}[ht!]
@@ -79,27 +80,32 @@ achieve by aborting the whole transaction. For example,
 specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
 the inode \cc{ino}.
 
-\begin{figure}
+\begin{figure}[ht]
 \begin{verbatim}
 predicate GETSZ_spec(ino: Ino, fs: FilesysData,
   fs': FilesysData, r: Result<uint64>)
 {
   fs' == fs &&
   (r.ErrBadHandle? ==> ino !in fs) &&
-  (r.ErrIsDir? ==> ino in fs && fs[ino].Dir?) &&
-  (r.Ok? ==> ino in fs && fs[ino].ByteFile? &&
+  (r.ErrIsDir? ==> (ino in fs) && fs[ino].Dir?) &&
+  (r.Ok? ==> (ino in fs) && fs[ino].ByteFile? &&
              r.v == |fs[ino].data|)
 }
 \end{verbatim}
-\caption{Specification of a hypothetical \cc{GETSZ} operation, a simplification
-  of the real \cc{GETATTR} operation.}
+  \caption[Transition-system specification for a hypothetical \cc{GETSZ} operation.]%
+  {Specification of a hypothetical \cc{GETSZ} operation, a simplification
+  of the real \cc{GETATTR} operation. When \texttt{GETSZ\_spec(ino, fs, fs', r)}
+  returns true, it is valid when the server receives \cc{GETSZ(ino)} to transition from
+the state \cc{fs} to \cc{fs'} and return \cc{r}. The return value can be an
+error (e.g., \cc{r.ErrBadHandle?}), or if \cc{r.Ok?} holds then \cc{r.v} is the
+\cc{uint64} return value from the operation.}
 \label{fig:getsz}
 \end{figure}
 
 There are four clauses in the specification. The first just says that this
 operation is read-only. The second is one possible error: if the server returns
 \cc{ErrBadHandle}, then \cc{ino} is not allocated. The third is a different
-error, which says this operation might return \cc{ErrIsDir} for directories.
+error, which says this operation returns \cc{ErrIsDir} if passed a directory inode.
 Finally the fourth clause says that if the operation is successful, it returns the
 length of the data in \cc{fs[ino]}. Dafny checks several consistency properties
 of this specification itself; for example, a use of \cc{fs[ino]} only compiles

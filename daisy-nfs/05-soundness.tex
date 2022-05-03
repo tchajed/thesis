@@ -4,10 +4,10 @@
 A key contribution of DaisyNFS is a proof structure that isolates concurrency and crash
 reasoning to the transaction system. The proof works in two steps. First, a
 \emph{simulation transfer} theorem extends GoTxn's program refinement to show
-how transactions enable sequential reasoning for an arbitrary system implemented
-top (\cref{sec:daisy:simulation-transfer}). Second, the sequential reasoning
-is implemented and verified in Dafny for the specific case of DaisyNFS and its
-NFS specification (\cref{sec:daisy:proof-dafny}).
+how transactions enable sequential reasoning for an arbitrary system implemented on
+top (\cref{sec:daisy:simulation-transfer}). Second, simulation transfer is
+applied to a the sequential reasoning carried out in Dafny for the specific case
+of DaisyNFS and its NFS specification (\cref{sec:daisy:proof-dafny}).
 
 \subsection{Simulation transfer}%
 \label{sec:daisy:simulation-transfer}
@@ -27,12 +27,11 @@ provided by program refinement.
 % applies, but we have a more precise and formal proof in Coq.
 To make this precise, we define formally what we mean by
 ``sequential reasoning''. Suppose we have an
-implementation of layer $S$ using operations from $T$. Note that all the proofs
-about the transaction system are for an arbitrary system with operations in $S$. The implementation $i$
+implementation of layer $S$ using operations from $T$. The implementation $i$
 consists of a function $i(\opv) : \gooselayer{T}$ for each operation $op \in S$. The statement
 $\seqrefinement \targ{T, S}(i)$ says that $i$ is a correct sequential
 implementation of $S$ using $T$. The effect of each operation is given by a
-transition relation $\sigma \overset{\opv}{\leadsto}$ that is part of the layer
+transition relation $\sigma \overset{\opv}{\leadsto} \sigma'$ that is part of the layer
 $S$. To specify correctness under crashes, the
 definition of sequential refinement refers to $\operatorname{crash}(\sigma, \sigma')$, which is a
 layer-specific crash transition that models, for example, clearing the
@@ -50,8 +49,8 @@ contents of memory.
   \]
 (2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ implies
 $R(\sigma_{S}, \sigma_{T})$, and \\
-(3) if $R(\sigma_{T}, \sigma_{S})$ holds and $\operatorname{crash}(\sigma_{T}$, $\sigma_{T}')$,
-then there exists a $\sigma_{S}'$ such that $R(\sigma_{T}', \sigma_{S}')$ and
+(3) if $R(\sigma_{S}, \sigma_{T})$ holds and $\operatorname{crash}(\sigma_{T}$, $\sigma_{T}')$,
+then there exists a $\sigma_{S}'$ such that $R(\sigma_{S}', \sigma_{T}')$ and
 $\operatorname{crash}(\sigma_{S}, \sigma_{S}')$.%
   \label{def:seqrefinement}
 \end{definition}
@@ -62,7 +61,7 @@ abstraction relation to be preserved by crashes, the proof engineer does \emph{n
 % is a standard condition for sequential crash-safety~\cite{chajed:argosy}
 % for sequential crash safety~\cite{chajed:argosy}.
 The
-diagram in \cref{fig:refinement} depicts the main
+diagram in \cref{fig:refinement:seq} depicts the main
 refinement condition (1) diagrammatically.
 % For example, it is fairly easy to use them to show
 % that for any sequential program $p : \gooselayer{S}$, the traces of the code
@@ -79,8 +78,8 @@ conditions for a system implemented using transactions and derives a
 stated as a theorem about an arbitrary program $p : \gooselayervar{Sys}$ using
 the specification-level API.\@ To model that program using the transactions given
 by implementation $i$, we write $\mathrm{link}(p, \atomiccomp i)$. The function
-$(\atomiccomp i)(\opv) = \atomically{i(\opv)}$ gives an atomic transaction in
-the GoTxn layer that implements $\opv$. Physically this \cc{atomically} block
+$(\atomiccomp i)(\opv) = \atomically{i(\opv)}$ wraps the implementation
+$i(\opv)$ in an \cc{atomically} block. Physically this \cc{atomically} block
 corresponds to running code in a pattern like the following, written using Go's
 support for generics:
 %
@@ -116,8 +115,8 @@ The theorem is about a program $p$ using some API $\Sys$, such as the server
 loop for DaisyNFS seen in \cref{sec:daisy:refinement-spec}, and an
 implementation $i$ of this API.\@
 The conclusion is a refinement that uses $p$ as the \emph{specification}; recall
-that the semantics of $p$ automatically make $\Sys$ operations atomic at this
-level. The left-hand side is the executable code for this program, derived in
+that the semantics of $p$ defines all the $\Sys$ operations to be atomic at this
+layer. The left-hand side is the executable code for this program, derived in
 two steps: first $\mathrm{link}(p, \atomiccomp i)$ takes each abstract operation
 $\opv$ in $p$ and replaces it with $\atomically{i(\opv)}$, and second
 $\linked{\mathrm{link}(p, \atomiccomp i)}$ takes the result of this process and
@@ -149,10 +148,10 @@ interface. Note that this is merely a hypothetical model of the Dafny code,
 since Goose does not support enough of Go to explicitly construct these terms in
 GooseLang. The Dafny annotations on these methods prove sequential refinement
 conditions that we will denote $\seqrefinementdfy(i)$, as
-illustrated in \cref{fig:refinement}. This sequential refinement is intended to
-encode as precisely as possible the conditions of sequential refinement in the
-simulation-transfer theorem, but formally they are distinct since the
-definitions are in different formal systems.
+illustrated in \cref{fig:refinement}. This sequential refinement is indexed by
+dfy to indicate that captures what is proven in Dafny, which is intended to
+capture $\seqrefinement(i)$ from the simulation-transfer theorem but formally is
+distinct.
 
 \begin{theorem} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
   \label{thm:dafny}
@@ -162,10 +161,9 @@ The Dafny code is implemented as a class with ghost variables for its abstract
 state and an invariant that expresses the proof's refinement relation $R$
 between the abstract state and its concrete state (which is limited to constants
 and the transaction system's logical disk). Condition (1) in the definition of
-sequential refinement is encoded exactly in Dafny, using requires and ensures
-clauses. There are some differences in the Dafny encoding proven in this theorem statement,
-in particular around condition (2) for initialization and condition (3) for
-crashes.
+sequential refinement is encoded exactly in Dafny, using \cc{requires} and \cc{ensures}
+clauses. Condition (2) for initialization and condition (3) for crashes relate
+to the Dafny code in a slightly more subtle way.
 
 Initialization and recovery are both special in that are implemented in Dafny as
 two \emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's
@@ -175,6 +173,7 @@ incorporate initialization and recovery formally as ordinary operations in the
 $\mathit{Sys}$ layer, albeit with particular preconditions that enforce the
 ``life cycle'' of the file system, namely from uninitialized, to initialized (a
 one-time process), and then from crashed to recovered on every subsequent boot.
+\tej{this needs to be expanded and formalized}
 
 The Dafny code implements the initialization using a \cc{NewTxnSystem} method
 that creates a fresh instance of GoTxn and sets up its initial object schema, as
@@ -186,15 +185,20 @@ system with just a single root inode.
 The \cc{Recover} constructor has a more interesting verification story, because
 it is permitted to assume the abstraction relation held just prior to the crash
 but should prove that the file-system restores its global constants. We express
-this in Dafny by giving the recovery the following specification:
+this in Dafny by giving file-system recovery the following specification:
 
 \begin{verbatim}
-constructor Recover(txs: TxnSystem,
-    ghost fs: Filesys)
-  requires fs.Valid()
-  requires same_txn_disk(txs, fs.txs)
-  ensures Valid()
-  ensures this.data == fs.data
+class Filesys {
+  ghost data: FilesysData;
+  ...
+
+  constructor Recover(txs: TxnSystem,
+      ghost fs: Filesys)
+    requires fs.Valid()
+    requires same_txn_disk(txs, fs.txs)
+    ensures Valid()
+    ensures this.data == fs.data
+}
 \end{verbatim}
 
 The specification takes a \emph{ghost} \cc{fs} that satisfies the invariant, as

@@ -1,17 +1,10 @@
 \section{System design}%
 \label{sec:daisy:system}
 
-% \begin{figure}
-%   \center
-%   \includegraphics{drawn-diagrams/system-overview.png}
-%   \caption{The structure of the code.}
-%   \label{fig:system}
-% \end{figure}
-
 \begin{figure}
   \center
   \input{daisy-nfs/fig/system-overview.tex}
-  \caption{The structure of the code.}
+  \caption{The structure of DaisyNFS.}
   \label{fig:system}
 \end{figure}
 
@@ -53,13 +46,12 @@ system.  The disk layout used by the file system is shown in
 \cref{fig:layout}, with regions for inode blocks, bitmap blocks,
 and data blocks for files and directories. This figure is in terms of
 the disk exported by the transaction system; the transaction system
-itself has a 513-block write-ahead log to support multi-block atomic
-writes to the disk.
+itself reserves a prefix of 513 blocks for the write-ahead log.
 
 The high-level organization of the file system separates three concerns, each
-building upon the previous: (1) implementing large (about 512GB), fixed-size
-files with zeros in place of unallocated data; (2) implementing byte-granularity
-reads and writes on top of blocks; and (3) implementing
+building upon the previous: (1) implementing indirect blocks to support large
+files; (2) implementing byte-granularity
+reads and writes on top the block-granularity interface below; and (3) implementing
 directories by encoding them as files with a special type together with
 operations to manipulate those files. \Cref{sec:daisy:design} explains the
 internals of the file-system design in more detail, alongside the structure of
@@ -74,7 +66,7 @@ the Dafny proof.
 The proof requires that each 4KB block be accessed with a consistent size. We
 represent that in the specification with a fixed ``schema'' specifying the
 size of every block address, which is fixed by the caller while calling the
-initialization function. The schema is never passed to the code and only used
+file-system initialization. The schema is never passed to the code and only used
 to enforce the consistent-size restriction in the precondition of \cc{Read}
 and \cc{Write}. These restrictions are reflected by representing the
 transaction system not as an array of bytes but as a mapping from

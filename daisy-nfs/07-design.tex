@@ -1,12 +1,10 @@
 \section{Verifying the Dafny implementation}%
 \label{sec:daisy:design}
 
-We follow the standard approach for verifying software in Dafny: each
-file-system operation is implemented as a method on a class and its
-specification is given using pre- and post-conditions. \Cref{sec:daisy:proof-dafny},
-explains how the Dafny notion of sequential refinement connects to the
-concurrent specification for GoTxn. This section focuses on the sequential
-verification itself, as well the file-system design.
+\Cref{sec:daisy:proof-dafny}
+explains how DaisyNFS connects sequential verification in Dafny to concurrency
+and crash safety in GoTxn. This instead section focuses on the sequential
+verification and file-system design themselves.
 
 % The proof is given by annotating the code with proof steps, which include
 % updates to ghost state, assertions to assist the automated verification, and
@@ -14,9 +12,9 @@ verification itself, as well the file-system design.
 
 DaisyNFS is implemented and verified in several layers of abstraction, depicted
 in \cref{fig:dafny-layers}. Each layer is implemented as a class that wraps the
-lower layer as a field. The transaction system is an assumed interface in Dafny.
-The final \cc{daisy-nfsd} binary also implements the NFS wire protocol in
-unverified Go code, but it calls into the top-level Dafny class and its verified
+lower layer as a field, until finally the transaction system is an assumed interface in Dafny.
+The \cc{daisy-nfsd} binary implements the NFS wire protocol in
+unverified Go code and calls the top-level Dafny class and its verified
 methods to handle each operation.
 
 \begin{figure}
@@ -25,6 +23,7 @@ methods to handle each operation.
   \toprule
   \textbf{Layer} & \textbf{Functionality} \\
   \midrule
+  daisy-nfsd & NFS wire protocol. \\
   dir & Directories and top-level NFS API. \\
   typed & Inode allocation. \\
   byte & Implement byte-level operations using blocks. \\
@@ -39,8 +38,8 @@ operations.}
 \label{fig:dafny-layers}
 \end{figure}
 
-Between the layers of the file system
-there are three difficult pieces of
+The layers of the file system
+can be organized into groups that implement three difficult pieces of
 functionality: organizing data blocks into metadata and data (the
 indirect and block layers), translating byte-level operations into
 block operations (the byte and typed layers), and implementing
@@ -76,17 +75,6 @@ use the standard strategy of enforcing a global ordering where inodes are always
 locked in numerical order (smaller inode numbers first); this avoids a deadlock
 where a cycle of threads is waiting on each other.
 
-At this point it is worth discussing the performance considerations that lead to
-handling lock ordering in the file
-system, rather than generically in GoTxn. The transaction system could
-avoid deadlocks by either enforcing a global order over addresses or by
-timing-out operations. Enforcing a global order is inefficient for the file
-system; data blocks will never cause deadlock because the file system only
-accesses a block after locking the (unique) inode that owns it. Timing-out
-operations would lead to slow and spurious transaction failures that could more
-rapidly be avoided in the higher-level code, hence we do not attempt to detect
-deadlock dynamically.
-
 In a rename operation, the source and destination are each specified by a
 combination of the parent directory inode and name within that directory. Rename
 has an additional functionality of overwriting the destination if the source and
@@ -104,16 +92,30 @@ the mean time. The rename operation runs in a loop until the lock hint succeeds;
 the loop is potentially unbounded, but each iteration can only fail due to
 concurrent renames that involve the same inodes.
 
+At this point it is worth discussing the performance considerations that lead to
+handling lock ordering in the file
+system, rather than generically in GoTxn. The transaction system could
+avoid deadlocks by either enforcing a global order over addresses or by
+timing-out operations. Enforcing a global order is inefficient for the file
+system; data blocks will never cause deadlock because the file system only
+accesses a block after locking the (unique) inode that owns it. Timing-out
+operations would lead to slow and spurious transaction failures that could more
+rapidly be avoided in the higher-level code, hence we do not attempt to detect
+deadlock dynamically.
+
+
 \subsubsection{Freeing space}
 \label{sec:dafny:freeing}
 
 Freeing space becomes surprisingly tricky with large files. The problem is that
 a large-enough file may reference too many blocks to be
-freed in a single transaction.
-DaisyNFS handles this issue by splitting removing a file and reclaiming space
+freed in a single transaction. Transactions are bounded by the size of the
+on-disk log (which can hold 511 blocks), whereas freeing a file requires
+writing 0s to the block allocator for all of its formerly used blocks to mark them as free.
+DaisyNFS handles this issue by splitting file removal and space reclamation
 into separate transactions. The latter is implemented with an operation
 \cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
-we prove has no effect on the file-system state. Because this operation is a
+we prove has no effect on the logical file-system state. Because this operation is a
 logical no-op, it is safe to call it at any time.
 
 The implementation is careful to call \cc{ZeroFreeSpace} after any operation
