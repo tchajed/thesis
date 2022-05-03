@@ -298,14 +298,41 @@ is usable (due to the verified reasoning principles in the logic). With this
 confidence in the meaning of a specification and intuition for how they can be
 soundly manipulated, now it is possible to carry out reasoning informally, or
 implement the logic in an automated system. Concurrency makes this especially
-important, since specifications can be quite subtle to use. \tej{there's some
-good examples of this, like the anti-frame rule}
+important, since specifications can be quite subtle to use. \tej{find some
+old subtle concurrent program logic, like the one with the anti-frame rule}
 
 \paragraph{Mechanized proofs force the reasoning to be complete.} On-paper
 reasoning about a system gains much of the value of formal reasoning, that of
 forcing the author of a system to think through the cases systematically. While
 it works to a degree, it is easy to delude oneself into thinking that a proof is
 complete while actually having neglected an important corner case.
+
+\paragraph{Interactive theorem proving is a great way to prototype.} I do not
+anticipate that busy engineers trying to write production code will write proofs
+in Coq, much less develop a custom program logic. However, this workflow is
+excellent for prototyping the right reasoning principles, some reasons for which
+are outlined above. Working out proofs interactively gives a good feel for how
+the logic works, from which automation can be designed bit by bit (some of it as
+Coq automation itself). In Perennial (as in Iris), proof steps are at a
+sufficiently high level of abstraction to make the proofs doable for prototyping
+purpose, even though it has no search-based automation, sophisticated
+algorithms, or use of an SMT solver.
+
+\paragraph{Verification is valuable for critical systems.} It will never be cost
+effective to verify all software; at a minimum software needs a specification
+that is more likely to be correct than the implementation to be verified.
+Instead, the aim is to use verification for critical systems, \emph{critical}
+because failures are especially bad, and \emph{systems} that have well-defined
+guarantees to make to other systems and applications running on top. It is also
+helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
+used by many other pieces of software, since then the impact of bugs is felt to
+a greater extent. Finally, alongside the need for a specification it is also
+important that the verification respond to changes in both specification and
+implementation. If both change rapidly and the proofs cannot be re-done, then
+verification won't keep up with the pace of development. File systems fit all of
+these criteria: bugs can lead to data loss which the application cannot
+mitigate, the interface is stable and relatively standard, and essentially all
+applications go through the file system to store persistent state.
 
 \resume
 
