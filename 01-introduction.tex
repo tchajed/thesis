@@ -261,17 +261,16 @@ thesis and not something much larger). Building on these foundations, I hope the
 costs come down to make verification an appealing alternative to verification
 for the next generation of storage systems.
 
-The real ideal for verification is not just it is worth paying the costs but
-that verification enables something that would otherwise not be doable. With
-file systems I believe this is possible, since verification might enable a new
-file system with more daring optimizations to gain confidence faster than would
-otherwise be possible. There aren't that many widely-used file systems --- most
-people use one of ext4, btrfs, or XFS on Linux, NTFS on Windows, and APFS on
-macOS --- and new file systems are generally adopted very slowly. APFS was
-surprising for having only a 3-year development period before Apply widely
-deployed it, and this was probably only possible because of Apple's tight
-vertical integration. Ext4 is the other ``new'' file system, introduced in 2008
-(by extending ext3, which was first released in 2001).
+A real achievement for verification would be to use verification not just as
+alternative to testing, but to build something with more daring optimizations,
+features, or speed then would otherwise be possible. I think file systems (or
+more generally, some storage system that holds persistent state) have the
+potential to be just such an application. There aren't that many widely-used
+file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
+Windows, and APFS on macOS --- and new file systems are generally adopted very
+slowly. APFS was surprising for having only a 3-year development period before
+Apply widely deployed it. Ext4 is the next newest of that list, introduced in
+2008 (by extending ext3, which was first released in 2001).
 
 % ext4: 2008
 % ext3: 2001
@@ -286,6 +285,27 @@ wrong. However, an advantage of formal verification, particularly fully
 machine-checked proofs, is that when bugs are discovered it's safe to start
 debugging with all the code outside the verification as well as looking at the
 specification.
+
+\paragraph{Working out the details gives confidence in the methodology.} One
+reason to go through the trouble of mechanizing the proofs is to validate new
+techniques in a way that gives confidence. This is like the confidence in a
+verified system, but at a higher level of abstraction: it applies to the theory
+behind the reasoning as well. \tej{an example of something where there are
+plausible but wrong versions would be great} For example, the formalism helps
+work out a specification for crash safety and concurrency, one that the
+mechanized proof shows has the right meaning (due to the soundness theorem) and
+is usable (due to the verified reasoning principles in the logic). With this
+confidence in the meaning of a specification and intuition for how they can be
+soundly manipulated, now it is possible to carry out reasoning informally, or
+implement the logic in an automated system. Concurrency makes this especially
+important, since specifications can be quite subtle to use. \tej{there's some
+good examples of this, like the anti-frame rule}
+
+\paragraph{Mechanized proofs force the reasoning to be complete.} On-paper
+reasoning about a system gains much of the value of formal reasoning, that of
+forcing the author of a system to think through the cases systematically. While
+it works to a degree, it is easy to delude oneself into thinking that a proof is
+complete while actually having neglected an important corner case.
 
 \resume
 
