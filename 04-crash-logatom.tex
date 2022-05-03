@@ -17,3 +17,26 @@ journaling is covered in more detail within the GoTxn chapter, in
 
 \input{crash-logatom/01-circ.tex}
 \input{crash-logatom/02-spec-style.tex}
+
+\section{Take-aways beyond formal verification}
+
+\paragraph{Physical versus logical logging.} The GoTxn log uses physical
+logging, where log entries are 4KB disk writes. An alternative is to use logical
+logging, where entries instead correspond to higher-level operations like
+appending to a file. From a correctness (and especially crash safety)
+perspective, what makes logical logging challenging is that it appears to break
+modularity: the concept of a file now shows up in the write-ahead log.
+
+The techniques in Iris and this chapter give a way to think about logical
+logging modularly where the log stores \emph{procedures}. The insight is that
+the calling code passes a function to the write-ahead log that interprets the
+logical log entry into block operations. This makes logical logging a
+higher-order interface. Note that in practice the code may not be organized this
+way; we can use \emph{defunctionalization} to specialize the logging code to
+only the procedures used by the caller, especially for the common use case of a
+tightly integrated file system and journal. The write-ahead log will rely on
+some specification (including a crash condition) for the function that
+interprets its entries. In this simplest case it might require idempotent
+operations; a more sophisticated logging design like ARIES~\cite{mohan:aries}
+can handle non-idempotent operations using a combination of redo logging (like
+GoTxn) and undo logging.
