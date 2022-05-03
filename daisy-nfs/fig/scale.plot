@@ -5,6 +5,7 @@ set -eu
 output=fig/scale.pdf
 input=data/
 legend="top left"
+ymax="*"
 
 usage() {
     echo "Usage: $0 [--input INPUT] [--output OUTPUT]" 1>&2
@@ -26,6 +27,11 @@ while [[ "$#" -gt 0 ]]; do
     -l | --legend)
         shift
         legend="$1"
+        shift
+        ;;
+    -y)
+        shift
+        ymax="$1"
         shift
         ;;
     -h | -help | --help)
@@ -65,7 +71,7 @@ gnuplot <<-EOF
     set output "${output}"
 
     set auto x
-    set yrange [0:*]
+    set yrange [0:${ymax}]
     set xtics 4
     set ylabel "files / sec"
     set format y '%.0s%c'
