@@ -34,7 +34,6 @@ but it does not describe the state an NFS server maintains.  We define
 the NFS server state as shown in \cref{fig:dafny-state}.
 
 \begin{figure}[ht!]
-\begin{small}
 \begin{verbatim}
 // the abstract state of the file system
 type FilesysData = map<Ino, File>
@@ -47,7 +46,6 @@ type Ino = uint64
 type FileName = seq<byte>
 datatype Attrs = Attrs(mode: uint32, ...)
 \end{verbatim}
-\end{small}
 \caption{Dafny definition of the NFS server state (simplified).}
 \label{fig:dafny-state}
 \end{figure}
@@ -82,7 +80,6 @@ specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
 the inode \cc{ino}.
 
 \begin{figure}
-\small
 \begin{verbatim}
 predicate GETSZ_spec(ino: Ino, fs: FilesysData,
   fs': FilesysData, r: Result<uint64>)

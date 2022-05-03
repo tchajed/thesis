@@ -41,24 +41,36 @@ transition system, which requires an invariant connecting their states and a
 proof that shows the invariant is preserved. In a sequential, non-crash
 simulation it is sufficient to show that each operation restores the invariant
 when it returns, since its intermediate states are invisible.
-\Cref{fig:concurrent-refinement} illustrates the obligation for a concurrent
-refinement, while \cref{fig:refinement} shows the much simpler obligation needed
-for a sequential simulation. The complication in a concurrent simulation is that the code can have many concurrent
+\Cref{fig:concurrent-refinement} illustrates the difference between the
+concurrent and sequential simulation obligations. The complication in a concurrent simulation is that the code can have many concurrent
 threads, each running a different operation at the specification level. The
 proof of any given operation must cover its intermediate states since at any
 time other threads might run, and similarly the proof must consider interference
 from other threads at any time.
 
 \begin{figure}
+  \begin{subfigure}[t]{0.6\textwidth}
   \includegraphics{fig/concurrent-refinement.png}
-  \caption[Proving a concurrent simulation]{This figure depicts the
-    concurrent-simulation obligation, from the perspective of the green thread.
-    Proving concurrent refinement requires a proof that shows every operation
-    (1) preserves the invariant at all intermediate points, and (2) simulates
-    the abstract specification for the operation at some \emph{linearization
-    point}. Unlike sequential refinement (see \cref{fig:refinement}), the
-    proof must show the invariant holds at intermediate points in order to
-    reason about potential interference with other threads.}
+  \caption{Concurrent simulation}
+  \label{fig:refinement:concurrent}
+  \end{subfigure}%
+%
+  \begin{subfigure}[t]{0.4\textwidth}
+  \includegraphics{fig/sequential-refinement.png}
+  \caption{Sequential simulation}
+  \label{fig:refinement:seq}
+  \end{subfigure}
+  \vspace{0.5\baselineskip}
+  \caption[Proving a concurrent simulation]{Contrast between verifying a
+    concurrent refinement (left) and sequential refinement (right), for a single
+    procedure running the green-colored transitions. Proving concurrent
+    refinement requires a proof that shows every operation (1) preserves the
+    invariant at all intermediate points, and (2) simulates the abstract
+    specification for the operation at some \emph{linearization point}. Unlike
+    sequential refinement, the proof must show the invariant holds at
+    intermediate points in order to reason about potential interference with
+    other threads. \tej{fix vertical alignment}}
+
   \label{fig:concurrent-refinement}
 \end{figure}
 
