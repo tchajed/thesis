@@ -176,7 +176,8 @@
 \addcontentsline{tod}{subsection}{\thetodo.~(\S\thesection)~#1}}%
 \makeatletter
 \newcommand\listoftodos{%
-  \section*{List of TODOs}\@starttoc{tod}}
+  \pdfbookmark{todo list}{Contents}
+  \chapter*{List of TODOs}\@starttoc{tod}}
 \makeatother
 
 % out of habit this macro is called \tej, even though all TODOs are written by
