@@ -151,11 +151,13 @@ conditions that we will denote $\seqrefinementdfy(i)$, as
 illustrated in \cref{fig:refinement}. This sequential refinement is indexed by
 dfy to indicate that captures what is proven in Dafny, which is intended to
 capture $\seqrefinement(i)$ from the simulation-transfer theorem but formally is
-distinct.
-
-\begin{theorem} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
+distinct. Dafny checks the following lemma that $\infs$ is correct, which will
+eventually be used to show the overall DaisyNFS correctness theorem:
+%
+\nopagebreak
+\begin{lemma} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
   \label{thm:dafny}
-\end{theorem}
+\end{lemma}
 
 The Dafny code is implemented as a class with ghost variables for its abstract
 state and an invariant that expresses the proof's refinement relation $R$
@@ -247,17 +249,21 @@ errors.}
   \label{fig:refinement}
 \end{figure}
 
-\begin{theorem}
+% hack to get theorem to have same number as original (only works because that's
+% the first theorem, and there are no subsequent theorems)
+\setcounter{theorem}{0}
+
+We can now take simulation transfer and the Dafny proof and combine them to get
+the overall DaisyNFS correctness theorem:
+\begin{theorem}[DaisyNFS correctness, restated]
   DaisyNFS atomically implements the NFS protocol, formally stated as the
   refinement $\linkedcode \refines \snfs$. Note that
-  $\sdfy = \mathrm{link}(\snfs, \infs)$. Initialization falls outside the
-  server's code; the caller is expected to run the \cc{Init} constructor once on
-  an empty disk to establish the right $\mathrm{init}$ predicate.
-  \label{thm:daisy-correctness}
+  $\sdfy = \mathrm{link}(\snfs, \infs)$. The system must be initialized with the
+  \cc{Init} constructor on an empty disk, and then after every reboot
+  re-initialized with the \cc{Recover} constructor.
+  \label{thm:daisy-correctness-restatement}
 \end{theorem}
 
-\tej{make this an actual theorem re-statement (with the same number), and give
-  the proof sketch here}
 This theorem re-states the specification developed in
 \cref{sec:daisy:refinement-spec}. Its proof is a simple on-paper argument that
 connects \cref{thm:gotxn-transfer} (which \emph{assumes} a sequential
@@ -281,7 +287,7 @@ themselves are correct.
     \cref{thm:gotxn-program-refinement}. This justifies sequential reasoning to
     show the transactions on top follow the NFS specification (top row), as
     proven in \cref{thm:dafny}. Putting the two together,
-    \cref{thm:daisy-correctness} shows the entire DaisyNFS server atomically
+    \cref{thm:daisy-correctness-restatement} shows the entire DaisyNFS server atomically
     implements the NFS specification.}
   \label{fig:refinement-execs}
 \end{figure}

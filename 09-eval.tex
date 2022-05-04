@@ -276,7 +276,7 @@ This section answers the question, what are the trusted (assumed correct)
 aspects of the DaisyNFS correctness theorem? It also discusses what we did to
 use testing to improve confidence in these components.
 
-For the proof of \cref{thm:daisy-correctness} to apply to the actual server, we trust that (1) the
+For the proof of \cref{thm:daisy-correctness-restatement} to apply to the actual server, we trust that (1) the
 Dafny code is a ``safe'' use of the transaction system, (2) sequential
 refinement is correctly encoded into Dafny, (3) the libraries for Go primitives
 are correctly specified in Dafny, and (4) the unverified Go code calling the
