@@ -50,27 +50,33 @@ time other threads might run, and similarly the proof must consider interference
 from other threads at any time.
 
 \begin{figure}
-  \begin{subfigure}[t]{0.6\textwidth}
+  \begin{subfigure}[m]{0.6\textwidth}
+    \vspace{0pt}
   \includegraphics{fig/concurrent-refinement.png}
-  \caption{Concurrent simulation}
+  \includegraphics{fig/crash-refinement.png}
+  \caption{Concurrent, crash-safe simulation}
   \label{fig:refinement:concurrent}
   \end{subfigure}%
-%
-  \begin{subfigure}[t]{0.4\textwidth}
+\hfill%
+  \begin{subfigure}[m]{0.4\textwidth}
+    \vspace{0pt}
   \includegraphics{fig/sequential-refinement.png}
   \caption{Sequential simulation}
   \label{fig:refinement:seq}
   \end{subfigure}
   \vspace{0.5\baselineskip}
-  \caption[Proving a concurrent simulation]{Contrast between verifying a
-    concurrent refinement (left) and sequential refinement (right), for a single
+  \caption[Concurrent, crash-safe simulation vs sequential simulation]{Contrast between verifying a
+    concurrent, crash-safe refinement (left) and sequential refinement (right), for a single
     procedure running the green-colored transitions. Proving concurrent
     refinement requires a proof that shows every operation (1) preserves the
     invariant at all intermediate points, and (2) simulates the abstract
-    specification for the operation at some \emph{linearization point}. Unlike
+    specification for the operation at some \emph{linearization point} (the
+    above diagram), as well
+    a similar obligation for crashes (the below diagram). For
+    crash safety, a crash at any time should behave like a specification crash transition. Unlike
     sequential refinement, the proof must show the invariant holds at
     intermediate points in order to reason about potential interference with
-    other threads. \tej{fix vertical alignment}}
+    other threads.}
 
   \label{fig:concurrent-refinement}
 \end{figure}
