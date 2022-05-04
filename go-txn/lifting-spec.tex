@@ -51,8 +51,19 @@ operation-local view associated with an in-memory operation $\mathit{op}$; it
 mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
 buffered write with the value $o$ to address $a$. The last resource,
 $a \mapstoLftd o$ is similar to $a \mapstoDisk o$, but the details are related
-to lifting and explained below. \tej{maybe add a small figure showing the
-lifecycle, similar to GoJournal talk}
+to lifting and explained below.
+
+The life cycle of these resources, as they are modified by lifting, writes,
+commit, and crashes, is shown in \cref{fig:gojournal-resources}. The complete
+specifications are detailed in the remainder of this section.
+
+\begin{figure}[hb]
+  \centering
+  \includegraphics{fig/gojournal-resources.png}
+  \vspace{0.5\baselineskip}
+  \caption{Life cycle for the resources in the lifting specification.}
+  \label{fig:gojournal-resources}
+\end{figure}
 
 
 \subsubsection{Initialization}

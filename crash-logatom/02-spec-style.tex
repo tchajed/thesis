@@ -200,7 +200,8 @@ resource $\jrnlToken{a}$ that gives the right to lift $a$. Then
 $a \mapstoDisk o$ is simply defined to be
 $a \mapstoLftd o \sep \jrnlToken{a}$.} We can give
 the journal's \cc{Commit} operation a
-(highly-simplified) specification like the following:
+specification like the following (simplified, in particular to operate on a
+single address):
 %
 \begin{align*}
   \hoareCV{a \mapstoLftd o \sep a \mapstoOp o'} %
@@ -247,20 +248,29 @@ distinguish between $a \mapstoDisk o$ in two different generations, we'll
 annotate the resource with a $\gamma$. The exchanger for the journaling proof is
 defined in terms of facts like:
 \[
-  \cc{exchange_addr}(a) \defeq (a \mapsto^{\gamma}_{d} o) \lor (a \mapsto^{\gamma'}_{d} o)
+  \cc{exchange_addr}(a) \defeq (a \mapsto^{\gamma, \mathrm{lftd}}_{d} o) \lor (a \mapsto^{\gamma'}_{d} o)
 \]
 When proving the post-recovery init theorem, we initially prove
 $\cc{exchange_addr}(a)$ using the right-hand side; this is easy since $\gamma'$
 is fresh, so we've just allocated all of its associated ghost state and it
 hasn't been used by any threads so far. We can then prove exchange lemmas like
-$a \mapsto^{\gamma}_{d} o \sep \cc{exchange_addr}(a) \proves a \mapsto^{\gamma'}_{d} o \sep \cc{exchange_addr}(a)$.
-The reason this proof works is that $a \mapsto_{d} o$ is \emph{exclusive}, thus
+$a \mapsto^{\gamma, \mathrm{lftd}}_{d} o \sep \cc{exchange_addr}(a) \proves a \mapsto^{\gamma'}_{d} o \sep \cc{exchange_addr}(a)$.
+The reason this proof works is that $a \mapstoLftd o$ is \emph{exclusive}, thus
 from the premise the proof can rule out that $\cc{exchange_addr}(a)$ is proven with the
 left disjunct and learn that the right-hand side holds. The proof takes out this
 right disjunct ($a \mapsto^{\gamma'}_{d} o$) and gives up
-$a \mapsto^{\gamma'}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
+$a \mapsto^{\gamma, \mathrm{lftd}}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
 the left disjunct. This all ensures that exchanging is only performed once,
 which is necessary since all the resources involved are exclusive.
+
+There is an important asymmetry here where the old ghost state only requires
+$a \mapstoLftd o$ while exchanging returns $a \mapsto_{d} o$. This asymmetry is
+possible because $a \mapsto_{d} o$ is just like $a \mapstoLftd o$ but with an
+additional exclusive token that gives the right to lift the address, and we can
+``drop'' the old tokens in the proof and switch to using fresh tokens generated
+for $\gamma'$. In practice this is what permits proving the \cc{Commit}
+operation's crash condition that has $a \mapsto_{d} o$ when the specification's
+precondition only has $a \mapstoLftd o$.
 
 % look at \cc{exchange_mapsto_commit} for the interesting case (ephemeral values
 % that might now be durable) and \cc{exchange_durable_mapsto} for the
