@@ -86,6 +86,7 @@ tools---gcc, ld, ar---but also running dd to generate a kernel image.
 %%   for n in $(seq 8 15) $(seq 24 31); do echo 0 > /sys/devices/system/cpu/cpu$n/online; done
 
 \begin{figure}[ht]
+  \centering
   \includegraphics{daisy-nfs/fig/bench.pdf}
   \caption[Performance for smallfile, largefile, and app benchmarks]%
   {Performance of Linux NFS and DaisyNFS for \cc{smallfile},
@@ -133,28 +134,15 @@ transaction lock, preventing any transactions from running concurrently but
 allowing concurrency between logging and installation in the write-ahead log.
 
 \begin{figure}[ht]
-  \begin{subfigure}[b]{0.5\textwidth}
-    \centering
-  \includegraphics[width=\textwidth]{daisy-nfs/fig/scale.pdf}
-  \caption{On an NVMe disk}
-  \label{fig:eval:scale:nvme}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.5\textwidth}
-    \centering
-  \includegraphics[width=\textwidth]{daisy-nfs/fig/scale-ram.pdf}
-  \caption{On an in-memory disk}
-  \label{fig:eval:scale:ram}
-  \end{subfigure}
-
+  \centering
+  \includegraphics{daisy-nfs/fig/scale.pdf}
   \vspace{0.5\baselineskip}
-
   \caption[Concurrent smallfile performance]%
   {Combined throughput of the \cc{smallfile} microbenchmark, varying the number
     of concurrent clients. DaisyNFS's performance scales with the number of
-    cores similar to ext4, but both eventually scale sub-linearly. Linux
-    is disk bandwidth-limited in the NVMe experiment, while DaisyNFS is limited by lock
-    contention before hitting this I/O bottleneck. \tej{move in-memory graph to
-      a separate figure, at end of section}}
+    clients similar to ext4, but both eventually scale sub-linearly. Linux
+    is disk bandwidth limited, while DaisyNFS is more limited by lock
+    contention.}
   \label{fig:eval:scale}
 \end{figure}
 
@@ -184,6 +172,16 @@ for installing sub-block object writes into a full block, which all operations
 go through to commit. The Go mutex profile points to this lock as being the
 biggest source of contention in DaisyNFS.
 
+\begin{figure}[ht]
+  \centering
+  \includegraphics{daisy-nfs/fig/scale-ram.pdf}
+  \vspace{0.5\baselineskip}
+  \caption[Concurrent smallfile performance on in-memory disk]%
+  {Scalability on the \cc{smallfile} benchmark, running on an in-memory disk.}
+  \label{fig:eval:scale:ram}
+\end{figure}
+
+
 The DaisyNFS seq WAL and seq txn variants evaluate where the concurrency in the
 system is important for performance with a concurrent workload. Even though in
 both of these configurations the server cannot process more than one request at
@@ -205,6 +203,7 @@ improvement is negligible.
     \caption{On an in-memory disk}
     \label{fig:bench-configs:ram}
   \end{subfigure}
+  \vspace{0.5\baselineskip}
   \caption[Benchmarks across file-system configurations]%
   {Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
@@ -266,8 +265,16 @@ the benchmark is dominated by disk writes. It's worth noting that even Linux
 does not saturate the disk, which can achieve 500 MB/s in sequential write
 throughput, due to the overhead of running over NFS.
 
-\tej{explain the DFSCQ implemented the optimization, it is not out-of-reach for
-  verification, but it breaks the GoTxn abstraction}
+The log bypass optimization has been verified in prior work on
+DFSCQ~\cite{chen:dfscq}, a verified sequential file system. While the
+optimization is not out of reach for verification in Perennial, it does break
+the GoTxn abstraction boundary, since log bypass writes are not persisted
+together with other writes in a transaction. What is much more achievable is
+transactions with asynchronous or deferred durability, where the writes are
+visible after commit but persisted only later. This optimization does not make
+much difference for the \cc{largefile} benchmark because the write size is
+large, but it is useful to combine several small writes in memory into one large
+transaction.
 
 \section{Testing the trusted code and spec}
 \label{sec:eval:testing}
@@ -370,7 +377,7 @@ We believe additional features such as symbolic links
 could be added incrementally with modest effort because
 of sequential reasoning and proof automation.
 
-\begin{figure}[h!]
+\begin{figure}[ht!]
 \begin{center}
 \begin{tabular}{lrr}
   \toprule

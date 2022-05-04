@@ -67,7 +67,7 @@ if [ -f "${input}/daisy-nfsd-seq-wal.data" ]; then
 fi
 
 gnuplot <<-EOF
-    set terminal pdf dashed noenhanced font "Charter,14" size 3.3in,2.6in
+    set terminal pdf dashed noenhanced font "Charter,14" size 3.6in,2.6in
     set output "${output}"
 
     set auto x
