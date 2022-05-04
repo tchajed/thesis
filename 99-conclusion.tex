@@ -12,6 +12,15 @@ by enabling sequential reasoning for transactions on top.
 The reader might wonder what the value of this kind of large verification effort
 is.
 
+\paragraph{Making verification feasible.}
+Prior to the work in this thesis, there simply didn't exist techniques for this
+kind of proof, thus we could not ask the question of whether it would be worth
+verifying a concurrent file system. This thesis makes it possible, and shows
+that the cost is not unreasonable. A second implementation and proof would not
+be as challenging, building on these foundations. I hope the costs eventually
+come down to make verification an appealing alternative to verification for the
+next generation of storage systems.
+
 \paragraph{Cost versus benefit.} There are many less formal ways to make
 software more reliable, including testing, fuzzing, and code auditing. Formal
 verification also has a spectrum; we could potentially apply property-based
@@ -19,15 +28,7 @@ testing, model checking, or symbolic execution to parts of the code. Rather than
 verifying the implementation, we could instead attempt to model and specify key
 parts of the algorithms or system design, then verify those. What is the
 additional value of fully machine-checked proofs, all the way down to the code?
-
 Verification in the real world needs to have benefits that outweigh the costs.
-The benefit of reliability for file systems is hopefully clear, from the
-exposition above. I see this work as lowering the cost of verifying crash-safe
-and concurrent systems: formerly, there simply didn't exist techniques for this
-kind of proof, and now it is possible (and at least the cost is bounded by a PhD
-thesis and not something much larger). Building on these foundations, I hope the
-costs come down to make verification an appealing alternative to verification
-for the next generation of storage systems.
 
 A real achievement for verification would be to use verification not just as
 alternative to testing, but to build something with more daring optimizations,
@@ -186,7 +187,7 @@ the right specification for the logging code which is enough to reason about the
 combination of installation and logging.
 
 Second, due to the future dependency in the write-ahead log's \cc{Read}
-(described in \cref{sec:txn:wal-read}), it is specified as two separate
+(described in \cref{sec:txn:wal}), it is specified as two separate
 operations; it would be interesting to add \emph{prophecy variables} to
 Perennial, similar to the Iris implementation~\cite{jung:prophecy}, and give
 \cc{Read} a single linearizable specification.

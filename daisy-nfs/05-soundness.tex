@@ -160,7 +160,8 @@ distinct.
 The Dafny code is implemented as a class with ghost variables for its abstract
 state and an invariant that expresses the proof's refinement relation $R$
 between the abstract state and its concrete state (which is limited to constants
-and the transaction system's logical disk). Condition (1) in the definition of
+and the transaction system's logical disk). \tej{add a code outline that shows the
+  class, state, methods, and constructors} Condition (1) in the definition of
 sequential refinement is encoded exactly in Dafny, using \cc{requires} and \cc{ensures}
 clauses. Condition (2) for initialization and condition (3) for crashes relate
 to the Dafny code in a slightly more subtle way.
@@ -255,6 +256,8 @@ errors.}
   \label{thm:daisy-correctness}
 \end{theorem}
 
+\tej{make this an actual theorem re-statement (with the same number), and give
+  the proof sketch here}
 This theorem re-states the specification developed in
 \cref{sec:daisy:refinement-spec}. Its proof is a simple on-paper argument that
 connects \cref{thm:gotxn-transfer} (which \emph{assumes} a sequential

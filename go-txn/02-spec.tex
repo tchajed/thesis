@@ -15,6 +15,7 @@ behaviors of the code are a subset of the behaviors of the specification.
 Refinement relates two programs in terms of their visible behavior, which is
 used in the specification to connect a specification where transactions are
 defined to be atomic to an implementation where they physically take many steps.
+\tej{mention concurrency explicitly}
 The notion of refinement incorporates crashes into the outcomes of executing the
 program and gives it a corresponding specification. Both implementation and
 specification programs can have concurrency, for example spawning threads. For
@@ -33,6 +34,7 @@ multiple times), wiping out any in-memory state after each crash.
   \label{def:refinement}
 \end{definition}
 
+\tej{clarify this is concurrent, crash-safe refinement essentially everywhere}
 The intuition behind the notation $p_{c} \refines p_{s}$ is that the set of
 behaviors of $p_{c}$ (the set of traces of network I/O $\textit{tr}$) is a subset of the
 behaviors of $p_{s}$. Whenever we state $p_{c} \refines p_{s}$ we leave implicit
@@ -123,6 +125,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 % \end{enumerate}
 
 The correctness of the transaction system is expressed by the following theorem:
+\tej{rename program refinement to transaction refinement}
 %
 \begin{theorem}[Program refinement]
   The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for

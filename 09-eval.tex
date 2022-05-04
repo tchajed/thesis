@@ -153,7 +153,8 @@ allowing concurrency between logging and installation in the write-ahead log.
     of concurrent clients. DaisyNFS's performance scales with the number of
     cores similar to ext4, but both eventually scale sub-linearly. Linux
     is disk bandwidth-limited in the NVMe experiment, while DaisyNFS is limited by lock
-    contention before hitting this I/O bottleneck.}
+    contention before hitting this I/O bottleneck. \tej{move in-memory graph to
+      a separate figure, at end of section}}
   \label{fig:eval:scale}
 \end{figure}
 
@@ -164,6 +165,8 @@ allowing concurrency between logging and installation in the write-ahead log.
 %     in-memory disk while varying the number of concurrent clients.}
 %   \label{fig:eval:scale-ram}
 % \end{figure}
+
+\paragraph{Scaling with number of clients.}
 
 The scalability experiment varies the number of concurrent smallfile clients,
 measuring the aggregate throughput of the whole system for each number of
@@ -187,6 +190,8 @@ both of these configurations the server cannot process more than one request at
 a time, performance improves slightly with more than one client since a request
 can be received while another is being processed. Beyond just two clients the
 improvement is negligible.
+
+\paragraph{Concurrency and log bypass for largefile.}
 
 \begin{figure}[hp]
   \begin{subfigure}[b]{\textwidth}

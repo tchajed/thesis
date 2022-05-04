@@ -254,7 +254,8 @@ $\linkedcode$ and $\snfs$ are both models of the \cc{daisy-nfsd} server binary's
 behavior. The former is a model of its implementation running on top of a disk,
 while the latter is its specification at the level of NFS methods. These two
 together are enough to state what it means for DaisyNFS to be correct:
-\begin{definition}[DaisyNFS specification]
+\tej{state as theorem here, allude to proof later}
+\begin{definition}[DaisyNFS correctness]
   DaisyNFS's top-level correctness definition is the refinement
   $\linkedcode \refines \snfs$. Initialization requires initializing the
   transaction system on an empty disk and then running the \cc{Init}
@@ -262,7 +263,7 @@ together are enough to state what it means for DaisyNFS to be correct:
   transaction system and then the file system with its \cc{Recover} constructor.
 \end{definition}
 
-This specification connects the server's implementation at the disk layer,
+This definition connects the server's implementation at the disk layer,
 $\linkedcode$, which combines a model of the Dafny code with the GoTxn
 implementations, to the most abstract version of the server $\snfs$ which by
 definition atomically processes operations, preserves data on crash, and follows
