@@ -12,26 +12,23 @@
 \pagenumbering{arabic}
 
 \input{frontmatter/title}
-% omit while writing
-%\maketitle
+\maketitle
 
 \begin{abstractpage}
 \input{frontmatter/abstract}
 \end{abstractpage}
 \cleardoublepage
 
-%% suppress these while writing
+\section*{Acknowledgments}
+\begin{spacing}{1}
+  \input{00-acknowledgements.tex}
+\end{spacing}
+\cleardoublepage
 
-%\section*{Acknowledgments}
-%\begin{spacing}{1}
-%  \ifoptionfinal{\input{00-acknowledgements.tex}}{Will be included in the final submission.}
-%\end{spacing}
-%\cleardoublepage
-%
-%\section*{Prior Publication}
-%Parts of this thesis were previously published in a conference
-%paper~\cite{chajed:gojournal}.
-%\cleardoublepage
+\section*{Prior Publication}
+Parts of this thesis were previously published in two conference
+papers~\cite{chajed:gojournal, chajed:daisy-nfs}.
+\cleardoublepage
 
 \tableofcontents
 \clearpage
