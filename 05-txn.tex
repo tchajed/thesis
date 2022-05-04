@@ -49,5 +49,19 @@ simulation proof that captures how two-phase locking's concurrency control works
 \input{go-txn/03-system}
 \input{go-txn/04-overview}
 \input{go-txn/06-proof}
-% 07-impl moved to dedicated impl chapter
+
+\section{Limitations}
+\label{sec:txn:limitations}
+
+GoTxn has some limitations. The program refinement proof currently only support
+\emph{synchronous} \cc{Commit}, which makes writes durable when it returns. The
+code also implements an asynchronous version of \cc{Commit} that makes the
+writes atomically visible to other threads, but durable only at a later point.
+It would be interesting to extend the program refinement specification and proof
+to cover asynchrony. The two-phase locking implementation only supports write
+locks and not reader-writer locking. At the bottom layer, GoTxn's disk interface
+assumes a synchronous disk interface --- it would be interesting to relax this
+to reason about asynchronous writes, which model how disks can lose recent
+writes on power failure due to internal buffering.
+
 \input{go-txn/99-concl}

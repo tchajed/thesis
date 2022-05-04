@@ -300,7 +300,12 @@ otherwise be possible. The specification for DaisyNFS uses a mathematical
 formulation of RFC 1813, the document that (in prose) specifies what a NFSv3
 server should do.
 
-\tej{describe limitations at a high level}
+The techniques and artifacts in this thesis do have some limitations, described
+in more detail in the appropriate chapters. Some examples: Perennial can reason
+about safety but not liveness (see \cref{sec:perennial:limitations}); GoTxn does
+not support asynchronous durability (see \cref{sec:txn:limitations}); DaisyNFS
+lacks support for symbolic links (see \cref{sec:daisy:motivation}); and Goose
+does not support Go's channels or interfaces (see \cref{sec:goose:limitations}).
 
 \section{Reading guide for the thesis}
 \label{sec:intro:reading-guide}

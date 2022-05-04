@@ -113,6 +113,7 @@ in particular how to ensure transactions are bounded in size (since GoTxn
 transactions cannot exceed the size of the on-disk circular buffer) and avoiding
 deadlocks in transactions.
 
+\paragraph{Limitations.}
 The design of DaisyNFS does impose limitations. The proof approach relies on
 transactions appearing to run sequentially, which prevents modifying state
 outside the transaction system. An example which would benefit from combining

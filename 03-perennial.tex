@@ -15,6 +15,28 @@ in \cref{sec:perennial:iris} to understand Perennial at a high level.
 \input{perennial/01-iris}
 \input{perennial/02-logic}
 
+\section{Limitations}
+\label{sec:perennial:limitations}
+
+Perennial has some limitations. The logic can prove \emph{safety} properties
+(``nothing bad happens'') but not \emph{liveness} (``something good eventually
+happens''), a limitation inherited from Iris and in fact due to deeper
+theoretical reasons related to step indexing --- Transfinite Iris is an approach
+to solve this issue that discusses the reasons well~\cite{spies:transfinite}.
+Due to different technical reasons related to step indexing, it is not currently
+possible to put weakest precondition assertions inside crash conditions; such a
+feature is useful for reasoning about procedures stored on disk, something that
+shows up in practice with logical logging~\cite{mohan:aries}.
+
+The current version of Perennial does not support \emph{recovery helping} from
+the original version~\cite{chajed:perennial} (although it has many new
+features), a reasoning principle where in a simulation proof recovery logically
+completes an operation from before the crash. As described here, operations must
+be simulated during the crash. It also does not implement Iris's support for
+prophecy variables~\cite{jung:prophecy}, though we believe this is doable --- an
+interesting extension to work out would be prophecies that predict a crash, or
+prophesize actions during recovery.
+
 \section{Take-aways beyond formal verification}
 
 \paragraph{Crash-aware locks.} One of the benefits of concurrent separation
