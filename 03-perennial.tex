@@ -3,14 +3,15 @@ we developed in order to verify GoTxn. The main component of Perennial is a
 program logic based on concurrent separation logic, with extensions for
 reasoning about crash and recovery behaviors.
 
-This chapter describes Perennial's reasoning techniques used in the GoTxn proof.
-Perennial is built on top of the Iris concurrency framework, and inherits its
-support for reasoning about concurrency; the novelty is in reasoning about
-crashes and recovery. Some knowledge of Iris is needed to fully appreciate this
-chapter as well as \cref{ch:crash-logatom}, but we aim to give enough background
-in \cref{sec:perennial:iris} to understand Perennial at a high level.
-
-\tej{explain the Perennial chapter's audience and purpose in more detail}
+\paragraph{Who is this chapter for?}
+This chapter describes Perennial for an audience with some programming languages
+or verification background, but not necessarily experience with concurrency
+specifically. The high-level ideas are meant to be broadly accessible even if
+some background on Iris is needed to appreciate the details. To that end the
+presentation is somewhat simplified, with details and side conditions omitted
+from the logical rules. A more systems-oriented reader can safely skip this
+chapter and the next (\cref{ch:crash-logatom}) and still understand the later
+chapters.
 
 \input{perennial/01-iris}
 \input{perennial/02-logic}
