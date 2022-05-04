@@ -162,11 +162,36 @@ eventually be used to show the overall DaisyNFS correctness theorem:
 The Dafny code is implemented as a class with ghost variables for its abstract
 state and an invariant that expresses the proof's refinement relation $R$
 between the abstract state and its concrete state (which is limited to constants
-and the transaction system's logical disk). \tej{add a code outline that shows the
-  class, state, methods, and constructors} Condition (1) in the definition of
+and the transaction system's logical disk). The top-level interface is outlined
+in \cref{fig:dafny-outline}. Condition (1) in the definition of
 sequential refinement is encoded exactly in Dafny, using \cc{requires} and \cc{ensures}
 clauses. Condition (2) for initialization and condition (3) for crashes relate
 to the Dafny code in a slightly more subtle way.
+
+\begin{figure}
+  \begin{verbatim}
+class Filesys {
+  // the external abstract state
+  ghost data: FilesysData;
+  var txs: TxnSystem;
+
+  // abstraction relation that relates txs.disk to data
+  predicate Valid() { ... }
+
+  // see text for these signatures
+  constructor Init() { ... }
+  constructor Recover() { ... }
+
+  method GETATTR(ino: uint64) returns (r: Result<Attrs>)
+    requires Valid() ensures Valid()
+    ensures GETATTR_spec(old(fs), fs, ino, r) { ... }
+
+  // ... methods for other NFS operations ...
+}
+  \end{verbatim}
+  \caption{Outline of how the Dafny proof is expressed.}
+  \label{fig:dafny-outline}
+\end{figure}
 
 Initialization and recovery are both special in that are implemented in Dafny as
 two \emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's
@@ -183,7 +208,16 @@ that creates a fresh instance of GoTxn and sets up its initial object schema, as
 described in \cref{sec:txn:lifting}. The \cc{Init} constructor establishes the
 class invariant \cc{Valid()} starting from nothing, implicitly assuming that the
 disk is all-zero to be ready for initialization. It promises a file
-system with just a single root inode.
+system with just a single root inode (the attributes include a time stamp and
+are thus not fully specified):
+
+\begin{verbatim}
+constructor Init()
+  ensures Valid()
+  ensures exists attrs0 ::
+          && init_attrs(attrs0)
+          && data == map[1 := Dir([], attrs0)]
+\end{verbatim}
 
 The \cc{Recover} constructor has a more interesting verification story, because
 it is permitted to assume the abstraction relation held just prior to the crash
@@ -191,21 +225,17 @@ but should prove that the file-system restores its global constants. We express
 this in Dafny by giving file-system recovery the following specification:
 
 \begin{verbatim}
-class Filesys {
-  ghost data: FilesysData;
-  ...
-
-  constructor Recover(txs: TxnSystem,
-      ghost fs: Filesys)
-    requires fs.Valid()
-    requires same_txn_disk(txs, fs.txs)
-    ensures Valid()
-    ensures this.data == fs.data
-}
+constructor Recover(txs: TxnSystem,
+    ghost fs: Filesys)
+  requires fs.Valid()
+  requires txs.disk == fs.txs.disk
+  ensures Valid()
+  ensures data == fs.data
 \end{verbatim}
 
 The specification takes a \emph{ghost} \cc{fs} that satisfies the invariant, as
-well as an assumption that the transactional disk from GoTxn is unchanged. The
+well as an assumption that the transactional disk from GoTxn is the same as the
+one for the old file system. The
 idea is that the system always maintains \cc{fs.Valid()} for \emph{some} file
 system is always an invariant, in general for the current \cc{fs} object, but
 just after a crash \cc{fs} is lost (in particular its read-only state). At the
