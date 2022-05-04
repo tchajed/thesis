@@ -63,14 +63,29 @@ the end position, and the remainder for update addresses. Recovery uses the
 header blocks to determine what subset of the circular buffer holds complete
 multiwrites; partially-appended updates are ignored for atomicity.
 
-To append atomically, \cc{c.Append(end, upds)} first writes the data
-(using \cc{end} to know where to start writing), and then writes the append
-header block to atomically incorporate the writes, and simultaneously to write
-the addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
+To append atomically, \cc{c.Append(end, upds)} first writes the data (using
+\cc{end} to know where to start writing), and then writes the append header
+block to atomically incorporate the writes, and simultaneously to write the
+addresses. The in-memory \cc{c *Appender} struct keeps track of the existing
 addresses so they can be re-written to disk. Meanwhile \cc{TrimTill} logically
-deletes by merely writing a new, higher start position to the trim header. Since
-these operations touch disjoint parts of disk, they can be performed
-concurrently. \tej{explain lower-bound reasoning intuitively here}
+deletes by merely writing a new, higher start position to the trim header.
+
+Since these operations touch disjoint parts of disk, they can be performed
+concurrently. However, one subtlety is that it is important to preserve the
+queue abstraction that append operations do not overflow the circular buffer
+(since this would overwrite old values) and that trim operations do not delete
+past the current end (this would invalidate future appends immediately). The
+insight that allows the caller to guarantee these properties is that the start
+and end positions of the circular buffer are monotonically increasing, meaning
+any snapshot of their positions is a \emph{lower bound} that is valid from then
+on. Thus without holding any locks a call to \cc{c.TrimTill(newStart)} can
+guarantee that the trim fits by showing that $\cc{newStart} \leq \cc{end_lb}$,
+where \cc{end_lb} is merely a lower bound and not necessarily the exact end
+position. However, it is necessary for the caller to know the exact start
+position and that it will not change concurrently, in order to guarantee that
+\cc{newStart} is greater than the current \cc{start}. The proof of
+\cc{c.Append(end, upds)} is the dual of trim, requiring a lower bound on the
+start position and exact control over \cc{end}.
 
 \begin{figure}[ht]
 \begin{minted}{coq}
