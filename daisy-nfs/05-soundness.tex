@@ -3,7 +3,7 @@
 
 A key contribution of DaisyNFS is a proof structure that isolates concurrency and crash
 reasoning to the transaction system. The proof works in two steps. First, a
-\emph{simulation transfer} theorem extends GoTxn's program refinement to show
+\emph{simulation transfer} theorem extends GoTxn's transaction refinement to show
 how transactions enable sequential reasoning for an arbitrary system implemented on
 top (\cref{sec:daisy:simulation-transfer}). Second, simulation transfer is
 applied to a the sequential reasoning carried out in Dafny for the specific case
@@ -12,17 +12,17 @@ of DaisyNFS and its NFS specification (\cref{sec:daisy:proof-dafny}).
 \subsection{Simulation transfer}%
 \label{sec:daisy:simulation-transfer}
 
-The GoTxn specification from \cref{sec:txn:spec} uses program refinement to
+The GoTxn specification from \cref{sec:txn:spec} uses transaction refinement to
 capture that transactions are atomic in the sense that every interleaved
 execution has a corresponding execution where each transaction runs all at once.
 This section describes a \emph{simulation transfer} theorem, proven in Coq, that
-uses program refinement to show how GoTxn enables \emph{sequential
+uses transaction refinement to show how GoTxn enables \emph{sequential
 reasoning} for a system implemented with transactions on top.
 
 The idea behind the simulation transfer specification is to express that a system
 verified using sequential reasoning for each transaction is also correct when
 run concurrently through GoTxn --- intuitively, this follows from the atomicity
-provided by program refinement.
+provided by transaction refinement.
 % , at which point the sequential reasoning
 % applies, but we have a more precise and formal proof in Coq.
 To make this precise, we define formally what we mean by
@@ -74,7 +74,7 @@ refinement condition (1) diagrammatically.
 
 The simulation transfer theorem takes a proof of \emph{sequential} refinement
 conditions for a system implemented using transactions and derives a
-\emph{concurrent and crash-safe} refinement. Like program refinement, it is
+\emph{concurrent and crash-safe} refinement. Like transaction refinement, it is
 stated as a theorem about an arbitrary program $p : \gooselayervar{Sys}$ using
 the specification-level API.\@ To model that program using the transactions given
 by implementation $i$, we write $\mathrm{link}(p, \atomiccomp i)$. The function
@@ -97,7 +97,7 @@ In order for simulation transfer to work, every transaction must satisfy some
 conditions to ensure atomicity. We write $\mathrm{safe}(i(\opv))$ to say that $i(\opv)$ is a
 valid transaction. The main restriction is that $i(\opv)$ cannot access global state
 such as the heap, since the transaction system does not make such accesses
-atomic; further details are discussed in \cref{sec:txn:program-refinement}.
+atomic; further details are discussed in \cref{sec:txn:transaction-refinement}.
 
 \begin{theorem}[Simulation transfer]
   Let $\textdom{Sys}$ be a layer implemented using transactions with
@@ -127,7 +127,7 @@ has a subset of behaviors of $p$, so that each operation is not only atomic but
 follows the abstract specification of the $\Sys$ layer.
 
 Simulation transfer is stated and proven in Coq. The proof builds on top of
-program refinement. For every execution of the code, program refinement promises
+transaction refinement. For every execution of the code, transaction refinement promises
 a corresponding atomic execution of $\mathrm{link}(p, \atomiccomp i)$, and the
 sequential refinement assumption is enough to show that the transactions
 correctly simulate $p$ at the $\mathit{Sys}$ abstraction level.
@@ -314,7 +314,7 @@ themselves are correct.
     (the top-level \cc{MKDIR} or \cc{LOOKUP} respectively). The refinement proof first
     shows that for every code execution (bottom row), there exists an atomic
     execution at the Txn layer (middle row), as proven in
-    \cref{thm:gotxn-program-refinement}. This justifies sequential reasoning to
+    \cref{thm:gotxn-transaction-refinement}. This justifies sequential reasoning to
     show the transactions on top follow the NFS specification (top row), as
     proven in \cref{thm:dafny}. Putting the two together,
     \cref{thm:daisy-correctness-restatement} shows the entire DaisyNFS server atomically

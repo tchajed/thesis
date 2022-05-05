@@ -272,7 +272,7 @@ challenging since the logical disk can change in the middle of a transaction. It
 \textbf{history-based abstract state} for the write-ahead log. This model allowed us to carry
 out a modular proof where the write-ahead logging library hides most of
 its internal complexity, simplifying reasoning about the rest of the GoTxn
-code that uses it. Finally, GoTxn exports a \textbf{program refinement}
+code that uses it. Finally, GoTxn exports a \textbf{transaction refinement}
 specification that captures how transactions appear to run atomically.
 
 The ideas in Perennial and Goose are applied to GoTxn, but they could be used
@@ -291,8 +291,8 @@ code.
 \paragraph{System design.}
 DaisyNFS is verified using sequential code despite having a concurrent
 implementation. The formal justification for this approach is a
-\textbf{simulation-transfer theorem}, proven on top of GoTxn's program
-refinement specification, which shows that sequential reasoning for each
+\textbf{simulation-transfer theorem}, proven on top of GoTxn's
+transaction-refinement specification, which shows that sequential reasoning for each
 transaction in a system implies correctness for the whole system when run on top
 of GoTxn. Sequential reasoning means DaisyNFS can be verified using Dafny, a
 sequential verification language, with much lower proof burden than would

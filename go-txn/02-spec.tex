@@ -2,9 +2,9 @@
 \label{sec:txn:spec}
 
 At a high level, GoTxn makes transactions atomic. This chapter formalizes this
-intuitive definition in the form of \emph{program refinement}. Later in
+intuitive definition in the form of \emph{transaction refinement}. Later in
 \cref{ch:daisy-nfs} we build upon this specification to show how it enables
-sequential reasoning. Program refinement is defined in terms of
+sequential reasoning. Transaction refinement is defined in terms of
 \emph{refinement}, which relates code to a specification.
 
 \subsection{Crash-safe, concurrent refinement}%
@@ -48,7 +48,7 @@ must correspond to a specification-level crash transition.
 \subsection{Modeling programs for refinement}%
 \label{sec:txn:go-layers}
 
-To define the program refinement specification, we need to be more precise about what a program is
+To define the transaction refinement specification, we need to be more precise about what a program is
 and how it executes. We
 write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
 from layer X.
@@ -75,8 +75,8 @@ external state in a controlled way (limited to a layer), for the purpose of
 defining the specification. Each GooseLang program is limited to one external
 layer to simplify the definitions, but of course Go permits unlimited imports.
 
-The program refinement specification for GoTxn below in
-\cref{sec:txn:program-refinement} relates a \emph{spec program}
+The transaction refinement specification for GoTxn below in
+\cref{sec:txn:transaction-refinement} relates a \emph{spec program}
 $p : \gooselayer{Txn}$ that uses transactions, to its executable version
 which invokes the GoTxn implementation. These specification programs can invoke
 transactions, which we write $\atomically{\cc{f}}$ to represent a transaction
@@ -90,10 +90,10 @@ specific to the transaction system, of replacing a specification transaction
 $\atomically{\cc{f}}$ with a sequence \cc{tx := Begin(); f(tx); tx.Commit()}
 (with some additional code handling aborts).
 
-\subsection{Program refinement}
-\label{sec:txn:program-refinement}
+\subsection{Transaction refinement}
+\label{sec:txn:transaction-refinement}
 
-The specification we give to GoTxn uses \emph{program refinement},
+The specification we give to GoTxn uses \emph{transaction refinement},
 which formalizes serializability (sometimes known as atomicity and isolation)
 for transactions running on top of GoTxn.
 To set up this specification, consider a program $p : \gooselayer{Txn}$ that
@@ -126,21 +126,20 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 % \end{enumerate}
 
 The correctness of the transaction system is expressed by the following theorem:
-\tej{rename program refinement to transaction refinement}
 %
-\begin{theorem}[Program refinement]
-  The transaction system's implementation $\txncode$ is a \emph{program refinement}, meaning for
+\begin{theorem}[Transaction refinement]
+  The transaction system's implementation $\txncode$ is a \emph{transaction refinement}, meaning for
   all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
   $\mathrm{link}(p, \txncode) \refines p$. The definition of
   $init(\sigma_{s}, \sigma_{c})$ in this refinement relates an all-zero physical
   disk to an all-zero transactional disk of the same size.
-  \label{thm:gotxn-program-refinement}
+  \label{thm:gotxn-transaction-refinement}
 \end{theorem}
 %
 What the theorem says is that if a program is safe, the program linked with the
 transaction system always behaves as if its transactions were atomically
 accessing a transactional disk logically maintained by the transaction system.
-Unlike standard refinement, which is between two complete programs, program
+Unlike the definition of concurrent, crash-safe refinement, which is between two complete programs, transaction
 refinement is a \emph{contextual refinement} property about a library that is
 stated in terms of all callers of that library.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.

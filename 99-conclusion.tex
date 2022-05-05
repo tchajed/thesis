@@ -134,7 +134,7 @@ GooseLang \cc{DiskRead} returns a freshly allocated buffer, but it would have
 been better for performance if the caller supplied a buffer that the
 \cc{DiskRead} wrote to (as in the usual \cc{read} system call). Similarly, the
 GoTxn interface to Dafny makes additional copies to simplify ownership
-reasoning, especially in the program refinement proof. A better solution would
+reasoning, especially in the transaction refinement proof. A better solution would
 have been to develop a specification style for expressing ownership in the
 semantics of the operations themselves, along with associated reasoning
 principles.

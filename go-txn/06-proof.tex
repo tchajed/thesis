@@ -6,7 +6,7 @@ This section outlines the proof of GoTxn's correctness, as described in
 together, as described in \cref{sec:txn:impl}. The proof follows the same
 structure, and the most interesting aspect is the specification for each layer.
 
-Recall that program refinement is a statement about an arbitrary program that
+Recall that transaction refinement is a statement about an arbitrary program that
 uses transactions. It would be infeasible to directly reason about the execution of an
 arbitrary use of GoTxn, including handling concurrently issued transactions and
 crashes at any time. Instead, the first step is to give a specification to the
@@ -42,7 +42,7 @@ disk.
 \label{sec:txn:wal}
 
 \tej{Joe points out that this is a jarring transition --- split into one section on verifying
-GoTxn's atomicity (lifting + program refinement) and another with proof
+GoTxn's atomicity (lifting + transaction refinement) and another with proof
 internals (WAL + logical atomicity + obj).}
 
 The write-ahead log layer is responsible for updating multiple disk

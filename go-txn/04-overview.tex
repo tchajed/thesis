@@ -25,10 +25,10 @@ synchronous reads and writes of 4KB sectors, a standard feature for disk
 hardware. On crash, the model of the disk in Perennial assumes writes are atomic
 at this 4KB granularity.
 
-At the top level, \scc{txn}'s specification is the program refinement
+At the top level, \scc{txn}'s specification is the transaction refinement
 specification described earlier in \cref{sec:txn:spec}. This specification is
 about an arbitrary program that uses GoTxn, which is formalized using GooseLang,
-the language that we use to model Go code. Note that the statement of program
+the language that we use to model Go code. Note that the statement of transaction
 refinement only talks about the GoTxn implementation and a (GooseLang) program
 using it; it no longer references the Perennial logic. We are able to prove such
 a theorem because Perennial comes with a soundness theorem that relates the

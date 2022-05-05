@@ -1,12 +1,12 @@
 % subsection of GoTxn proof section
-\subsection{Proving program refinement}
+\subsection{Proving transaction refinement}
 \label{sec:txn:refinement}
 
 \newcommand{\txnmapsto}{\mapsto_{\cc{txn}}}
 \newcommand{\thdmapsto}{\Rightarrow}
 
-Recall that \cref{thm:gotxn-program-refinement} is the overall correctness
-theorem for GoTxn. It says that the GoTxn implementation is a \emph{program
+Recall that \cref{thm:gotxn-transaction-refinement} is the overall correctness
+theorem for GoTxn. It says that the GoTxn implementation is a \emph{transaction
 refinement} between the Txn layer (with programs that use transactions) and the
 Disk layer (with an implementation that interacts with a disk).
 That is, given a program
@@ -153,7 +153,7 @@ guarantees that this correctly simulates \cc{f}.
 
 Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the
-transaction system, as mentioned in \cref{sec:txn:program-refinement}. Accesses to such global state
+transaction system, as mentioned in \cref{sec:txn:transaction-refinement}. Accesses to such global state
 would violate the invariant because their behavior would then depend upon
 things outside of the footprint $\Sigma$. Because those global values could change
 by the time the transaction commits, the above argument would no longer work if they were allowed.
@@ -163,7 +163,7 @@ invariant. Allocations do not hold the allocator lock throughout the remainder
 of a transaction. This seems to violate the two-phase locking pattern, since
 allocations could be implicitly observed by other concurrent transactions from
 the fact that an allocated address is no longer free. As described in
-\cref{sec:txn:program-refinement}, GoTxn under-specifies the allocator's behavior so that it
+\cref{sec:txn:transaction-refinement}, GoTxn under-specifies the allocator's behavior so that it
 atomically follows its (non-deterministic) specification even though it is not
 protected by the 2PL locking discipline.
 

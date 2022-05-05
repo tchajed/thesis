@@ -10,7 +10,7 @@ several aspects of the proof. The implementation is composed of a software stack
 with several layers; each layer implements a new interface on top of one
 below. The proof follows the same structure, with several new specifications for
 intermediate layers. Of particular note are the
-program-refinement specification for the transaction system, the lifting
+transaction-refinement specification for the transaction system, the lifting
 specification for the journaling layer, and the abstraction for the write-ahead
 log layer.
 
@@ -24,7 +24,7 @@ First, GoTxn's specification is stated in terms of programs using the
 transaction system, and not all programs will observe atomic transactions ---
 for example, accessing global variables or the network in the middle of a
 transaction is not atomic. To state a provable specification for GoTxn we needed
-a formalization of \emph{safe transactions}, described in \cref{sec:txn:program-refinement},
+a formalization of \emph{safe transactions}, described in \cref{sec:txn:transaction-refinement},
 which obey some restrictions that the specification assumes the caller follows.
 
 The second challenge is supporting an in-memory allocator, which is necessary
@@ -53,11 +53,11 @@ simulation proof that captures how two-phase locking's concurrency control works
 \section{Limitations}
 \label{sec:txn:limitations}
 
-GoTxn has some limitations. The program refinement proof currently only support
+GoTxn has some limitations. The transaction refinement proof currently only support
 \emph{synchronous} \cc{Commit}, which makes writes durable when it returns. The
 code also implements an asynchronous version of \cc{Commit} that makes the
 writes atomically visible to other threads, but durable only at a later point.
-It would be interesting to extend the program refinement specification and proof
+It would be interesting to extend the transaction refinement specification and proof
 to cover asynchrony. The two-phase locking implementation only supports write
 locks and not reader-writer locking. At the bottom layer, GoTxn's disk interface
 assumes a synchronous disk interface --- it would be interesting to relax this
