@@ -180,7 +180,7 @@ def main():
                 # triple {{{ }}} means one layer of literal curly braces, then
                 # an escaped identifier
                 print(
-                    f"\\newcommand{{{cmd_name}}}" + f"{{{lines}}}",
+                    f"\\def{cmd_name}{{{lines}}}",
                     file=f,
                 )
     else:

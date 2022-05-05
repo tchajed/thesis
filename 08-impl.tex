@@ -108,7 +108,7 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
   GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
   File system (Dafny) & \loc{\daisyProof}  & \loc{\daisyCode} & \loc{\daisySpec} (Thm~\ref{thm:dafny}) \\
   Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec{} \\
-  \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode{} & --- \\
+  \cc{daisy-nfsd} & \emph{unverified} & \loc{\daisyTrustedCode} & --- \\
   \bottomrule
 \end{tabular}
 \caption{Lines of proof, code, and trusted specification for DaisyNFS.}
@@ -135,7 +135,7 @@ The proof summarizes the implementation well, with about $6\times$ fewer lines
 of specification as code (about half that specification is quite verbose and concerns
 error codes and attributes). For efficiency, the Dafny code has trusted interfaces to
 primitives like byte slices and integer-to-byte encoding. Together these are
-written in \daisyTrustedSpec{} lines of trusted Dafny code.
+written in \loc{\daisyTrustedSpec{}} lines of trusted Dafny code.
 % The rest of the system has good leverage from the proofs: there are $8\times$
 % as many lines of code as specification.
 Finally, to complete the NFS server required around \loc{1000} lines of Go
