@@ -144,41 +144,6 @@ Finally, to complete the NFS server required around \loc{1000} lines of Go
 code, about half of which bridge between the Dafny method signatures and the
 actual NFS structs.
 
-% fish script:
-\begin{comment}
-begin
-    rm -rf src-compiled
-    for file in src/*/**.dfy
-        set -l path (string sub --start 4 $file)
-        set -l dir (dirname $path)
-        mkdir -p src-compiled/$dir
-        dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path $file &
-    end
-    wait
-    cloc --read-lang-def ~/dafny-lang.txt src-compiled
-    cloc --read-lang-def ~/dafny-lang.txt src
-end
-\end{comment}
-
-% cloc (compiled)
-% 3227 source lines of code
-
-% cloc (total)
-% 9585 source lines total (minus code, 6358 proof lines)
-
-\begin{comment}
-begin
-    gsed -n '/method[^(]* [A-Z]*(/,/^\s*{/p' src/fs/dir_fs.dfy
-    cat src/fs/nfs.s.dfy
-end | wc -l
-\end{comment}
-%
-% 382
-
-\tej{describe something similar for GoTxn proof and code; some spec number would
-  be helpful, and separate transaction refinement and simulation transfer since
-  they're large}
-
 \section{Achieving good performance for DaisyNFS}
 \label{sec:impl:dafny-perf}
 
