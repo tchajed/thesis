@@ -397,12 +397,27 @@ mechanisms from Iris and Perennial.
 \section{Implementation}
 \label{sec:perennial:impl}
 
-Perennial is implemented on top of Iris. The Iris logic is divided into two
+Perennial is implemented on top of Iris in about 25,000 lines of code (a
+breakdown is given in \cref{fig:perennial:lines}).
+The Iris logic is divided into two
 parts: a ``base logic'' which defines a notion of resources, ownership, and
 separation logic, and on top of this base logic a \emph{program logic} that
 defines the weakest precondition $\wpre{e}{Q}$ as an assertion in the base logic
 about the execution of $e$. All of the proof rules in the program logic are
 defined as theorems in the base logic, using the definition of $\wpw$.
+
+\begin{figure}
+\centering
+\begin{tabular}{lr}
+\toprule
+\bf Component & \bf Lines of Coq \\
+\midrule
+  \input{go-txn/tables/perennial-loc.tex}
+\end{tabular}
+\caption[Lines of code for Perennial.]%
+{Lines of code (including proofs) for Perennial.}
+\label{fig:perennial:lines}
+\end{figure}
 
 Perennial re-uses the Iris base logic with no changes, and builds a custom
 program logic on top with $\wpc{e}{Q}{Q_{c}}$ and $\wpre{e}{Q}$. The non-crash

@@ -119,9 +119,13 @@ common iteration specification, so our proofs should remain unchanged if
 \section{Implementation}%
 \label{sec:goose:impl}
 
-Goose is implemented in Go. It takes advantage of a family of packages in under
+% wc -l errors.go goose.go idents.go interface.go types.go internal/coq/coq.go
+% 4089
+
+The Goose translator is implemented in Go, in about \loc{4000} lines of code.
+It takes advantage of a family of packages in under
 \cc{go} in the Go standard library, such as \cc{go/ast} and \cc{go/types}, to
-parse and type-check Go code; the \cc{golang.org/x/tools/go/packages} package
+parse and type-check Go code; the \texttt{golang.org/x/tools/go/packages} package
 even makes it possible to work with Go packages and modules. These greatly
 simplify implementing Goose and also make it more trustworthy, since at least
 the source code is parsed in exactly the same way as the compiler (though we can
@@ -138,6 +142,26 @@ such as the topological order on definitions mentioned in limitations above (in
 section \cref{sec:goose:limitations}); in these cases the resulting Coq code
 does not compile, which preserves soundness but is a slightly worse user
 experience.
+
+GooseLang is implemented in Coq, in a total of about \loc{14,000} lines of code;
+a breakdown is given in \cref{fig:gooselang:lines}.
+This includes a core language definition as well as libraries implemented in the
+core language to model Go features. Each library has associated reasoning
+principles verified in Coq.
+
+\begin{figure}
+\centering
+\begin{tabular}{lr}
+\toprule
+\bf Component & \bf Lines of Coq \\
+\midrule
+  \input{go-txn/tables/gooselang-loc.tex}
+\end{tabular}
+\caption[Lines of code for GooseLang]%
+{Lines of code (including proofs) for GooseLang.}
+\label{fig:gooselang:lines}
+\end{figure}
+
 
 GooseLang has a notion of ``external'' operations and state, which is generally
 instantiated with a disk. The translator checks that the source package imports

@@ -46,21 +46,6 @@ def perennial_table():
     )
     ghost_state = wc_l("src/algebra/*.v") - wc_l("src/algebra/liftable.v")
     program_logic = wc_l("src/program_logic/*.v")
-    # this is the "core" of GooseLang, which is a bit subjective
-    # mainly the intent was to exclude the refinement proof infrastructure
-    goose_lang = wc_l(
-        prefix_patterns(
-            "src/goose_lang/",
-            """lang.v lifting.v notation.v proofmode.v
-               tactics.v recovery_adequacy.v disk.v""".split(),
-        )
-    )
-    goose_lang_lib_impl = wc_l("src/goose_lang/lib/*/impl.v")
-    goose_lang_lib = wc_l(
-        prefix_patterns("src/goose_lang/", ["lib/*.v", "lib/*/*.v"]),
-        "src/program_proof/disk_lib.v",
-    )
-    goose_lang_lib_proof = goose_lang_lib - goose_lang_lib_impl
     data = [
         (
             "Helper libraries (maps, lifting, tactics)",
@@ -78,9 +63,32 @@ def perennial_table():
             "Perennial total",
             helpers + ghost_state + program_logic,
         ),
-        ("GooseLang (core)", goose_lang),
-        ("GooseLang libraries (impl)", goose_lang_lib_impl),
-        ("GooseLang libraries (proof)", goose_lang_lib_proof),
+    ]
+    return pd.DataFrame.from_records(data, columns=["Component", "Lines of Coq"])
+
+
+def gooselang_table():
+    """Generate table with GooseLang lines of code."""
+    goto_path("perennial")
+    # this is the "core" of GooseLang, which is a bit subjective
+    # mainly the intent was to exclude the refinement proof infrastructure
+    goose_lang = wc_l(
+        prefix_patterns(
+            "src/goose_lang/",
+            """lang.v lifting.v notation.v proofmode.v
+               tactics.v recovery_adequacy.v disk.v""".split(),
+        )
+    )
+    goose_lang_lib_impl = wc_l("src/goose_lang/lib/*/impl.v")
+    goose_lang_lib = wc_l(
+        prefix_patterns("src/goose_lang/", ["lib/*.v", "lib/*/*.v"]),
+        "src/program_proof/disk_lib.v",
+    )
+    goose_lang_lib_proof = goose_lang_lib - goose_lang_lib_impl
+    data = [
+        ("GooseLang definition", goose_lang),
+        ("Libraries (implementation)", goose_lang_lib_impl),
+        ("Libraries (proof)", goose_lang_lib_proof),
         ("GooseLang total", goose_lang + goose_lang_lib),
     ]
     return pd.DataFrame.from_records(data, columns=["Component", "Lines of Coq"])
@@ -241,7 +249,9 @@ def latex_ratio(x):
 
 def perennial_to_latex(df):
     rows = []
-    for _, row in df.iterrows():
+    for index, row in df.iterrows():
+        if index == len(df) - 1:
+            rows.append(["\\midrule"])
         rows.append([row[0], loc(row[1])])
     return array_to_latex_table(rows)
 
@@ -288,13 +298,18 @@ if __name__ == "__main__":
     original_pwd = os.getcwd()
 
     perennial_df = perennial_table()
+    gooselang_df = gooselang_table()
     impl_df = program_proof_table().fillna("---")
 
     os.chdir(original_pwd)
 
     if args.latex is None:
-        print("Lines of code in Perennial and GooseLang")
+        print("Lines of code in Perennial")
         print(perennial_df.to_string(index=False))
+        print()
+
+        print("Lines of code in GooseLang")
+        print(gooselang_df.to_string(index=False))
         print()
 
         print("Lines of code for GoTxn")
@@ -302,5 +317,7 @@ if __name__ == "__main__":
     else:
         with open(join(args.latex, "perennial-loc.tex"), "w") as f:
             print(perennial_to_latex(perennial_df), file=f)
+        with open(join(args.latex, "gooselang-loc.tex"), "w") as f:
+            print(perennial_to_latex(gooselang_df), file=f)
         with open(join(args.latex, "impl-loc.tex"), "w") as f:
             print(impl_to_latex(impl_df), file=f)

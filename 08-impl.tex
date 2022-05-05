@@ -72,19 +72,6 @@ implemented.
 
 \begin{figure}
 \centering
-\small
-\begin{tabular}{lr}
-\toprule
-\bf Component & \bf Lines of Coq \\
-\midrule
-  \input{go-txn/tables/perennial-loc.tex}
-\end{tabular}
-\caption{Lines of specs and proofs for Perennial.}
-\label{fig:perennial:lines}
-\end{figure}
-
-\begin{figure}
-\centering
 \begin{tabular}{lrrr}
 \toprule
   & \bf Lines of code & \bf Lines of proof & \bf Ratio \\
@@ -121,8 +108,8 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
 \label{fig:daisy:loc}
 \end{figure}
 
-The lines of proof, code, and specification for the layers of the system are
-summarized in \cref{fig:daisy:loc}. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
+The lines of proof, code, and specification for the layers of GoTxn are
+summarized in \cref{fig:txn:loc}. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
 relatively large because code executed in atomically blocks can include many Go
 operations modeled by Perennial, and the proof has cases to handle
 each operation. However the result of the proof is a relatively concise
@@ -130,7 +117,8 @@ specification as a plain Coq statement that doesn't refer to the Perennial
 logic.
 
 The file-system operations are implemented in Dafny, which helped us verify a
-relatively complete system without too much tedium. The
+relatively complete system without too much tedium. A breakdown of DaisyNFS's
+lines of code is given in \cref{fig:daisy:loc}. The
 proof-to-code ratio (where code is the number of lines extracted by Dafny's
 \cc{/printMode:NoGhost} flag) is about $2\times$ for the file system code.
 The proof summarizes the implementation well, with about $6\times$ fewer lines
