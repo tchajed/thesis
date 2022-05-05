@@ -147,13 +147,13 @@ end
 
 \begin{figure}
 \centering
-\begin{tabular}{lrrr}
+\begin{tabular}{lrrl}
   \toprule
   & \bf proof & \bf code & \bf spec \\
   \midrule
   GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
   File system (Dafny) & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{272+313}} (Thm~\ref{thm:dafny}) \\
-  Dafny trusted interfaces & --- & --- & \daisyTrustedSpec (Dafny) \\
+  Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec \\
   \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode & --- \\
   \bottomrule
 \end{tabular}
