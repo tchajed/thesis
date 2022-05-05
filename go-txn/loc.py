@@ -56,7 +56,10 @@ def perennial_table():
         )
     )
     goose_lang_lib_impl = wc_l("src/goose_lang/lib/*/impl.v")
-    goose_lang_lib = wc_l(prefix_patterns("src/goose_lang/", ["lib/*.v", "lib/*/*.v"]))
+    goose_lang_lib = wc_l(
+        prefix_patterns("src/goose_lang/", ["lib/*.v", "lib/*/*.v"]),
+        "src/program_proof/disk_lib.v",
+    )
     goose_lang_lib_proof = goose_lang_lib - goose_lang_lib_impl
     data = [
         (

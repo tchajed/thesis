@@ -96,54 +96,8 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
 \label{fig:txn:loc}
 \end{figure}
 
-
-%% daisy-nfsd spec:
-% gsed -n '/public/,/^\s*{/p' src/fs/dir_fs.dfy | wc -l
-%   272
-% cloc --read-lang-def ~/dafny-lang.txt src/fs/nfs.s.dfy
-%   313
-\newcommand{\daisyMethodSpecs}{272}
-\newcommand{\daisyNfsSpec}{313}
-\newcommand{\daisySpec}{\fpeval{\daisyMethodSpecs+\daisyNfsSpec}}
-
-% getting lines of code and total lines (proof is total - code)
-\begin{comment}
-cat ~/dafny-lang.txt
-Dafny
-    filter rm_comments_in_strings " /* */
-    filter rm_comments_in_strings " //
-    filter call_regexp_common C++
-    extension dfy
-    3rd_gen_scale 5.00
-\end{comment}
-
-\begin{comment}
-begin
-  rm -rf src-compiled
-  for file in src/*/**.dfy
-          set -l path (string sub --start 4 $file)
-          set -l dir (dirname $path)
-          mkdir -p src-compiled/$dir
-          dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path $file &
-      end
-  wait
-  cloc --read-lang-def ~/dafny-lang.txt src-compiled
-  cloc --read-lang-def ~/dafny-lang.txt src
-end
-\end{comment}
-
-\newcommand{\daisyCode}{3479}
-\newcommand{\daisyTotal}{10137}
-\newcommand{\daisyProof}{\fpeval{\daisyTotal-\daisyCode}}
-
-% wc -l src/jrnl/*.s.dfy src/machine/*.s.dfy
-% 558 trusted lines of code
-\newcommand{\daisyTrustedSpec}{\loc{558}\xspace}
-
-% additional unverified lines of Go in dafny-nfsd
-% wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
-% 1142
-\newcommand{\daisyTrustedCode}{\loc{1142}\xspace}
+% ./daisy-nfs/loc.py --latex daisy-nfs/
+\input{daisy-nfs/loc-cmds.tex}
 
 \begin{figure}
 \centering
@@ -153,8 +107,8 @@ end
   \midrule
   GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
   File system (Dafny) & \loc{\daisyProof}  & \loc{\daisyCode} & \loc{\daisySpec} (Thm~\ref{thm:dafny}) \\
-  Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec \\
-  \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode & --- \\
+  Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec{} \\
+  \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode{} & --- \\
   \bottomrule
 \end{tabular}
 \caption{Lines of proof, code, and trusted specification for DaisyNFS.}
@@ -181,7 +135,7 @@ The proof summarizes the implementation well, with about $6\times$ fewer lines
 of specification as code (about half that specification is quite verbose and concerns
 error codes and attributes). For efficiency, the Dafny code has trusted interfaces to
 primitives like byte slices and integer-to-byte encoding. Together these are
-written in \daisyTrustedSpec lines of trusted Dafny code.
+written in \daisyTrustedSpec{} lines of trusted Dafny code.
 % The rest of the system has good leverage from the proofs: there are $8\times$
 % as many lines of code as specification.
 Finally, to complete the NFS server required around \loc{1000} lines of Go
