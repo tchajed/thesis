@@ -1,4 +1,5 @@
-personal_ws-1.1 en 489 
+personal_ws-1.1 en 500 
+APFS
 APIs
 AST
 Addr
@@ -24,6 +25,7 @@ CSPEC
 Cap'n
 CertiKOS
 Chajed
+Champaign
 ChkliaevHS
 CmpXchg
 CompCert
@@ -169,6 +171,7 @@ Toolchain
 TrimTill
 Txn
 TxnSystem
+Urbana
 VCC
 VFS
 VST
@@ -181,6 +184,7 @@ WPs
 WebAssembly
 WriteBit
 XDR
+XFS
 Xeon
 Zeldovich
 ZeroFreeSpace
@@ -192,6 +196,7 @@ allocators
 api
 appender
 ar
+asynchrony
 atomicity
 attrs
 automata
@@ -222,6 +227,7 @@ circularAppender
 citecolor
 clightgen
 cloc
+codebase
 colorlinks
 conf
 coq
@@ -233,6 +239,7 @@ dafny
 dafnyVerify
 daisynfs
 deallocating
+defunctionalization
 dereference
 dereferenced
 dereferencing
@@ -299,6 +306,7 @@ inode
 inode's
 inodes
 installOneBit
+instantiations
 inv
 invariants
 isCrashLock
@@ -397,6 +405,7 @@ preLock
 preborrow
 pred
 printMode
+prophesize
 protobuf
 prover
 ptr
@@ -437,6 +446,7 @@ str
 struct
 structType
 structs
+stuckness
 subslice
 subslicing
 suchThat
@@ -444,6 +454,7 @@ symlinks
 synonymously
 sys
 sz
+szBits
 testbed
 tgt
 th
