@@ -1,10 +1,15 @@
-\section{Verifying GoTxn}
+\section{Verifying atomicity in GoTxn}
 \label{sec:txn:proof}
 
-This section outlines the proof of GoTxn's correctness, as described in
-\cref{sec:txn:spec}. The implementation consists of multiple layers stacked
-together, as described in \cref{sec:txn:impl}. The proof follows the same
-structure, and the most interesting aspect is the specification for each layer.
+This section outlines the proof of GoTxn's transaction refinement specification
+from \cref{sec:txn:spec}. The implementation consists of multiple layers stacked
+together, as described in \cref{sec:txn:impl}. This section focuses on proofs of
+the upper two layers: the journaling layer implements \emph{crash atomicity}
+while the \scc{txn} layer uses two-phase locking for \emph{concurrency
+  atomicity}. The proof is carried out modularly, so the specification for
+journaling and the proof of two-phase locking are both described here. The
+following section, \cref{sec:txn:lower-layers}, describes aspects of verifying
+the lower layers.
 
 Recall that transaction refinement is a statement about an arbitrary program that
 uses transactions. It would be infeasible to directly reason about the execution of an
@@ -38,12 +43,15 @@ disk.
 \input{go-txn/lifting-spec.tex}
 \input{go-txn/refinement-proof.tex}
 
+\section{Verifying GoTxn's implementation layers}
+\label{sec:txn:lower-layers}
+
+This section walks through the proof of lower layers of GoTxn's implementation.
+Rather than give complete specifications and proof sections, it focuses on some
+of the most interesting aspects.
+
 \subsection[Write-ahead logging (WAL)]{Write-ahead logging (\scc{wal})}
 \label{sec:txn:wal}
-
-\tej{Joe points out that this is a jarring transition --- split into one section on verifying
-GoTxn's atomicity (lifting + transaction refinement) and another with proof
-internals (WAL + logical atomicity + obj).}
 
 The write-ahead log layer is responsible for updating multiple disk
 blocks (a multiwrite) atomically.
@@ -433,11 +441,13 @@ regardless of what block happened to be read,
 the caller is guaranteed to see the correct object $o$.
 
 The object layer supports \emph{bit-sized} objects, which create a verification
-challenge since the operations involved are implemented with low-level bit manipulation. For example,
-example is the code to install a bit into another word. The specification for
-this code uses a
-pair of conversion functions \cc{byte_to_bits} and \cc{bit_to_bytes} that go
-between an 8-bit integer (a \cc{u8}) and \cc{list bool} (of length 8). To reason
-about this code we wrote tactics to prove theorems about bytes and bits by brute
-force, simply considering all possible cases; this works reasonably well in Coq
-even when there are thousands of cases (but not too much more).
+challenge since the operations involved are implemented with low-level bit
+manipulation. One example is a function \cc{installBit(src u8, dst u8, off
+uint64) uint64} that returns \cc{src} with the \cc{off}th bit replaced with
+the corresponding bit from \cc{dst}. The specification for this code uses a pair
+of conversion functions \cc{byte_to_bits} and \cc{bit_to_bytes} that go between
+an 8-bit integer (a \cc{u8}) and \cc{list bool} (of length 8). To reason about
+the implementation of \cc{installBit} we wrote tactics to prove theorems about
+bytes and bits by brute force, simply considering all possible cases; this works
+reasonably well in Coq even when there are thousands of cases (but not too much
+more).
