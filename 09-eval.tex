@@ -158,8 +158,8 @@ allowing concurrency between logging and installation in the write-ahead log.
 
 The scalability experiment varies the number of concurrent smallfile clients,
 measuring the aggregate throughput of the whole system for each number of
-clients. Each data point is the result of averaging 5 separate runs, each for 10
-seconds. The results are shown in \cref{fig:eval:scale}. The graph shows that
+clients. The results are shown in \cref{fig:eval:scale}. Each data point is the result of
+running for 30 seconds. The graph shows that
 DaisyNFS achieves both good absolute performance and gets higher throughput with
 more clients, comparable to the scalability of the Linux NFS server, though
 Linux has better scalability. These benchmarks don't have perfect scalability
