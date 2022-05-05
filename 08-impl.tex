@@ -105,10 +105,28 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
 
 % getting lines of code and total lines (proof is total - code)
 \begin{comment}
-begin rm -rf src-compiled for file in src/*/**.dfy set -l path (string sub
---start 4 $file) set -l dir (dirname $path) mkdir -p
-src-compiled/$dir dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path
-$file & end wait cloc --read-lang-def ~/dafny-lang.txt src-compiled cloc --read-lang-def ~/dafny-lang.txt src end
+cat ~/dafny-lang.txt
+Dafny
+    filter rm_comments_in_strings " /* */
+    filter rm_comments_in_strings " //
+    filter call_regexp_common C++
+    extension dfy
+    3rd_gen_scale 5.00
+\end{comment}
+
+\begin{comment}
+begin
+  rm -rf src-compiled
+  for file in src/*/**.dfy
+          set -l path (string sub --start 4 $file)
+          set -l dir (dirname $path)
+          mkdir -p src-compiled/$dir
+          dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path $file &
+      end
+  wait
+  cloc --read-lang-def ~/dafny-lang.txt src-compiled
+  cloc --read-lang-def ~/dafny-lang.txt src
+end
 \end{comment}
 
 \newcommand{\daisynfsCode}{3479}
