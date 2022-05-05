@@ -102,6 +102,9 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
 %   272
 % cloc --read-lang-def ~/dafny-lang.txt src/fs/nfs.s.dfy
 %   313
+\newcommand{\daisyMethodSpecs}{272}
+\newcommand{\daisyNfsSpec}{313}
+\newcommand{\daisySpec}{\fpeval{\daisyMethodSpecs+\daisyNfsSpec}}
 
 % getting lines of code and total lines (proof is total - code)
 \begin{comment}
@@ -129,21 +132,18 @@ begin
 end
 \end{comment}
 
-\newcommand{\daisynfsCode}{3479}
-\newcommand{\daisynfsTotal}{10137}
+\newcommand{\daisyCode}{3479}
+\newcommand{\daisyTotal}{10137}
+\newcommand{\daisyProof}{\fpeval{\daisyTotal-\daisyCode}}
 
 % wc -l src/jrnl/*.s.dfy src/machine/*.s.dfy
 % 558 trusted lines of code
-
 \newcommand{\daisyTrustedSpec}{\loc{558}\xspace}
 
 % additional unverified lines of Go in dafny-nfsd
 % wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
 % 1142
-
 \newcommand{\daisyTrustedCode}{\loc{1142}\xspace}
-
-\newcommand{\daisynfs}
 
 \begin{figure}
 \centering
@@ -152,7 +152,7 @@ end
   & \bf proof & \bf code & \bf spec \\
   \midrule
   GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
-  File system (Dafny) & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{272+313}} (Thm~\ref{thm:dafny}) \\
+  File system (Dafny) & \loc{\daisyProof}  & \loc{\daisyCode} & \loc{\daisySpec} (Thm~\ref{thm:dafny}) \\
   Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec \\
   \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode & --- \\
   \bottomrule
