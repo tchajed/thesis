@@ -67,6 +67,9 @@ implemented.
 
 \section{Lines of code}
 
+% generate tables with
+% ./go-txn/loc.py --latex go-txn/tables
+
 \begin{figure}
 \centering
 \small
@@ -74,8 +77,7 @@ implemented.
 \toprule
 \bf Component & \bf Lines of Coq \\
 \midrule
-  \input{go-txn/tables/perennial-loc.tex} \\
-  \bottomrule
+  \input{go-txn/tables/perennial-loc.tex}
 \end{tabular}
 \caption{Lines of specs and proofs for Perennial.}
 \label{fig:perennial:lines}
@@ -88,13 +90,17 @@ implemented.
   & \bf Lines of code & \bf Lines of proof & \bf Ratio \\
   & (Go) & (Coq) & \\
 \midrule
-  \input{go-txn/tables/impl-loc.tex} \\
-\bottomrule
+  \input{go-txn/tables/impl-loc.tex}
 \end{tabular}
 \caption{Lines of code and proof for the components of GoTxn.
 Ratio is the proof:code ratio, a rough measure of verification overhead.}
 \label{fig:txn:loc}
 \end{figure}
+
+
+% spec for refinement proof
+% wc -l src/goose_lang/{typed_translate.v,ffi/jrnl_ffi_spec.v,refinement.v} src/program_proof/txn/{typed_translate.v,op_wrappers.v}
+\newcommand{\gotxnSpec}{932}
 
 % ./daisy-nfs/loc.py --latex daisy-nfs/
 \input{daisy-nfs/loc-cmds.tex}
@@ -105,7 +111,7 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
   \toprule
   & \bf proof & \bf code & \bf spec \\
   \midrule
-  GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
+  GoTxn (Go + Coq) & \loc{39371}  & \loc{1674} & \loc{\gotxnSpec} (Thm~\ref{thm:gotxn-transfer}) \\
   File system (Dafny) & \loc{\daisyProof}  & \loc{\daisyCode} & \loc{\daisySpec} (Thm~\ref{thm:dafny}) \\
   Trusted interfaces (Dafny) & --- & --- & \daisyTrustedSpec{} \\
   \cc{daisy-nfsd} & \emph{unverified} & \loc{\daisyTrustedCode} & --- \\
@@ -122,10 +128,6 @@ operations modeled by Perennial, and the proof has cases to handle
 each operation. However the result of the proof is a relatively concise
 specification as a plain Coq statement that doesn't refer to the Perennial
 logic.
-
-% spec for refinement proof
-% wc -l src/goose_lang/{typed_translate.v,ffi/jrnl_ffi_spec.v,refinement.v} src/program_proof/txn/{typed_translate.v,op_wrappers.v}
-% 932 lines of Coq
 
 The file-system operations are implemented in Dafny, which helped us verify a
 relatively complete system without too much tedium. The

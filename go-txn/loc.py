@@ -216,14 +216,14 @@ def array_to_latex_table(rows):
     latex = ""
     for index, row in enumerate(latex_rows):
         latex += row
-        if index == len(latex_rows) - 1:
-            # at end, don't do anything
-            pass
-        elif row == "\\midrule":
+        if row == "\\midrule":
             # hack to make \midrule work
             latex += "\n"
         else:
             latex += " \\\\\n"
+    # this has to be in the \input file, otherwise LaTeX adds an extra space to
+    # the bottom right cell
+    latex += "\\bottomrule"
     return latex
 
 
