@@ -149,16 +149,19 @@ since Goose does not support enough of Go to explicitly construct these terms in
 GooseLang. The Dafny annotations on these methods prove sequential refinement
 conditions that we will denote $\seqrefinementdfy(i)$, as
 illustrated in \cref{fig:refinement}. This sequential refinement is indexed by
-dfy to indicate that captures what is proven in Dafny, which is intended to
-capture $\seqrefinement(i)$ from the simulation-transfer theorem but formally is
-distinct. Dafny checks the following lemma that $\infs$ is correct, which will
-eventually be used to show the overall DaisyNFS correctness theorem:
+``dfy'' to indicate that it captures what is proven in Dafny. It is intended
+that this obligation captures $\seqrefinement(i)$ from the simulation-transfer
+theorem, but using a formal distinction always to say that the connection
+between these definitions is trusted. Dafny checks the following lemma that
+$\infs$ is correct, which will eventually be used to show the overall DaisyNFS
+correctness theorem:
 %
 \nopagebreak
 \begin{lemma} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
   \label{thm:dafny}
 \end{lemma}
 
+We now state more formally what $\seqrefinementdfy$ means.
 The Dafny code is implemented as a class with ghost variables for its abstract
 state and an invariant that expresses the proof's refinement relation $R$
 between the abstract state and its concrete state (which is limited to constants
@@ -193,23 +196,83 @@ class Filesys {
   \label{fig:dafny-outline}
 \end{figure}
 
-Initialization and recovery are both special in that are implemented in Dafny as
-two \emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's
-global constants and establish $R$ to begin with. In the formalism above,
-initialization and recovery code are not given any special treatment. We can
-incorporate initialization and recovery formally as ordinary operations in the
-$\mathit{Sys}$ layer, albeit with particular preconditions that enforce the
-``life cycle'' of the file system, namely from uninitialized, to initialized (a
-one-time process), and then from crashed to recovered on every subsequent boot.
-\tej{this needs to be expanded and formalized}
+\newcommand{\Op}{\mathcal{O}}
+
+To describe how Dafny encodes this form of refinement, we start by describing its
+specification transition system in more formal detail. The transition system is
+a triple $S = (\Sigma, \Op, \delta)$ where $\sigma \in \Sigma$ is a set of states,
+$o \in \Op$ is a set of operations, and $\delta$ is a relation, where
+$\delta(\sigma, o, \sigma', v)$ is true when in state $\sigma$ operation $o$ can
+transition to $\sigma'$ and return $v$. To simplify the notation, the transition
+system has a special operation $\mathsf{crash}$ to represent a crash transition.
+
+\newcommand{\altsys}[1]{\tilde{#1}}
+
+The methods of the Dafny class define a fairly intuitive transition system
+$\altsys{S}$. A state $\sigma \in \altsys{\Sigma}$ of this transition system
+consists of the values for all the ghost variables that define the API; in the
+case of the file system this is just the \cc{data} field of type
+\cc{FilesysData}, which was defined in \cref{fig:dafny-state}. Each method and its
+arguments is an operation in $\altsys{\Op}$, and predicates like \cc{GETSZ_spec}
+define the transition relation $\altsys{\delta}$. We now incorporate
+initialization and recovery into this transition system, which are implemented
+in Dafny as \emph{constructors} \cc{Init} and \cc{Recover}. Constructors are
+needed to set up the system's global constants, and to initially establish the
+abstraction relation. Specifically let us define $S$ in terms of $\altsys{S}$.
+To define $\delta$, we write $\sigma \xrightarrow[v]{o} \sigma'$ to mean that
+$\delta(\sigma, o, \sigma', v)$ is true, and let $\delta$ implicitly be false
+elsewhere for undefined transitions.
+
+\begin{figure}
+  \begin{mathpar}
+  \begin{array}{llcl}
+    &\Sigma &\defeq & \mathsf{UnInit} \ALT \mathsf{Running}(\sigma:
+                      \altsys{\Sigma}) \ALT \mathsf{Crashed}(\sigma:
+                      \altsys{\Sigma}) \\
+    &\Op &\defeq & \mathsf{Init} \ALT \mathsf{Recover} \ALT \mathsf{Method}(o:
+                   \altsys{\Op}) \\
+    &\delta& \defeq& \mathsf{Running}(\sigma) \xrightarrow[v]{\mathsf{Method}(o)}
+        \mathsf{Running}(\sigma') \text{ when } \sigma \xrightarrow[v]{o}
+
+        \sigma' \text{ (in  $\altsys{\delta}$)} \\
+    &&& \mathsf{UnInit} \xrightarrow{\mathsf{Init}} \mathsf{Running}(\sigma_0) \\
+    &&& \mathsf{Crashed}(\sigma) \xrightarrow{\mathsf{Recover}} \mathsf{Running}(\sigma) \\
+    &&& \mathsf{Running}(\sigma) \xrightarrow{\mathsf{crash}}
+        \mathsf{Crashed}(\sigma') \text{ when } \sigma
+        \xrightarrow{\mathsf{crash}} \sigma' \text{ (in  $\altsys{\delta}$)} \\
+    &&& \mathsf{UnInit} \xrightarrow{\mathsf{crash}} \mathsf{UnInit} \\
+    &&& \mathsf{Crashed}(\sigma) \xrightarrow{\mathsf{crash}} \mathsf{Crashed}(\sigma) \\
+  \end{array}
+  \end{mathpar}
+  \caption[Formal definition of the Dafny specification transition
+  system.]{Defining the specification transition system $S$ for the Dafny code,
+    in terms of $\altsys{S}$ which only defines the transitions for the
+    methods.}
+  \label{fig:daisy:formal-spec}
+\end{figure}
+
+The transition system $S$ embeds $\altsys{S}$ in the transitions over
+$\mathsf{Running}(\sigma)$, and these are the usual transitions during normal
+operation. However, the Dafny code has to transition into the
+$\mathsf{Running}(\sigma)$ state in two places: first the $\mathsf{Init}$
+operation starts the system in state $\sigma_{0}$, and following a crash, the
+system generally transitions from $\mathsf{Running}(\sigma)$ to
+$\mathsf{Crashed}(\sigma)$. The system has to be restored to its usual running
+state in order to use any methods.
+
+In the Dafny code, $\mathsf{Running}(\sigma)$ corresponds to when there \emph{is
+an instance} of the \cc{Filesys} class. The formal $\mathsf{Init}$ and
+$\mathsf{Recover}$ operations are special insofar as they are implemented as
+\emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's global
+constants.
 
 The Dafny code implements the initialization using a \cc{NewTxnSystem} method
 that creates a fresh instance of GoTxn and sets up its initial object schema, as
 described in \cref{sec:txn:lifting}. The \cc{Init} constructor establishes the
 class invariant \cc{Valid()} starting from nothing, implicitly assuming that the
-disk is all-zero to be ready for initialization. It promises a file
-system with just a single root inode (the attributes include a time stamp and
-are thus not fully specified):
+disk is all-zero to be ready for initialization. It promises an initial
+file-system abstract state $\sigma_{0}$ with just a single root inode (the
+attributes include a time stamp and are thus not fully specified):
 
 \begin{verbatim}
 constructor Init()
@@ -219,10 +282,18 @@ constructor Init()
           && data == map[1 := Dir([], attrs0)]
 \end{verbatim}
 
-The \cc{Recover} constructor has a more interesting verification story, because
-it is permitted to assume the abstraction relation held just prior to the crash
-but should prove that the file-system restores its global constants. We express
-this in Dafny by giving file-system recovery the following specification:
+The \cc{Recover} constructor has a more interesting verification story.
+According to $S$ above,
+it is permitted to assume that the system starts out in the state
+$\mathsf{Crashed}(\sigma)$. The only difference between
+$\mathsf{Crashed}(\sigma)$ and $\mathsf{Running}(\sigma)$ as far as the
+simulation is concerned is that in $\mathsf{Crashed}(\sigma)$, the \cc{Filesys}
+instance is no longer accessible in memory --- the system always maintains an
+abstraction relation \cc{fs.Valid()} that relates the physical state
+(\cc{txs.disk} in the Dafny code) to the abstract state (the \cc{data} ghost
+field). The proof of recovery shows it transitions from
+$\mathsf{Crashed}(\sigma)$ to $\mathsf{Running}(\sigma)$, expressed in Dafny
+with the following specification:
 
 \begin{verbatim}
 constructor Recover(txs: TxnSystem,
@@ -235,17 +306,28 @@ constructor Recover(txs: TxnSystem,
 
 The specification takes a \emph{ghost} \cc{fs} that satisfies the invariant, as
 well as an assumption that the transactional disk from GoTxn is the same as the
-one for the old file system. The
-idea is that the system always maintains \cc{fs.Valid()} for \emph{some} file
-system is always an invariant, in general for the current \cc{fs} object, but
-just after a crash \cc{fs} is lost (in particular its read-only state). At the
-same time GoTxn does promise to maintain its logical state after a crash and its
-own recovery. Finally recovery establishes the postconditions \cc{Valid()} and
-\cc{this.data == fs.data}, which say respectively that recovery restores
-invariant for this \cc{Filesys} object and logically has the same file-system
-state. We can think of the effect of a crash on the file-system abstract state
-as turning the \cc{Filesys} instance into a ghost instance, and this recovery
-procedure as restoring it to an in-memory instance.
+one for the old file system. The former is true since the system is in the state
+$\mathsf{Crashed}(\sigma)$, and the latter is due to the transaction system's
+specification defining a crash as a no-op on the logical state. In order to
+transition to the state $\mathsf{Running}(\sigma)$, recovery returns a fully
+initialized file system (implicit in the fact that this is a constructor), which
+satisfies the abstraction relation \cc{Valid()} and has the same underlying
+state $\sigma$ as before (written \cc{data == fs.data} in Dafny). The proof of
+recovery is not that involved, since all that must be verified is that recovery
+restores the global constants of the file system to their old values, which is
+implemented by storing them on disk in a fixed-location file-system super block.
+
+The methods in Dafny are verified with the usual pre- and post-conditions. By
+virtue of being methods, they implicitly assume that the system in the state
+$\mathsf{Running}(\sigma)$; the \cc{Filesys} object must be initialized to call
+any method on it. Initialization and recovery implicitly require that the user
+follows the protocol above; specifically initialization must be called only
+once, and subsequently recovery should be used to restore the previous state.
+The code tries to check these assumptions: for example, the super block contains
+a ``magic number'' (a fixed, initially randomly chosen 64-bit integer) and
+recovery fails if the super block has the wrong magic number, indicating an
+attempt to recover from a disk that has not been initialized. Ext4 implements a
+similar feature to prevent mounting an invalid image.
 
 \begin{figure}
   \centering
