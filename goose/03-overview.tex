@@ -39,9 +39,11 @@ syntactic restrictions via that type system.
 \begin{figure}
   \includegraphics{fig/goose.png}
   \vspace{0.5\baselineskip}
-  \caption{Goose supports a subset of Go, which it translates to GooseLang. The
-    target is more general, so not all of GooseLang can be produced from Go
-    code. GooseLang itself is embedded in the Coq proof assistant.}
+  \caption[Representation of Goose's translation support]%
+  {Pictorial representation of Goose's translation. Goose supports a subset of
+    Go, which it translates to GooseLang. The target is more general, so not all
+    of GooseLang can be produced from Go code. GooseLang itself is embedded in
+    the Coq proof assistant.}
   \label{fig:goose:overview}
 \end{figure}
 
@@ -87,7 +89,8 @@ the code and proofs fit together when using Goose.
 \begin{figure}
   \includegraphics{fig/goose-proofs.png}
   \vspace{0.5\baselineskip}
-  \caption{Workflow for proving code using Goose. The user writes the code and
+  \caption[Workflow for verifying code with Goose]%
+  {Workflow for verifying code using Goose. The user writes the code and
     proofs on top of the generated model. The model references libraries that
     model features of Go, which come equipped with proof libraries to make
     proofs easier. The code is ordinary Go that can be compiled, tested, and

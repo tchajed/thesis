@@ -371,7 +371,8 @@ proof of crash safety across layers.
 \begin{figure}
   \centering
   \input{go-txn/fig/appendhocap}
-  \caption{Illustration of how the proof of \cc{Append} executes a logical
+  \caption[Using a logical callback to reason about \cc{Append} in Perennial]%
+  {Illustration of how the proof of \cc{Append} executes a logical
 callback $P \vs Q$, an assertion in Perennial which updates ghost state. The
 logger passes a callback that adds \cc{len(txns)} to the \cc{diskEnd} ghost variable.}
 % $\gamma\ \cc{+=}\ \cc{len(txns)}$.
