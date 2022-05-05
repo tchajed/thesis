@@ -74,7 +74,8 @@ implemented.
 \toprule
 \bf Component & \bf Lines of Coq \\
 \midrule
-  \input{go-txn/tables/perennial-loc.tex}
+  \input{go-txn/tables/perennial-loc.tex} \\
+  \bottomrule
 \end{tabular}
 \caption{Lines of specs and proofs for Perennial.}
 \label{fig:perennial:lines}
@@ -82,7 +83,6 @@ implemented.
 
 \begin{figure}
 \centering
-\small
 \begin{tabular}{lrrr}
 \toprule
   & \bf Lines of code & \bf Lines of proof & \bf Ratio \\
@@ -91,8 +91,8 @@ implemented.
   \input{go-txn/tables/impl-loc.tex} \\
 \bottomrule
 \end{tabular}
-\caption{Lines of code and proof for the components of GoTxn and for
-\simplenfs. Ratio is the proof:code ratio, a rough measure of verification overhead.}
+\caption{Lines of code and proof for the components of GoTxn.
+Ratio is the proof:code ratio, a rough measure of verification overhead.}
 \label{fig:txn:loc}
 \end{figure}
 
@@ -105,60 +105,55 @@ implemented.
 
 % getting lines of code and total lines (proof is total - code)
 \begin{comment}
-begin
-  rm -rf src-compiled
-  for file in src/*/**.dfy
-          set -l path (string sub --start 4 $file)
-          set -l dir (dirname $path)
-          mkdir -p src-compiled/$dir
-          dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path $file &
-      end
-  wait
-  cloc --read-lang-def ~/dafny-lang.txt src-compiled
-  cloc --read-lang-def ~/dafny-lang.txt src
-end
+begin rm -rf src-compiled for file in src/*/**.dfy set -l path (string sub
+--start 4 $file) set -l dir (dirname $path) mkdir -p
+src-compiled/$dir dafny /printMode:NoGhost /dafnyVerify:0 /rprint:src-compiled/$path
+$file & end wait cloc --read-lang-def ~/dafny-lang.txt src-compiled cloc --read-lang-def ~/dafny-lang.txt src end
 \end{comment}
 
 \newcommand{\daisynfsCode}{3479}
 \newcommand{\daisynfsTotal}{10137}
 
+% wc -l src/jrnl/*.s.dfy src/machine/*.s.dfy
+% 558 trusted lines of code
+
+\newcommand{\daisyTrustedSpec}{\loc{558}\xspace}
+
+% additional unverified lines of Go in dafny-nfsd
+% wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
+% 1142
+
+\newcommand{\daisyTrustedCode}{\loc{1142}\xspace}
+
+\newcommand{\daisynfs}
+
 \begin{figure}
-\small
+\centering
 \begin{tabular}{lrrr}
   \toprule
   & \bf proof & \bf code & \bf spec \\
   \midrule
-  GoJournal & \loc{26000} & \loc{1345} & \cite{chajed:gojournal} \\
-  Transaction system & \loc{10000}  & \loc{250} & \loc{564} (Thm~\ref{thm:gotxn-transfer}) \\
-  File system & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{272+313}} (Thm~\ref{thm:dafny}) \\
-  \cc{daisy-nfsd} & \emph{unverified} & \loc{1073} & --- \\
+  GoTxn (Go + Coq) & \loc{35600}  & \loc{1674} & \loc{932} (Thm~\ref{thm:gotxn-transfer}) \\
+  File system (Dafny) & \loc{\fpeval{\daisynfsTotal-\daisynfsCode}}  & \loc{\daisynfsCode} & \loc{\fpeval{272+313}} (Thm~\ref{thm:dafny}) \\
+  Dafny trusted interfaces & --- & --- & \daisyTrustedSpec (Dafny) \\
+  \cc{daisy-nfsd} & \emph{unverified} & \daisyTrustedCode & --- \\
   \bottomrule
 \end{tabular}
-\caption[Lines of proof, code, and trusted specification for DaisyNFS]%
-{Lines of proof, code, and trusted specification. GoJournal is included
-  only for comparison; its specification is subsumed by the transaction system's.
-  Not shown are 635 lines of assumptions in Dafny about the
-  transaction system and Go primitives.}
+\caption{Lines of proof, code, and trusted specification for DaisyNFS.}
 \label{fig:daisy:loc}
 \end{figure}
 
 The lines of proof, code, and specification for the layers of the system are
-summarized in \cref{fig:daisy:loc}. GoJournal is prior work but included for
-comparison purposes. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
+summarized in \cref{fig:daisy:loc}. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
 relatively large because code executed in atomically blocks can include many Go
 operations modeled by Perennial, and the proof has cases to handle
 each operation. However the result of the proof is a relatively concise
 specification as a plain Coq statement that doesn't refer to the Perennial
 logic.
 
-% wc -l program_proof/txn/{txn_proof,twophase_refinement_proof,twophase_sub_logical_reln_defs,typed_translate_facts,wrapper_proof,wrapper_init_proof}.v goose_lang/ffi/{jrnl_ffi_facts,atomic_refinement}.v
-% 9999 lines of Coq
-
-% allocator is 459 lines of proof for 123 lines of code
-
 % spec for refinement proof
-% wc -l src/goose_lang/typed_translate.v src/goose_lang/ffi/jrnl_ffi_spec.v
-% 564 lines of Coq
+% wc -l src/goose_lang/{typed_translate.v,ffi/jrnl_ffi_spec.v,refinement.v} src/program_proof/txn/{typed_translate.v,op_wrappers.v}
+% 932 lines of Coq
 
 The file-system operations are implemented in Dafny, which helped us verify a
 relatively complete system without too much tedium. The
@@ -168,15 +163,12 @@ The proof summarizes the implementation well, with about $6\times$ fewer lines
 of specification as code (about half that specification is quite verbose and concerns
 error codes and attributes). For efficiency, the Dafny code has trusted interfaces to
 primitives like byte slices and integer-to-byte encoding. Together these are
-written in \loc{635} lines of trusted Dafny code.
+written in \daisyTrustedSpec lines of trusted Dafny code.
 % The rest of the system has good leverage from the proofs: there are $8\times$
 % as many lines of code as specification.
 Finally, to complete the NFS server required around \loc{1000} lines of Go
 code, about half of which bridge between the Dafny method signatures and the
 actual NFS structs.
-
-% wc -l src/jrnl/*.s.dfy src/machine/*.s.dfy
-% 635 trusted lines of code
 
 % fish script:
 \begin{comment}
@@ -208,10 +200,6 @@ end | wc -l
 \end{comment}
 %
 % 382
-
-% additional unverified lines of Go in dafny-nfsd
-% wc -l nfsd/{fh,mkfs,mount,ops}.go cmd/daisy-nfsd/main.go
-% 1073
 
 \tej{describe something similar for GoTxn proof and code; some spec number would
   be helpful, and separate transaction refinement and simulation transfer since
