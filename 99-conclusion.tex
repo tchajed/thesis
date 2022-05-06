@@ -9,12 +9,13 @@ by enabling sequential reasoning for transactions on top.
 
 \section{What is the value of verifying a file system?}
 
-The reader might wonder what the value of this kind of large verification effort
-is. This section gives several broader points as to what the value of verification is.
+The reader might wonder what the value of verification is, more broadly. This
+section attempts to answer this question.
 
 \paragraph{Making verification feasible.}
 Prior to the work in this thesis, there simply didn't exist techniques for this
-kind of proof, thus we could not ask the question of whether it would be worth
+kind of proof, with the combination of concurrency and crashes,
+thus we could not ask the question of whether it would be worth
 verifying a concurrent file system. This thesis makes it possible, and shows
 that the cost is not unreasonable --- we were able to verify a file system with
 a number of features, reasonable performance, and with a small team.
@@ -38,7 +39,7 @@ verification for the next generation of storage systems.
 
 A real achievement for verification would be to use verification not just as
 alternative to the practices above, but to build something with more daring optimizations,
-features, or speed then would otherwise be possible. I think file systems (or
+features, or speed than would otherwise be possible. I think file systems (or
 more generally, some storage system that holds persistent state) have the
 potential to be just such an application. There aren't that many widely-used
 file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
@@ -56,6 +57,51 @@ system for persistent memory or new zoned storage (ZNS) SSDs.
 % NTFS: 1993
 % APFS: 2017
 
+\paragraph{Verification is valuable for critical systems.} It will never be cost
+effective to verify all software; at a minimum, for verification to be useful a
+piece of software needs a specification that is more likely to be correct than
+the implementation.
+Instead, the aim is to use verification for critical systems, \emph{critical}
+because failures are especially bad, and \emph{systems} that have well-defined
+guarantees to make to other systems and applications running on top. It is also
+helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
+used by many other pieces of software, since then the impact of bugs is felt to
+a greater extent. Finally, alongside the need for a specification it is also
+important that the verification respond to changes in both specification and
+implementation. If both change rapidly and the proofs cannot be re-done, then
+verification won't keep up with the pace of development. File systems fit all of
+these criteria: bugs can lead to data loss which the application cannot
+mitigate, the interface is stable and relatively standard, and essentially all
+applications go through the file system to store persistent state.
+
+\paragraph{Mechanized proofs are good for change.} Informal
+reasoning even with a program logic can gain much of the value of formal
+reasoning in that it helps the author think systematically, and permits varying
+the level of detail to suit the author's needs. However, a complete and
+mechanized proof is especially valuable when it comes to \emph{changing} the
+code and proof: it is difficult and tedious to make a systematic change to a
+proof and be confident that all relevant parts of the proof have been
+re-analyzed and updated. In contrast, a mechanized proof has a proof assistant
+that says clearly what parts are incomplete after changing the code or
+specification. In developing the DaisyNFS Dafny proof, I had a wonderful
+experience with adapting a proof when adding indirect blocks: at some point a
+function verified before I had even understood if or why it was correct!
+
+\paragraph{Verification helps discover accurate, precise specifications.} Some
+systems are extremely reliable, due to extensive testing, real-world usage, and
+development, but they still lack a clear description of the interface exposed.
+The process of verification helps discover a precise, mathematical
+specification, and the proofs confirm that this specification is actually an
+accurate description of the implementation. Precise and accurate specifications
+are useful even for unverified software. Surprisingly perhaps, very few systems
+attempt to formalize their guarantees; even the long history of formal semantics
+of programming languages does not mean that real-world languages are formally
+specified.\footnote{The notable exception is WebAssembly, which was co-developed
+with its formal semantics~\cite{haas:wasm}. There are several languages with
+independent formalizations, such as for Standard ML, Python, and R5RS Scheme,
+and then many specifications that focus on modeling a particular language
+feature like Featherweight Java. \tej{add citations}}.
+
 \paragraph{Verification guides debugging.} With a verified system, bugs are
 still inevitable since there is unverified code surrounding the verified code,
 the assumptions of the proof can be violated, and the specification can be
@@ -63,6 +109,18 @@ wrong. However, an advantage of formal verification, particularly fully
 machine-checked proofs, is that when bugs are discovered it's safe to start
 debugging with all the code outside the verification as well as looking at the
 specification.
+
+\paragraph{Interactive theorem proving is a great way to prototype.} I do not
+anticipate that busy engineers trying to write production code will write proofs
+in Coq, much less develop a custom program logic. However, this workflow is
+excellent for prototyping the right reasoning principles, some reasons for which
+are outlined above. Working out proofs interactively gives a good feel for how
+the logic works, from which automation can be designed bit by bit (some of it as
+Coq automation itself). In Perennial (as in Iris), proof steps are at a
+sufficiently high level of abstraction to make the proofs doable for prototyping
+purpose, even though it has no search-based automation, sophisticated
+algorithms, or use of an SMT solver.
+
 
 \paragraph{Working out the details gives confidence in the methodology.} One
 reason to go through the trouble of mechanizing the proofs is to validate new
@@ -84,47 +142,6 @@ and on-paper. Higher-order reasoning, especially the ability to store procedures
 in the heap, has also led to some subtle reasoning principles like the
 anti-frame rule~\cite{pottier:anti-frame}, whose soundness proof was rather
 sophisticated~\cite{schwinghammer:semantic-anti-frame}.
-
-\paragraph{Mechanized proofs are good for change.} Informal
-reasoning even with a program logic can gain much of the value of formal
-reasoning in that it helps the author think systematically, and permits varying
-the level of detail to suit the author's needs. However, a complete and
-mechanized proof is especially valuable when it comes to \emph{changing} the
-code and proof: it is difficult and tedious to make a systematic change to a
-proof and be confident that all relevant parts of the proof have been
-re-analyzed and updated. In contrast, a mechanized proof has a proof assistant
-that says clearly what parts are incomplete after changing the code or
-specification. In developing the DaisyNFS Dafny proof, I had a wonderful
-experience with adapting a proof when adding indirect blocks: at some point a
-function verified before I had even understood if or why it was correct!
-
-\paragraph{Interactive theorem proving is a great way to prototype.} I do not
-anticipate that busy engineers trying to write production code will write proofs
-in Coq, much less develop a custom program logic. However, this workflow is
-excellent for prototyping the right reasoning principles, some reasons for which
-are outlined above. Working out proofs interactively gives a good feel for how
-the logic works, from which automation can be designed bit by bit (some of it as
-Coq automation itself). In Perennial (as in Iris), proof steps are at a
-sufficiently high level of abstraction to make the proofs doable for prototyping
-purpose, even though it has no search-based automation, sophisticated
-algorithms, or use of an SMT solver.
-
-\paragraph{Verification is valuable for critical systems.} It will never be cost
-effective to verify all software; at a minimum, for verification to be useful a
-piece of software needs a specification that is more likely to be correct than
-the implementation.
-Instead, the aim is to use verification for critical systems, \emph{critical}
-because failures are especially bad, and \emph{systems} that have well-defined
-guarantees to make to other systems and applications running on top. It is also
-helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
-used by many other pieces of software, since then the impact of bugs is felt to
-a greater extent. Finally, alongside the need for a specification it is also
-important that the verification respond to changes in both specification and
-implementation. If both change rapidly and the proofs cannot be re-done, then
-verification won't keep up with the pace of development. File systems fit all of
-these criteria: bugs can lead to data loss which the application cannot
-mitigate, the interface is stable and relatively standard, and essentially all
-applications go through the file system to store persistent state.
 
 
 \section{Discussion}

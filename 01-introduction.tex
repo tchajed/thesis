@@ -58,7 +58,7 @@ code always meets the specification. For confidence in the proof itself, the
 proof is carried out in a computer and a piece of software called a proof
 assistant checks that the proof is valid. The nature of formal verification
 forces the proof engineer to systematically cover every corner case in the code.
-As a result, they can completely rule out whole classes of bugs, including
+As a result, verification can completely rule out whole classes of bugs, including
 low-level bugs like memory safety but also logic errors like returning the wrong
 data. Verification does not guarantee that a system is bug-free, because the
 specification must be correct and the assumptions in the proof must hold in
@@ -306,10 +306,6 @@ about safety but not liveness (see \cref{sec:perennial:limitations}); GoTxn does
 not support asynchronous durability (see \cref{sec:txn:limitations}); DaisyNFS
 lacks support for symbolic links (see \cref{sec:daisy:motivation}); and Goose
 does not support Go's channels or interfaces (see \cref{sec:goose:limitations}).
-
-\section{Broader value of this thesis}
-
-\tej{lift the most important points from conclusion to intro}
 
 \section{Reading guide for the thesis}
 \label{sec:intro:reading-guide}
