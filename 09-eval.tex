@@ -110,8 +110,8 @@ benchmark. The NFS client's behavior on
 this benchmark means it issues writes past the end of the file; the semantics of
 such a write are to fill the gap with zeros. DaisyNFS and Linux get good
 performance despite this because they implicitly encode those zeros without even
-allocating a block. DaisyNFS gets comparable performance on this benchmark
-because GoTxn is good at handling concurrent synchronous writes.
+allocating a block. This benchmark shows that GoTxn is good at handling
+concurrent, synchronous writes.
 
 \subsection{Scalability}
 
