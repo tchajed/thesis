@@ -95,6 +95,8 @@ tools---gcc, ld, ar---but also running dd to generate a kernel image.
   \label{fig:eval:bench}
 \end{figure}
 
+\tej{revise this section in light of new results and better understanding}
+
 The first set of results are for the three benchmarks, run on an in-memory disk, all
 with a single client. These benchmarks are challenging to support efficiently
 since an in-memory disk means performance isn't dominated by slow I/O, and a
@@ -163,7 +165,7 @@ running for 30 seconds. The graph shows that
 DaisyNFS achieves both good absolute performance and gets higher throughput with
 more clients, comparable to the scalability of the Linux NFS server, though
 Linux has better scalability. These benchmarks don't have perfect scalability
-primarily due to lock contention.
+primarily due to lock contention. \tej{not quite true, Linux is bottlenecked by something else}
 
 We ran an analogous experiment on an in-memory disk to reduce the I/O
 bottleneck, shown in \cref{fig:eval:scale:ram}; scalability is similar,
