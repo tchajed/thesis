@@ -1,4 +1,4 @@
-personal_ws-1.1 en 500 
+personal_ws-1.1 en 507 
 APFS
 APIs
 AST
@@ -171,12 +171,15 @@ Toolchain
 TrimTill
 Txn
 TxnSystem
+UnInit
 Urbana
 VCC
 VFS
 VST
+Vafeiadis's
 Vec
 VeriBetrKV
+Viktor
 WAFL
 WAL's
 WPCs
@@ -186,9 +189,11 @@ WriteBit
 XDR
 XFS
 Xeon
+ZNS
 Zeldovich
 ZeroFreeSpace
 addr
+al
 alloc
 allocator
 allocator's
@@ -267,6 +272,7 @@ effectful
 entailments
 entrancy
 enum
+et
 eval
 exchanger
 expr
@@ -341,6 +347,7 @@ loopback
 lr
 lrcl
 lrr
+lrrl
 lrrr
 macOS
 mapDelete
