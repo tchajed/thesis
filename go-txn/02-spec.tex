@@ -35,7 +35,6 @@ multiple times), wiping out any in-memory state after each crash.
   \label{def:refinement}
 \end{definition}
 
-\tej{clarify this is concurrent, crash-safe refinement essentially everywhere}
 The intuition behind the notation $p_{c} \refines p_{s}$ is that the set of
 behaviors of $p_{c}$ (the set of traces of network I/O $\textit{tr}$) is a subset of the
 behaviors of $p_{s}$. The statement $p_{c} \refines p_{s}$ leaves implicit
@@ -48,7 +47,7 @@ must correspond to a specification-level crash transition.
 \subsection{Modeling programs for refinement}%
 \label{sec:txn:go-layers}
 
-To define the transaction refinement specification, we need to be more precise about what a program is
+To define the transaction-refinement specification, we need to be more precise about what a program is
 and how it executes. We
 write $p : \gooselayer{X}$ to say $p$ is a Go program written using operations
 from layer X.
@@ -75,7 +74,7 @@ external state in a controlled way (limited to a layer), for the purpose of
 defining the specification. Each GooseLang program is limited to one external
 layer to simplify the definitions, but of course Go permits unlimited imports.
 
-The transaction refinement specification for GoTxn below in
+The transaction-refinement specification for GoTxn below in
 \cref{sec:txn:transaction-refinement} relates a \emph{spec program}
 $p : \gooselayer{Txn}$ that uses transactions, to its executable version
 which invokes the GoTxn implementation. These specification programs can invoke

@@ -18,7 +18,7 @@ particular atomicity for transactions). The proof of this theorem leverages the
 journaling specification from \cref{sec:txn:lifting}, extending it to also
 reason about the concurrency control implemented with two-phase locking.
 
-In general, the Perennial framework supports proving refinements between a
+In general, the Perennial framework supports proving crash-safe, concurrent refinements between a
 specification layer $\gooselayer{S}$ and an implementation layer $\gooselayer{I}$ by constructing
 a simulation between the specification and its implementation. The simulation is
 expressed in terms of refinement conditions that are written using the usual
@@ -58,13 +58,12 @@ return value of operation $o$. In the proof of this triple, the ghost execution
 rule above is used at the linearization point of $p_o$, to mark
 when the operation logically takes effect by executing $o$ in the ghost code.
 
-These refinement triples imply a refinement between programs in $\gooselayer{S}$
-and $\gooselayer{I}$. Refinement triples encode this refinement property into
-per-operation specifications. The Coq development uses Perennial's soundness
-theorem to prove that these refinement triples imply refinement. This involves using
-the classic technique of \emph{logical relations} and using a low-level
-soundness theorem from Perennial to derive a refinement theorem between the two
-programs rather than the usual Hoare triple soundness theorem about a single
+These refinement triples imply a concurrent, crash-safe refinement between programs in $\gooselayer{S}$
+and $\gooselayer{I}$, which is proven in the Coq development using Perennial's
+soundness theorem. The soundness theorem combines
+the classic technique of \emph{logical relations} with a low-level
+soundness theorem from Perennial to derive the desired refinement between the two
+programs, rather than the usual Hoare triple soundness theorem about a single
 program's executions. The resulting theorem statement expresses refinement
 directly (without referencing the Perennial logic), while its proof has access
 to the full range of Perennial's features.

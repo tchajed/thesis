@@ -57,7 +57,7 @@ GoTxn has some limitations. The transaction refinement proof currently only supp
 \emph{synchronous} \cc{Commit}, which makes writes durable when it returns. The
 code also implements an asynchronous version of \cc{Commit} that makes the
 writes atomically visible to other threads, but durable only at a later point.
-It would be interesting to extend the transaction refinement specification and proof
+It would be interesting to extend the transaction-refinement specification and proof
 to cover asynchrony. The two-phase locking implementation only supports write
 locks and not reader-writer locking. At the bottom layer, GoTxn's disk interface
 assumes a synchronous disk interface --- it would be interesting to relax this

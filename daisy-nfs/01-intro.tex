@@ -23,17 +23,16 @@ implementation some flexibility.
 
 The transition system describes the abstraction of an NFS server, but what does
 it mean for the \cc{daisy-nfsd} binary to implement this specification? To formalize
-DaisyNFS's correctness we use \emph{refinement}, as used in the GoTxn
-specification as well. The server binary is a refinement of the NFS transition
-system if every execution of the code has
-user-visible behavior that the specification could also produce (also phrased as
-a behavior that the specification allows). In DaisyNFS's specification the visible
-behavior is defined to be network requests and responses. This
-notion of refinement also considers crashing executions (where the server
-suddenly stops, the machine reboots, and the server resumes), and concurrent NFS
-requests.
+DaisyNFS's correctness we use the same \emph{concurrent, crash-safe refinement}
+that was used in the GoTxn
+specification. The server binary is a refinement of the NFS transition
+system if every execution of the code --- including with concurrent operations
+and on crash --- has
+user-visible behavior that the specification could also produce (that is, the
+behavior is allowed by the specification). In DaisyNFS's specification the visible
+behavior is defined to be network requests and responses.
 
-DaisyNFS's concurrent refinement is a much more sophisticated property to verify
+DaisyNFS's concurrent, crash-safe refinement is a much more sophisticated property to verify
 than sequential refinement. For both forms of refinement, the basic proof technique is to construct a
 \emph{forward simulation} from the code execution to the specification
 transition system, which requires an invariant connecting their states and a
@@ -44,10 +43,10 @@ when it returns, since its intermediate states are invisible.
 concurrent and sequential simulation obligations. The complication in a
 concurrent simulation is that the code can have many concurrent threads, each
 running a different operation at the specification level. The
-proof of any given operation must show the intermediate states satisfy the
-invariant as well as the final one, since at any
-time other threads might run, and similarly the proof must consider interference
-from other threads at any time.
+proof of any given operation must show the intermediate states as well as the
+final one satisfy the invariant, since at any
+time other threads might run. Similarly, the proof of each operation's implementation must
+consider interference on its execution from other threads at any time.
 
 \begin{figure}
   \begin{subfigure}[m]{0.6\textwidth}
@@ -92,7 +91,7 @@ form of a \emph{simulation-transfer theorem} (described in
 with transactions that is verified with a sequential forward simulation against
 some specification refines the same specification in the sense of a concurrent,
 crash-safe refinement when run through GoTxn. The proof of this theorem is an
-extension of the transaction refinement specification from \cref{sec:txn:spec}.
+extension of the transaction-refinement specification from \cref{sec:txn:spec}.
 
 Due to simulation transfer, we are able to use a simpler verification
 methodology of sequential simulation for the DaisyNFS file-system code, compared
