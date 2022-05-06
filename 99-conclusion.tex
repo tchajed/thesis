@@ -170,6 +170,16 @@ have been to develop a specification style for expressing ownership in the
 semantics of the operations themselves, along with associated reasoning
 principles.
 
+Rust would assist with better handling of ownership in interfaces, but does
+not completely solve the problem. Where it would fit in is that if an interface
+makes \emph{assumptions} about ownership transfer, Rust would help in enforcing
+those assumptions at compile time. While convenient for the verified code to
+know if ownership is violated before attempting a proof, this would be
+especially good for enforcing that code calling into a verified interface
+respects its assumptions about ownership. What Rust doesn't solve is that it is
+still necessary to express ownership assumptions in the interface, a challenge
+independent of the implementation language.
+
 \paragraph{Read-only sharing.}
 Another challenge, related to memory safety, was reasoning about read-only
 sharing in the internals of GoTxn. Changing data structures after they were written to support read-only
