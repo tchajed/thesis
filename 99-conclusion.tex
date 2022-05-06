@@ -110,28 +110,27 @@ machine-checked proofs, is that when bugs are discovered it's safe to start
 debugging with all the code outside the verification as well as looking at the
 specification.
 
-\paragraph{Interactive theorem proving is a great way to prototype.} I do not
-anticipate that busy engineers trying to write production code will write proofs
-in Coq, much less develop a custom program logic. However, this workflow is
-excellent for prototyping the right reasoning principles, some reasons for which
-are outlined above. Working out proofs interactively gives a good feel for how
-the logic works, from which automation can be designed bit by bit (some of it as
-Coq automation itself). In Perennial (as in Iris), proof steps are at a
-sufficiently high level of abstraction to make the proofs doable for prototyping
-purpose, even though it has no search-based automation, sophisticated
-algorithms, or use of an SMT solver.
+% \paragraph{Interactive theorem proving is a great way to prototype.} I do not
+% anticipate that busy engineers trying to write production code will write proofs
+% in Coq, much less develop a custom program logic. However, this workflow is
+% excellent for prototyping the right reasoning principles, some reasons for which
+% are outlined above. Working out proofs interactively gives a good feel for how
+% the logic works, from which automation can be designed bit by bit (some of it as
+% Coq automation itself). In Perennial (as in Iris), proof steps are at a
+% sufficiently high level of abstraction to make the proofs doable for prototyping
+% purpose, even though it has no search-based automation, sophisticated
+% algorithms, or use of an SMT solver.
 
 
-\paragraph{Working out the details gives confidence in the methodology.} One
-reason to go through the trouble of mechanizing the proofs is to validate new
-techniques in a way that gives confidence, much like how mechanizing a program proof increases
+\paragraph{Working out the details gives confidence in the program logic.} One
+reason to go through the trouble of mechanizing the proofs is to validate the
+program logic itself in a way that gives confidence, much like how mechanizing a program proof increases
 confidence in the correctness of the reasoning. For example, the formalism helps
 work out a specification for crash safety and concurrency, one that the
 mechanized proof shows has the right meaning (due to the soundness theorem) and
 is usable (due to the verified reasoning principles in the logic). After gaining
-confidence and intuition with the safety-net of a proof, it is possible to make
-further progress with informal reasoning, or
-implementing the logic in an automated system.
+confidence and intuition with the safety-net of a soundness proof, it is possible to make
+further progress with informal reasoning, or by implementing the logic in an automated system.
 
 Concurrency makes soundness especially challenging and important, since specifications can be quite
 subtle to use. One recent example is prophecy variables, where in the process of

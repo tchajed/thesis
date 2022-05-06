@@ -199,7 +199,8 @@ class Filesys {
 \newcommand{\Op}{\mathcal{O}}
 
 To describe how Dafny encodes this form of refinement, we start by describing its
-specification transition system in more formal detail. The transition system is
+specification transition system in more formal detail. The specification
+transition system is
 a triple $S = (\Sigma, \Op, \delta)$ where $\sigma \in \Sigma$ is a set of states,
 $o \in \Op$ is a set of operations, and $\delta$ is a relation, where
 $\delta(\sigma, o, \sigma', v)$ is true when in state $\sigma$ operation $o$ can
@@ -208,22 +209,24 @@ system has a special operation $\mathsf{crash}$ to represent a crash transition.
 
 \newcommand{\altsys}[1]{\tilde{#1}}
 
-The methods of the Dafny class define a fairly intuitive transition system
-$\altsys{S}$. A state $\sigma \in \altsys{\Sigma}$ of this transition system
+To define $S$, we build on a subset of its transitions $\altsys{S}$ that only
+defines the methods of the Dafny class.
+A state $\sigma \in \altsys{\Sigma}$ of this sub-transition system
 consists of the values for all the ghost variables that define the API; in the
 case of the file system this is just the \cc{data} field of type
-\cc{FilesysData}, which was defined in \cref{fig:dafny-state}. Each method and its
-arguments is an operation in $\altsys{\Op}$, and predicates like \cc{GETSZ_spec}
-define the transition relation $\altsys{\delta}$. We now incorporate
-initialization and recovery into this transition system, which are implemented
+\cc{FilesysData}, which was defined in \cref{fig:dafny-state}. Each NFS method and its
+arguments is an operation $o \in \altsys{\Op}$, and predicates like \cc{GETSZ_spec}
+define the transition relation $\altsys{\delta}$. Building on $\altsys{S}$, we
+can now define $S$ by incorporating
+initialization and recovery, which are implemented
 in Dafny as \emph{constructors} \cc{Init} and \cc{Recover}. Constructors are
 needed to set up the system's global constants, and to initially establish the
-abstraction relation. Specifically let us define $S$ in terms of $\altsys{S}$.
+abstraction relation. Below we define $S$ in terms of $\altsys{S}$.
 To define $\delta$, we write $\sigma \xrightarrow[v]{o} \sigma'$ to mean that
 $\delta(\sigma, o, \sigma', v)$ is true, and let $\delta$ implicitly be false
 elsewhere for undefined transitions.
 
-\begin{figure}
+\begin{figure}[ht!]
   \begin{mathpar}
   \begin{array}{llcl}
     &\Sigma &\defeq & \mathsf{UnInit} \ALT \mathsf{Running}(\sigma:
