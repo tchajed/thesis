@@ -6,6 +6,7 @@ output=fig/scale.pdf
 input=data/
 legend="top left"
 ymax="*"
+size="3.6in,2.6in"
 
 usage() {
     echo "Usage: $0 [--input INPUT] [--output OUTPUT]" 1>&2
@@ -27,6 +28,11 @@ while [[ "$#" -gt 0 ]]; do
     -l | --legend)
         shift
         legend="$1"
+        shift
+        ;;
+    --size)
+        shift
+        size="$1"
         shift
         ;;
     -y)
@@ -67,7 +73,7 @@ if [ -f "${input}/daisy-nfsd-seq-wal.data" ]; then
 fi
 
 gnuplot <<-EOF
-    set terminal pdf dashed noenhanced font "Charter,14" size 3.6in,2.6in
+    set terminal pdf dashed noenhanced font "Charter,14" size ${size}
     set output "${output}"
 
     set auto x

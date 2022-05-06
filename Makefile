@@ -40,11 +40,11 @@ daisy-nfs/fig/extended-bench-ram.pdf: daisy-nfs/fig/extended-bench.plot daisy-nf
 
 daisy-nfs/fig/scale.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/nvme/daisy-nfsd.data daisy-nfs/data/nvme/linux.data
 	@echo "daisy-nfs scale.plot (NVMe)"
-	@cd daisy-nfs; ./fig/scale.plot --input data/nvme --output fig/scale.pdf --legend "right center" -y 11000
+	@cd daisy-nfs; ./fig/scale.plot --input data/nvme --output fig/scale.pdf --legend "outside top right" --size "5.2in,2.6in" -y "*"
 
 daisy-nfs/fig/scale-ram.pdf: daisy-nfs/fig/scale.plot daisy-nfs/data/daisy-nfsd.data daisy-nfs/data/linux.data
 	@echo "daisy-nfs scale.plot (RAM)"
-	@cd daisy-nfs; ./fig/scale.plot --input data --output fig/scale-ram.pdf
+	@cd daisy-nfs; ./fig/scale.plot --input data --output fig/scale-ram.pdf --size "3.6in,2.6in"
 
 
 spell:
