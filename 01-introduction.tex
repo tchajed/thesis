@@ -173,7 +173,8 @@ reasoning about crashes. Perennial builds upon Iris, a modular framework for
 concurrency, preserving its concurrency features while extending it with
 crash-safety reasoning.
 
-Using the new Perennial program logic, we verified GoTxn, a concurrent transaction system.
+Using the new Perennial program logic, we verified GoTxn, a concurrent
+transaction system implemented in the Go programming language~\cite{lang:go}.
 The transaction system's correctness theorem says that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
