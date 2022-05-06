@@ -145,11 +145,9 @@ sophisticated~\cite{schwinghammer:semantic-anti-frame}.
 
 \section{Discussion}
 
-\paragraph{Memory safety.}
+\paragraph{Memory safety at interface boundaries.}
 A surprisingly difficult aspect of the proof was addressing memory safety
-considerations. These show up in two ways: describing ownership at interface
-boundaries and reasoning about read-only sharing.
-
+considerations while describing interfaces.
 DaisyNFS has two important interface boundaries, one between GooseLang and the
 disk, and another to describe the GoTxn interface. Both APIs involve data in the
 form of byte slices. The challenging aspect of using bytes in a method is
@@ -162,7 +160,7 @@ caller can share the buffer.
 
 Expressing ownership as a logical idea in the logic is relatively easy using
 separation logic, but the semantics of \cc{DiskWrite(a, v)} has to be
-axiomatized. In order to simplify expressing the ownership transfer, the
+axiomatized since it is part of an external interface. In order to simplify expressing the ownership transfer, the
 GooseLang \cc{DiskRead} returns a freshly allocated buffer, but it would have
 been better for performance if the caller supplied a buffer that the
 \cc{DiskRead} wrote to (as in the usual \cc{read} system call). Similarly, the
@@ -172,14 +170,17 @@ have been to develop a specification style for expressing ownership in the
 semantics of the operations themselves, along with associated reasoning
 principles.
 
-Another challenge in the internals of GoTxn was reasoning about read-only
-sharing. Changing data structures after they were written to support read-only
+\paragraph{Read-only sharing.}
+Another challenge, related to memory safety, was reasoning about read-only
+sharing in the internals of GoTxn. Changing data structures after they were written to support read-only
 sharing was difficult, since every specification needs to incorporate fractional
 permissions. Read-only locking was challenging to retrofit support for, even
-though it may have improved read-read concurrency in GoTxn and DaisyNFS.
+though it may have improved read-read concurrency in GoTxn and DaisyNFS. This
+also showed up in the data structure for the in-memory log, which needs to share
+read-only data blocks between threads issuing reads to the write-ahead log, the logger
+thread, and the installer thread.
 
 \paragraph{Modular proofs.}
-
 \Cref{ch:crash-logatom} describes a style for specifying a library in Perennial.
 Modularity was essential to enable the GoTxn proof. Better support for
 modularity, perhaps formalizing some of the aspects of the specification style,
