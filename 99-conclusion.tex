@@ -10,21 +10,19 @@ by enabling sequential reasoning for transactions on top.
 \section{What is the value of verifying a file system?}
 
 The reader might wonder what the value of this kind of large verification effort
-is.
-
-\tej{do a pass over these discussion points}
+is. This section gives several broader points as to what the value of verification is.
 
 \paragraph{Making verification feasible.}
 Prior to the work in this thesis, there simply didn't exist techniques for this
 kind of proof, thus we could not ask the question of whether it would be worth
 verifying a concurrent file system. This thesis makes it possible, and shows
-that the cost is not unreasonable. A second implementation and proof would not
-be as challenging, building on these foundations. I hope the costs eventually
-come down to make verification an appealing alternative to verification for the
-next generation of storage systems.
+that the cost is not unreasonable --- we were able to verify a file system with
+a number of features, reasonable performance, and with a small team.
 
-\paragraph{Cost versus benefit.} There are many less formal ways to make
-software more reliable, including testing, fuzzing, and code auditing. Formal
+\paragraph{Cost versus benefit.}
+There are many less formal ways to make
+software more reliable, including testing, fuzzing, and code auditing, so one
+might ask what the value of verification is. Formal
 verification also has a spectrum; we could potentially apply property-based
 testing, model checking, or symbolic execution to parts of the code. Rather than
 verifying the implementation, we could instead attempt to model and specify key
@@ -32,8 +30,14 @@ parts of the algorithms or system design, then verify those. What is the
 additional value of fully machine-checked proofs, all the way down to the code?
 Verification in the real world needs to have benefits that outweigh the costs.
 
+This work helps give an upper bound on the cost, but further research would
+bring the costs down. A second implementation and proof of a concurrent file
+system would not be as challenging, building on these foundations. I hope the
+costs eventually come down to make verification an appealing alternative to
+verification for the next generation of storage systems.
+
 A real achievement for verification would be to use verification not just as
-alternative to testing, but to build something with more daring optimizations,
+alternative to the practices above, but to build something with more daring optimizations,
 features, or speed then would otherwise be possible. I think file systems (or
 more generally, some storage system that holds persistent state) have the
 potential to be just such an application. There aren't that many widely-used
@@ -41,7 +45,10 @@ file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
 Windows, and APFS on macOS --- and new file systems are generally adopted very
 slowly. APFS was surprising for having only a 3-year development period before
 Apple widely deployed it. Ext4 is the next newest of that list, introduced in
-2008 (by extending ext3, which was first released in 2001).
+2008 (by extending ext3, which was first released in 2001). Verification has the
+potential to create a file system that is more rapidly adopted by virtue of its
+proof. This might be especially applicable for some new hardware, like a file
+system for persistent memory or new zoned storage (ZNS) SSDs.
 
 % ext4: 2008
 % ext3: 2001
@@ -63,26 +70,33 @@ techniques in a way that gives confidence, much like how mechanizing a program p
 confidence in the correctness of the reasoning. For example, the formalism helps
 work out a specification for crash safety and concurrency, one that the
 mechanized proof shows has the right meaning (due to the soundness theorem) and
-is usable (due to the verified reasoning principles in the logic). With this
-confidence in the meaning of a specification and intuition for how they can be
-soundly manipulated, now it is possible to carry out reasoning informally, or
-implement the logic in an automated system.
+is usable (due to the verified reasoning principles in the logic). After gaining
+confidence and intuition with the safety-net of a proof, it is possible to make
+further progress with informal reasoning, or
+implementing the logic in an automated system.
 
-Concurrency makes this especially important, since specifications can be quite
+Concurrency makes soundness especially challenging and important, since specifications can be quite
 subtle to use. One recent example is prophecy variables, where in the process of
-developing a mechanized proofs Jung et al found an unsoundness in the use of
+developing a mechanized proofs Jung et al.\ found an unsoundness in the use of
 prophecy variables in a proof from Viktor Vafeiadis's PhD
-thesis~\cite{jung:prophecy,vafeiadis-phd}. Higher-order reasoning, especially
-the ability to store procedures in the heap, has also led to some subtle
-reasoning principles like the anti-frame rule~\cite{pottier:anti-frame}, whose
-soundness proof was rather
+thesis~\cite{jung:prophecy,vafeiadis-phd}, a proof that was conducted informally
+and on-paper. Higher-order reasoning, especially the ability to store procedures
+in the heap, has also led to some subtle reasoning principles like the
+anti-frame rule~\cite{pottier:anti-frame}, whose soundness proof was rather
 sophisticated~\cite{schwinghammer:semantic-anti-frame}.
 
-\paragraph{Mechanized proofs force the reasoning to be complete.} On-paper
-reasoning about a system gains much of the value of formal reasoning, that of
-forcing the author of a system to think through the cases systematically. While
-it works to a degree, it is easy to delude oneself into thinking that a proof is
-complete while actually having neglected an important corner case.
+\paragraph{Mechanized proofs are good for change.} Informal
+reasoning even with a program logic can gain much of the value of formal
+reasoning in that it helps the author think systematically, and permits varying
+the level of detail to suit the author's needs. However, a complete and
+mechanized proof is especially valuable when it comes to \emph{changing} the
+code and proof: it is difficult and tedious to make a systematic change to a
+proof and be confident that all relevant parts of the proof have been
+re-analyzed and updated. In contrast, a mechanized proof has a proof assistant
+that says clearly what parts are incomplete after changing the code or
+specification. In developing the DaisyNFS Dafny proof, I had a wonderful
+experienc with adapting a proof when adding indirect blocks: at some point a
+function verified before I had even understood if or why it was correct!
 
 \paragraph{Interactive theorem proving is a great way to prototype.} I do not
 anticipate that busy engineers trying to write production code will write proofs
@@ -96,8 +110,9 @@ purpose, even though it has no search-based automation, sophisticated
 algorithms, or use of an SMT solver.
 
 \paragraph{Verification is valuable for critical systems.} It will never be cost
-effective to verify all software; at a minimum software needs a specification
-that is more likely to be correct than the implementation to be verified.
+effective to verify all software; at a minimum, for verification to be useful a
+piece of software needs a specification that is more likely to be correct than
+the implementation.
 Instead, the aim is to use verification for critical systems, \emph{critical}
 because failures are especially bad, and \emph{systems} that have well-defined
 guarantees to make to other systems and applications running on top. It is also
