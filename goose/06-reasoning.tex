@@ -20,9 +20,9 @@ gives the value of one address in memory. For example, some basic specifications
 in separation logic are those for the load and store operations:
 %
 \begin{mathpar}
-  \hoare{\ell \mapsto v}{!\ell}{\Ret{v} \ell \mapsto v}
+  \infer{}{\hoare{\ell \mapsto v}{!\ell}{\Ret{v} \ell \mapsto v}}
 
-  \hoare{\ell \mapsto v_0}{\ell \gets v}{\ell \mapsto v}
+  \infer{}{\hoare{\ell \mapsto v_0}{\ell \gets v}{\ell \mapsto v}}
 \end{mathpar}
 The specification for load uses $\Ret{v}$ to specify what the return value is.
 Stores also execute to a value, but since it is the GooseLang unit value we omit
@@ -420,13 +420,15 @@ also represents ownership over all these elements, in terms of the
 underlying struct points-to facts. GooseLang's slice specifications use this
 predicate to describe loading and storing by index:
 \begin{mathpar}
-  \hoareV{\sliceRep(s, l) * i < |l|}%
+  % these are wrapped in infer so that they get math-mode spacing (otherwise
+  % there's an extra blank after every line)
+  \infer{}{\hoareV[b]{\sliceRep(s, l) * i < |l|}%
 {\mathtt{s[i]}}%
-{\Ret{v} v = l[i] * \sliceRep(s, l)}
+{\Ret{v} v = l[i] * \sliceRep(s, l)}}
 
-  \hoareV{\sliceRep(s, l) * i < |l|}%
+  \infer{}{\hoareV[b]{\sliceRep(s, l) * i < |l|}%
  {\mathtt{s[i] = v}}%
-{\Ret{v} v = l[i] * \sliceRep(s, l\mapupd{i}{v})}
+{\sliceRep(s, l\mapupd{i}{v})}}
 \end{mathpar}
 
 \newidentmacro{sliceFull}
@@ -443,9 +445,9 @@ includes ownership over the capacity:
 \begin{mathpar}
 \sliceFull(s, l) \defeq \sliceRep(s, l) * \sliceCap(s) \\
 
-\hoareV{\sliceFull(s, l)}%
+\infer{}{\hoareV[t]{\sliceFull(s, l)}%
 {\mathtt{append(s, x)}}%
-{\Ret{s'} \sliceFull(s', l \lappend [x])}
+{\Ret{s'} \sliceFull(s', l \lappend [x])}}
 \end{mathpar}
 
 This specification looks simple but has a non-trivial proof, since in the case
@@ -580,9 +582,9 @@ assume full ownership over the map's reference.
 
 Many of the map specifications relate an implementation to a model over the
 Gallina map. For example, this is the specification for map deletion:
-\[
-\hoare{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, delete(m, k))}
-\]
+\begin{mathpar}
+\infer{}{\hoareV{\mapRep(l, m)}{\mapDelete(l, k)}{\mapRep(l, \textlog{delete}(m, k))}}
+\end{mathpar}
 
 Map iteration has a more sophisticated implementation and specification.
 Consider a generic loop over a map in Go like the following:
@@ -647,9 +649,8 @@ to avoid counting overwritten values. A subtlety is that the map length is a
 64-bit integer, and this counter could in principle overflow while iterating
 over the map. This situation is unrealistic since a map with $2^{64}$ elements
 would take an unreasonable amount of memory, so the model \emph{assumes} that
-the map size stays below $2^{64}$. The specification for \cc{MapLen} is
-\[
-\hoare{\mapRep(\ell, m)}{\cc{MapLen}(\ell)}{\Ret{s} s = |m| * \mapRep(\ell, m)},
-\]
-which reflects
-the bounded size assumption because $s$ is a 64-bit integer.
+the map size stays below $2^{64}$. The specification for \cc{MapLen} is:
+\begin{mathpar}
+\infer{}{\hoare{\mapRep(\ell, m)}{\cc{MapLen}(\ell)}{\Ret{s} s = |m| * \mapRep(\ell, m)},}
+\end{mathpar}
+which reflects the bounded-size assumption because $s$ is a 64-bit integer.
