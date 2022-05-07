@@ -95,8 +95,6 @@ tools---gcc, ld, ar---but also running dd to generate a kernel image.
   \label{fig:eval:bench}
 \end{figure}
 
-\tej{revise this section in light of new results and better understanding}
-
 The first set of results are for the three benchmarks, run on an in-memory disk, all
 with a single client. These benchmarks are challenging to support efficiently
 since an in-memory disk means performance isn't dominated by slow I/O, and a
@@ -142,9 +140,7 @@ allowing concurrency between logging and installation in the write-ahead log.
   \caption[Concurrent smallfile performance]%
   {Combined throughput of the \cc{smallfile} microbenchmark, varying the number
     of concurrent clients. DaisyNFS's performance scales with the number of
-    clients similar to ext4, but both eventually scale sub-linearly. Linux
-    is disk bandwidth limited, while DaisyNFS is more limited by lock
-    contention.}
+    clients, but both eventually scale sub-linearly due to lock contention. DaisyNFS has a single lock that becomes contended more quickly than the contention observed in Linux.}
   \label{fig:eval:scale}
 \end{figure}
 
@@ -160,19 +156,23 @@ allowing concurrency between logging and installation in the write-ahead log.
 
 The scalability experiment varies the number of concurrent smallfile clients,
 measuring the aggregate throughput of the whole system for each number of
-clients. The results are shown in \cref{fig:eval:scale}. Each data point is the result of
-running for 30 seconds. The graph shows that
-DaisyNFS achieves both good absolute performance and gets higher throughput with
-more clients, comparable to the scalability of the Linux NFS server, though
-Linux has better scalability. These benchmarks don't have perfect scalability
-primarily due to lock contention. \tej{not quite true, Linux is bottlenecked by something else}
+clients. The results are shown in \cref{fig:eval:scale}. Each data point is the
+result of running for 30 seconds. The graph shows that both DaisyNFS and Linux
+get better performance as the number of clients increase, though Linux has
+better scalability on this benchmark. The peak throughput of DaisyNFS is about
+60\% the throughput of Linux.
 
-We ran an analogous experiment on an in-memory disk to reduce the I/O
-bottleneck, shown in \cref{fig:eval:scale:ram}; scalability is similar,
-demonstrating that lock contention is still relevant. DaisyNFS has a common lock
-for installing sub-block object writes into a full block, which all operations
-go through to commit. The Go mutex profile points to this lock as being the
-biggest source of contention in DaisyNFS.
+With a large number of clients, both file systems
+stop scaling due to lock contention; they are neither I/O bottlenecked nor are
+they using the entire CPU.\@ For example, with 30 clients Linux uses only 19\% CPU
+while DaisyNFS uses 19\% in userspace and an additional 8\% in the kernel; both
+numbers include the cost of the NFS client, which runs in the kernel. We
+confirmed this with an analogous experiment run on an in-memory disk to remove
+the effect of I/O, shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
+lock for installing sub-block object writes into a full block, which all
+operations go through to commit. The Go mutex profile points to this lock as
+being the biggest source of contention in DaisyNFS for both the NVMe and
+in-memory benchmarks.\@
 
 \begin{figure}[ht]
   \centering
@@ -221,23 +221,29 @@ the largefile and app benchmarks as well. We compare against the same variants
 of DaisyNFS with reduced concurrency, as well as against Linux with its
 log-bypass optimization. The results are presented in \cref{fig:bench-configs},
 on both an NVMe disk and an in-memory disk. The results for the NVMe disk have
-most of the interesting trends and the in-memory numbers are mostly included for
-completeness, but there are a few interesting differences worth noting.
+most of the interesting trends, but there are a few interesting differences
+worth noting.
 
 The \cc{smallfile-25} and \cc{smallfile-1} numbers repeat individual points from
 the \cref{fig:eval:scale}, but presented as throughput relative to Linux so that
-it is easier to compare across file systems. DaisyNFS can coalesce concurrent
-operations and journal them together to reduce total I/O, which is important on
-the physical disk but hardly helps with an in-memory disk. The relative
-performance for DaisyNFS is much worse on an in-memory disk because the lock
-contention for preparing a transaction dominates performance, although DaisyNFS
-gets almost the same absolute performance as on the NVMe disk.
+it is easier to compare across file systems. The \cc{smallfile-1} results shown
+here make it much clearer that DaisyNFS gets worse performance than Linux with
+only a single client on a physical disk, even though performance is comparable with an in-memory disk. This is due to less efficient use of
+the NVMe drive; looking at the kernel's I/O statistics, both file systems have
+similar total disk bandwidth (130 MB/s for Linux and 120 MB/s for DaisyNFS), but
+DaisyNFS is issuing requests that are half the size on average. DaisyNFS spends
+most of its time waiting on disk I/O in this benchmark.
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
 operation at a time, and yet seq WAL performs noticeably worse. This is because
 the write-ahead log is parallelizing logging writes and installing them to the
 disk (rather than alternating between logging and installation), and the disk is
 able to get better throughput by doing these concurrently.
+
+On the \cc{smallfile-25} benchmark DaisyNFS can coalesce concurrent operations
+and journal them together to reduce total I/O. Unlike with \cc{smallfile-1},
+lock contention dominates I/O performance so both file systems perform similarly
+between disk and memory (even in absolute performance).
 
 The \cc{largefile} benchmark is interesting because the client issues many
 concurrent operations, but they all conflict since they write to the same file.
