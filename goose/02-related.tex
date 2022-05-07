@@ -78,6 +78,13 @@ right, not just for verifying code in that language. Many similar semantics
 efforts are focused on the goal of completeness, in order to understand how all
 of the language features interact.
 
+Featherweight Go~\cite{griesemer:featherweight-go} gives a semantics to a core
+subset of Go, for the purpose of reasoning precisely about adding
+\emph{generics} to Go (this paper influenced the final design for Go's generics,
+which were added to Go 1.18 and released in 2022). The purpose of this paper is
+quite different from Goose, since it aims mainly to reason about Go's type
+system as a whole rather than model specific programs.
+
 CH20~\cite{krebbers:c-coq} is a fairly complete formalization of the C standard.
 CH20 defines C in operational and axiomatic styles, along with an executable
 semantics to test the semantics on (small) concrete programs. All of these
