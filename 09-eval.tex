@@ -172,7 +172,7 @@ the effect of I/O, shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
 lock for installing sub-block object writes into a full block, which all
 operations go through to commit. The Go mutex profile points to this lock as
 being the biggest source of contention in DaisyNFS for both the NVMe and
-in-memory benchmarks.\@
+in-memory benchmarks. The fact that scalability is limited by this common lock indicates the importance of concurrency for performance.
 
 \begin{figure}[ht]
   \centering
