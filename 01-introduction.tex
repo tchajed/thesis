@@ -11,8 +11,9 @@ the service in an operating system that implements the abstraction of files and
 directories. File systems are important because they are used by all
 applications to store data, and bugs in file systems are especially costly
 because they can lead to data loss for any of these applications. The next
-contribution is a system design that enables verifying something with the
-complexity of a file system.
+contribution is a design that isolates crash and concurrency reasoning so that
+the majority of the file system is verified with much simpler sequential
+reasoning.
 
 \section{Motivation}
 \label{sec:intro:motivation}
@@ -107,12 +108,12 @@ potentially missing bugs.
 The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
 Flashix~\cite{bodenmuller:concurrent-flashix}, a verified, concurrent file
-system that runs on flash devices. The techniques
-developed to verify Flashix are specialized to its particular file-system
-design, especially its write-back cache. Its concurrency is primarily between
-regular operations and garbage collection, and read-only concurrency. This
-thesis develops a general logic for reasoning about crashes and concurrency and
-applies this logic to verify a system with write-write concurrency.
+system that runs on flash devices. Flashix is based on a different methodology for
+reasoning about crashes and concurrency, using refinement-based techniques to
+first show that operations are atomic and then to show that a crash preserves
+the specification's semantics. The artifact is also structured differently,
+following the traditional approach of using journaling for crash atomicity,
+unlike the system design described in this thesis based on transactions.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an

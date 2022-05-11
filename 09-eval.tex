@@ -403,16 +403,9 @@ of sequential reasoning and proof automation.
 \label{fig:features}
 \end{figure}
 
-Getting
-the client to issue exactly these four RPCs took some work, since Linux relies
-on getting the right ``weak cache-consistency'' data from all the operations to
-maintain its local cache. Without this caching, it issues more operations like
-\cc{GETATTR} and \cc{ACCESS} in between operations to update the directory
-attributes and permissions.
-
 For the smallfile benchmark, it took some work to ensure that the Linux NFS
 client issued exactly four RPCs per iteration. What this involved was returning
-the write ``weak cache-consistency'' data from all operations, so that the
+the correct ``weak cache-consistency'' data from all operations, so that the
 client reliably caches attribute information. The RFC says these post-operation
 attributes are optional but encouraged for the server, but without this
 information in practice the Linux client issues additional \cc{GETATTR} and

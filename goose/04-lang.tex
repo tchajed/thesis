@@ -140,7 +140,7 @@ func Arith(a uint64,
 \begin{translategooselang}
 \begin{flalign*}
   &\goosedef{Arith} \defeq \gooselambda{a, b} & \\
-  &\quad\gooselet{sum}{a + b}{let}{} & \\
+  &\quad\gooselet{sum}{a + b}{}{} & \\
   &\quad\gooseif{sum = 7}{a}{} & \\
   &\quad\quad \gooselet{mid}{\goosedef{Midpoint} \app a \app b}{} &\\
   &\quad\quad mid &

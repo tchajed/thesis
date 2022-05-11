@@ -266,37 +266,53 @@ the kernel.
 The Flashix project deserves special attention since it also develops a verified
 concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
 Flashix targets flash storage, a lower-level storage technology than the drives
-that DaisyNFS targets. The project has different goals around concurrency,
-extending a sequential verified file system with limited concurrency. Flashix
-has an idiosyncratic approach to reasoning about concurrency and crashes
-specific to their file-system design, as opposed to Perennial's general
-reasoning principles. Flashix is implemented using abstract data types in a
-high-level language; a code generator transforms this code into executable C,
-but this process is both not verified and has difficulty producing the most
-efficient code using in-place updates.
+that DaisyNFS targets. Crash and concurrency reasoning in Flashix is based based
+on refinement, in particular using Lipton's theory of
+reduction~\cite{lipton:movers}, extended with conditions for crash
+safety~\cite[\S 13.3]{Pfaehler2018}. Flashix is implemented using abstract data
+types in a high-level language; a code generator transforms this code into
+executable C, but this process is both not verified and has difficulty producing
+the most efficient code using in-place updates.
 
-While Flashix does have mechanized proofs, the approaches for both concurrency
-and crash safety are layered on top in such a way that the top-level
-specification and proof are not entirely within the proof assistant. Perennial
-on the other hand formalizes the complete specification down to a simple
-semantics for crashes and concurrency. Flashix also effectively has crash
-reasoning throughout the system, whereas DaisyNFS factors out this reasoning to
-GoTxn and then layers sequential proofs on top.
+The crash-safety aspects of Flashix's refinement approach are implemented in the
+KIV theorem prover as axioms --- that is, the system generates proof obligations
+based on the theory for a program being verified, but the connection between the
+obligations and the desired refinement property is given by an on-paper proof.
+The Perennial program logic on the other hand is implemented in Coq with an
+associated soundness theorem that allows to extract a final theorem that is a
+simple statement about executions. Flashix reasons about crashes in both the
+journaling and file-system layers, whereas DaisyNFS factors out this reasoning
+to GoTxn and then layers sequential proofs on top.
 
-The Flashix project reports that components ``intertwined'' and could not be
-separated as cleanly for reasoning purposes as they would have
-liked~\cite[\S 8]{bodenmuller:concurrent-flashix}.
-We had a similar experience within the transaction system, where
-performance constrained the APIs of internal layers and forced us to export
-complicated APIs. The  GoTxn was perhaps trickier than the components of Flashix
-because Goose models the implementation at a lower level of abstraction, so even issues like
-concurrency and memory safety show up in each interface. We were inspired to
-develop the DaisyNFS design to get truly sequential reasoning from the
-experience of working in Perennial compared to automated verification in \fstar
-and Dafny, and found modularity and clean abstractions much easier once
-code ran within a transaction.
+The concurrency in Flashix is a bit different from DaisyNFS. At the file-system
+layer, the system has a reader-writer lock over the entire directory structure,
+and additionally supports concurrent writes to different files. Internally, the
+system can also perform garbage collection and erase-block management
+concurrently with file-system operations. DaisyNFS in contrast can concurrently
+write to distinct files or directories, and concurrently installs from the
+write-ahead log to the data region, but does not support read-read concurrency
+to different directories. Flashix achieves comparable performance to UBIFS (an
+existing flash file system in Linux)~\cite{bodenmuller:concurrent-flashix}, and
+DaisyNFS achieves comparable performance to the Linux kernel NFS server.
+Comparing the performance of both systems to each other is difficult, since they
+run on different types of hardware. The Flashix benchmarks do not evaluate
+scalability to many cores, focusing on the impact of concurrent garbage
+collection.
 
-Where it lacks in generality, Flashix does make up for in verifying a taller
+%The Flashix project reports that components were ``intertwined'' and could not be
+%separated as cleanly for reasoning purposes as they would have
+%liked~\cite[\S 8]{bodenmuller:concurrent-flashix}.
+%We had a similar experience within the transaction system, where
+%performance constrained the APIs of internal layers and forced us to export
+%complicated APIs. Interfaces in GoTxn were perhaps trickier than the components of Flashix
+%because Goose models the implementation at a lower level of abstraction, so even issues like
+%concurrency and memory safety show up in each interface. We were inspired to
+%develop the DaisyNFS design to get truly sequential reasoning from the
+%experience of working in Perennial compared to automated verification in \fstar
+%and Dafny, and found modularity and clean abstractions much easier once
+%code ran within a transaction.
+
+Flashix verifies a taller
 storage stack than DaisyNFS. Flash storage has a more limited API than a
 standard drive --- in particular flash blocks must be completely erased before
 being reused. A flash file system works around this limitation with \emph{garbage
@@ -304,7 +320,8 @@ collection}, where occasionally the system identifies a mostly-unused block,
 moves its valid data elsewhere, and then erases it to reclaim space. This is
 implemented by maintaining a logical-to-physical block mapping, similar to
 virtual memory. DaisyNFS does not require any of this code, since it runs on
-devices that internally implement these features.
+devices that internally implement these features, though Perennial could be used
+to model flash storage and verify the code that interacts with it directly.
 
 
 \section{Transactions to simplify system design}
