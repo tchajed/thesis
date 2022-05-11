@@ -2,18 +2,19 @@ Formal verification is a promising approach for improving reliability, in which
 a system is developed along with a proof that it always follows a high-level
 specification of its intended behavior. The first contribution of this
 thesis is to develop ideas and techniques for proving the correctness of a class of
-systems that store persistent data and thus make guarantees about \emph{crashes}
-where the whole computer stops and reboots, and also have \emph{concurrency} for
+systems that store persistent data. The key challenges in such systems are that
+they make guarantees about \emph{crashes} where the whole computer stops and
+reboots, and that their implementations take advantage of \emph{concurrency} for
 good performance.
 
 The thesis applies these verification techniques to a \emph{file system},
 the service in an operating system that implements the abstraction of files and
 directories. File systems are important because they are used by all
 applications to store data, and bugs in file systems are especially costly
-because they can lead to data loss for any of these applications. The next
-contribution is a design that isolates crash and concurrency reasoning so that
-the majority of the file system is verified with much simpler sequential
-reasoning.
+because they can lead to data loss for any of these applications. This thesis
+also contributes a design and approach that isolate crash and concurrency
+reasoning to a transaction system, so that the majority of the file system is
+verified with much simpler sequential reasoning.
 
 \section{Motivation}
 \label{sec:intro:motivation}
@@ -37,10 +38,11 @@ even if the system stops running at any time, say due to a power failure or
 kernel panic. This thesis uses ``crash'' to refer to any of these circumstances
 where the computer stops and is rebooted. After a reboot, the file system is
 expected to preserve data from before the crash. The second big challenge is
-concurrency in the implementation, which complicates approaches for improving
-reliability, including both testing and verification.
+concurrency in the implementation. Both challenges complicate testing, fuzzing,
+and verification. The combination of concurrency and crashes can also lead to more
+intricate and hard-to-find bugs.
 
-Bugs are still discovered in widely used file systems like ext4 and btrfs,
+Even in widely used file systems like ext4 and btrfs, new bugs are still discovered,
 despite a long history of developing, testing, and using these file systems. For
 example, a
 recent approach for fuzzing file systems~\cite{kim:hydra} found new crash-safety
@@ -53,19 +55,21 @@ serious consequences than most bugs in application software). File systems have
 a lot of internal concurrency for performance reasons, which both leads to bugs
 and makes testing and fuzzing more challenging.
 
-This thesis develops techniques to apply formal verification to a file system. In this approach, we write the code, then a specification of the
+This thesis develops techniques to apply formal verification to a file system,
+which has the potential to completely eliminate whole classes of bugs.
+In this approach, we write the code, then a specification of the
 intended behavior of the code, and finally a mathematical proof that shows the
 code always meets the specification. For confidence in the proof itself, the
-proof is carried out in a computer and a piece of software called a proof
+proof is carried out with a computer and a piece of software called a proof
 assistant checks that the proof is valid. The nature of formal verification
 forces the proof engineer to systematically cover every corner case in the code.
-As a result, verification can completely rule out whole classes of bugs, including
+As a result, verification can rule out whole classes of bugs, including
 low-level bugs like memory safety but also logic errors like returning the wrong
 data. Verification does not guarantee that a system is bug-free, because the
 specification must be correct and the assumptions in the proof must hold in
-practice, but it does help since the specification is smaller than the
-implementation, and it isolates debugging to identifying where the specification
-is wrong or an assumption was violated.
+practice, but it does help since the specification is intended to be easier to
+understand than the implementation, and verification isolates debugging to
+identifying where the specification is wrong or an assumption was violated.
 
 % The key to verifying a system with the complexity of DaisyNFS is a design
 % that splits the file system into two main parts: a transaction system called
@@ -91,7 +95,8 @@ Production file systems are generally validated by testing. While testing is
 indispensable for development, the nature of a file system makes it difficult to
 catch all bugs with only testing. The fundamental difficulty is a high degree of
 non-determinism from two sources: crashes in the middle of execution, and
-concurrency in the implementation that is needed for good performance.
+concurrency in the implementation that is needed for good performance. This
+leads to many possible execution paths, which are difficult to exhaustively test.
 
 The importance of file-system correctness has been recognized by the academic
 community, thus there are many approaches for increasing confidence with
