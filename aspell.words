@@ -1,16 +1,21 @@
-personal_ws-1.1 en 512 
+personal_ws-1.1 en 541 
 APFS
 APIs
 AST
+Achour
 Addr
 AllocN
+Anish
 Appender
 ArbitraryInt
 ArbitraryU
 Arith
+Athalye
 AtomFS
 Attrs
+Beckmann
 BetrFS
+Blalock
 Blkno
 ByteFile
 CAS
@@ -20,6 +25,7 @@ CHL
 CHL's
 CIVL
 CPUs
+CSC
 CSL
 CSPEC
 Cap'n
@@ -27,6 +33,7 @@ CertiKOS
 Chajed
 Champaign
 ChkliaevHS
+Chlipala
 CmpXchg
 CompCert
 CompareAndSwapUint
@@ -36,6 +43,7 @@ Coq's
 CoqPL
 CrashMonkey
 Crypto
+D'Angelo
 DFSCQ
 Dafny
 Dafny's
@@ -65,10 +73,12 @@ Flashix's
 FlatBuffers
 ForestGreen
 Frans
+Frans's
 GETATTR
 GETSZ
 Gallina
 GetRequest
+Gjengset
 GoJournal
 GoJournal's
 GoNFS
@@ -85,15 +95,21 @@ Hoare
 Hoare's
 ISA
 InitCircular
+Ioannidis
 IronFleet
 IsoFS
 KIV
 KaReMeL
 Kaashoek
 Kolodziejski
+Konradi
 Konradi's
+Krebbers
+Kumar
 LFS
 Lampson
+Lef
+Leilani
 Liveness
 LoadTyped
 LoadUint
@@ -124,10 +140,12 @@ OCaml
 Ok
 OverWrite
 PATHCONF
+PAX
 PLDI
 POG
 POSIX
 PVS
+Praveen
 PrepareWrite
 Proto
 READDIR
@@ -136,14 +154,18 @@ READLINK
 RFC's
 RPC
 RPCs
+Ralf
 ReadBit
 ReadBuf
 ReadInstalled
 ReadMem
 RecoverCircular
 RefinedC
+Robbert
 RunSystem
 RustBelt
+RustHorn
+RustHornBelt
 SETATTR
 SMT
 SOSP
@@ -167,6 +189,7 @@ TSO
 Tassarotti
 Tej
 Theng
+Theng's
 ToString
 ToU
 Toolchain
@@ -185,6 +208,7 @@ VeriBetrKV
 Viktor
 WAFL
 WAL's
+WCC
 WPCs
 WPs
 WebAssembly
@@ -272,6 +296,7 @@ dom
 dst
 duplicable
 effectful
+ement
 entailments
 entrancy
 enum
@@ -365,6 +390,8 @@ memEnd
 memStart
 memend
 memstart
+mentees
+mentorship
 metatheory
 metavariable
 microbenchmark
@@ -382,6 +409,7 @@ namespaces
 nat
 nativeType
 natively
+ne
 newStart
 newlock
 nextDiskEnd
@@ -439,6 +467,7 @@ runTxn
 runtime
 scalability
 sda
+secnumdepth
 sep
 serializability
 serializable

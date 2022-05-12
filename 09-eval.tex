@@ -450,7 +450,7 @@ GoTxn, with the largest lines of code even after splitting off these two data
 structures, so factoring its complexity was essential to the proof. The second
 change was an optimization Mark Theng made to improve performance. Installation
 absorbed multiple writes to the same address before installing as a way of
-simplifying the proof, but Mark found this hurt performance since typically absorption had already ocurred earlier, and the process had a non-trivial CPU cost. He was able to
+simplifying the proof, but Mark found this hurt performance since typically absorption had already occurred earlier, and the process had a non-trivial CPU cost. He was able to
 eliminate it and fix the proof; notably this change incrementally changed an
 already-complete proof. Finally, the transactional part of GoTxn implemented
 with two-phase locking was a later idea,
