@@ -224,6 +224,12 @@ eventually trims the log, it needs to be sure not to advance beyond the current
 logger position, which the proof demonstrates using a lower bound on
 \cc{diskEnd} from when the logger initially started.
 
+The proof of this aspect of the write-ahead log is one of the trickiest parts of
+GoTxn, because of the lock-free concurrency in the write-ahead log. For more
+details on the proof strategy, see Mark Theng's thesis~\cite{mtheng-meng}. Mark
+helped complete the proof and described the complete proof and its invariants in
+more detail in his thesis.
+
 \paragraph{Specifying lock-free reads.}
 Concurrency in the write-ahead log complicates not just its proof but its
 specification due a challenge with reading installed data. The difficulty is that

@@ -132,6 +132,8 @@ allow any parallel disk access. The ``seq txn'' variant leaves the write-ahead
 log the same but changes the per-address locking in GoTxn to a \emph{global}
 transaction lock, preventing any transactions from running concurrently but
 allowing concurrency between logging and installation in the write-ahead log.
+(Mark Theng came up with the idea of comparing to this seq txn variant in his
+master's thesis~\cite{mtheng-meng}.)
 
 \begin{figure}[ht]
   \centering
