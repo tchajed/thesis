@@ -120,14 +120,15 @@ regular execution does not need it.\footnote{For a concrete example, see the
 bubble sort example in
 \url{https://www.doc.ic.ac.uk/~scd/Dafny_Material/Lectures.pdf}.}
 
+\pagebreak[1]
 Ghost variables can also be used to give abstract specifications to a piece of
 code. For example, consider a ``statistics database'' that maintains the running
 mean of a sequence of numbers (written in Go for readability):
-
+\nopagebreak
 \vspace{\baselineskip}
-\hrule
-\vspace{-8pt}
-\begin{multicols}{2}
+\hrule\nopagebreak
+\vspace{-12pt}\nopagebreak
+\noindent\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[frame=none]{go}
 type StatDB struct {
   count int
@@ -139,9 +140,7 @@ func (db *StatDB) Add(n float64) {
   db.sum += n
 }
 \end{minted}
-%
-\columnbreak
-
+&
 \begin{minted}[frame=none]{go}
 func (db *StatDB) Mean() float64 {
   if db.count == 0 {
@@ -150,8 +149,8 @@ func (db *StatDB) Mean() float64 {
   return db.sum/db.count
 }
 \end{minted}
-\end{multicols}
-\vspace{-5pt}
+\end{tabular}
+\vspace{-8pt}
 \hrule
 \vspace{\baselineskip}
 

@@ -2,8 +2,8 @@
   \textbf{Pure reduction}%
   \hfill %
   \boxedassert[line width=0.4pt]{e \purereduction e'} %
-  \hspace{20pt}
-
+  \hspace{10pt}%
+  %
   \begin{mathpar}
   \begin{array}{rcll}
     v \binop v' &\purereduction & v'' & \mathrm{if} \: v'' = v \binop v' \\
@@ -23,7 +23,7 @@
   \textbf{Per-thread head reduction}%
   \hfill %
   \boxedassert[line width=0.4pt]{((h, w), e) \reduces ((h', w'), e') } %
-  \hspace{20pt}
+  \hspace{10pt}%
   %
   \begin{mathpar}
   \begin{array}{llcl}
@@ -77,8 +77,7 @@
   \textbf{Context reduction}%
   \hfill%
   \boxedassert[line width=0.4pt]{((h, w), \mathcal{E}) \reduces ((h', w'), \mathcal{E}')}%
-  \hspace{20pt}
-
+  \hspace{10pt}
   \begin{mathpar}
   \begin{array}{llcl}
     \textdom{ECtx}& E &::= & \square \ALT e \app E \ALT E \app v  %

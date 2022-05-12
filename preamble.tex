@@ -18,11 +18,24 @@
 % for 1.5 line spacing
 \usepackage{setspace}
 \onehalfspacing
-%% single spacing for table of contents
-%\AfterTOCHead{\singlespacing}
 
-% recompute page layout based on the above
-%\recalctypearea
+% set up nicer headers/footers (in particular, no capitalization and put page
+% number in footer)
+\makeatletter
+\def\ps@headings{\let\@mkboth\markboth
+    \def\@oddfoot{\hfil \rm\thepage \hfil}
+    \def\@evenfoot{\hfil \rm\thepage \hfil}
+    \def\@evenhead{\hfil \sl \leftmark}	% Left heading.
+    \def\@oddhead{\hbox{}\sl \rightmark \hfil}	% Right heading.
+    \def\chaptermark##1{\markboth {\ifnum \c@secnumdepth >\m@ne
+	\@chapapp\ \thechapter. \ \fi ##1}{}}
+    \def\sectionmark##1{\markright {\ifnum \c@secnumdepth >\z@
+	\thesection. \ \fi ##1}}
+    \pulldownheader				% Bring header down from edge
+}
+\makeatother
+
+\pagestyle{headings}
 
 % more colors (like RedOrange)
 \usepackage[dvipsnames]{xcolor}
