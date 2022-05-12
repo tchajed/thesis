@@ -1,7 +1,7 @@
 This thesis describes an approach to verify software with a combination of
 concurrency in the implementation and crash-safety guarantees, applied to the
-DaisyNFS file system. It spans from foundations for verifying this software in
-general through the design and proof of the file system itself. The foundations
+DaisyNFS file system. It spans from general verification foundations
+through the design and proof of the file system itself. The foundations
 include Perennial, a program logic for crashes and concurrency, and Goose, an
 approach for reasoning about Go code. DaisyNFS is designed around a verified
 transaction system called GoTxn, which makes it feasible to scale verification
@@ -260,7 +260,7 @@ interpreted by the caller, resulting in a higher-order specification where the
 caller passes a function which might need to be run during recovery, and
 multiple times.
 
-\paragraph{Verifying a file system directly on top of GoJournal.} Dafny allows
+\paragraph{Verify a file system directly on top of GoJournal.} Dafny allows
 the DaisyNFS proof to take advantage of automation that is enabled by sequential
 reasoning. It would be interesting to do a direct comparison against a proof in
 Perennial where due to ownership the proofs would still require only sequential

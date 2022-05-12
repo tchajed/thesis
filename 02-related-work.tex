@@ -30,15 +30,15 @@ system verified with Crash Hoare Logic (CHL). CHL's basic specifications have
 the form $\hoareC{P}{e}{Q}{Q_{c}}$, extending the Hoare triple $\hoare{P}{e}{Q}$
 with a \emph{crash condition} $Q_{c}$ that holds at all intermediate points in the
 function's execution. Crash conditions handle a core difficulty of crashes,
-namely that they stop the system at some intermediate step. There are two
+namely reasoning about the state of the system at all intermediate points. There are two
 remaining challenges: a crash wipes in-memory state, and the system might crash again
 while recovering after a crash. CHL connects the system's crash conditions to a
 specification for recovery to handle these two issues. A crash predicate
 transformation captures what can be assumed when recovery starts, and for
 crashes during recovery CHL requires that recovery be \emph{idempotent} in the
 sense that its crash condition implies its own precondition. CHL was used to
-specify and verify FSCQ~\cite{chen:fscq} and a more performant successor
-DFSCQ~\cite{chen:dfscq}.
+specify and verify FSCQ~\cite{chen:fscq} and DFSCQ~\cite{chen:dfscq}, a more
+performant successor.
 
 Yggdrasil~\cite{sigurbjarnarson:yggdrasil} takes a different approach to crash
 safety. The basic definition is \emph{crash refinement}, which says that a
@@ -246,8 +246,7 @@ Yggdrasil~\cite{sigurbjarnarson:yggdrasil}.
 AtomFS~\cite{zou:atomfs} is a verified, concurrent file system, but its
 implementation does not store data durably. The proof structure is quite
 different from DaisyNFS in that all of the concurrency reasoning is part of the
-file-system operations and there is no interaction between persistence and
-concurrency. AtomFS is verified using a relational logic with rely-guarantee
+file-system operations. AtomFS is verified using a relational logic with rely-guarantee
 reasoning; unlike separation logic, the basic specification in this logic is a
 refinement statement that relates an implementation to a (simpler) specification
 program.
@@ -328,7 +327,7 @@ to model flash storage and verify the code that interacts with it directly.
 \label{sec:rel:txn}
 
 To be conducive to verification, DaisyNFS is implemented differently than
-many NFS servers; in particular using two-phase locking is not common
+many NFS servers; in particular, using two-phase locking is not common
 practice.  Other user-level NFS servers are typically implemented on
 top of an existing file system, relying on the underlying file system
 for logging and locking. Ext3 and ext4 use a journaling system underneath, but
@@ -342,7 +341,7 @@ are more complicated and have more features than DaisyNFS.\@
 Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
 in its API, but without formal verification, which was used to implement a file
 system called IsoFS. Its logging design is based on
-multi-version concurrency control (MVCC) rather than our use of pessimistic
+multi-version concurrency control (MVCC)~\cite{bernstein:concurrency-dbs} rather than our use of pessimistic
 locking. The Isotope paper uses Isotope not only for the IsoFS file system but
 also two persistent key-value stores. While GoTxn is in principle also suitable to implement a
 key-value store, we have so far only used it in combination with DaisyNFS.\@

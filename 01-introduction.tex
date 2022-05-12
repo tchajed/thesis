@@ -1,7 +1,7 @@
-Formal verification is a promising approach for improving reliability, in which
+A promising approach for improving reliability is \emph{formal verification}, in which
 a system is developed along with a proof that it always follows a high-level
 specification of its intended behavior. The first contribution of this
-thesis is to develop ideas and techniques for proving the correctness of a class of
+thesis is to develop ideas and techniques for formal verification of a class of
 systems that store persistent data. The key challenges in such systems are that
 they make guarantees about \emph{crashes} where the whole computer stops and
 reboots, and that their implementations take advantage of \emph{concurrency} for
@@ -330,7 +330,7 @@ formulation of RFC 1813, the document that (in prose) specifies what a NFSv3
 server should do.
 
 The techniques and artifacts in this thesis do have some limitations, described
-in more detail in the appropriate chapters. Some examples: Perennial can reason
+in more detail in the appropriate chapters. Some examples include: Perennial can reason
 about safety but not liveness (see \cref{sec:perennial:limitations}); GoTxn does
 not support asynchronous durability (see \cref{sec:txn:limitations}); DaisyNFS
 lacks support for symbolic links (see \cref{sec:daisy:motivation}); and Goose
@@ -379,3 +379,6 @@ DaisyNFS, covering both GoTxn and the file-system code.
 
 \Cref{ch:eval} evaluates the whole file system along a few dimensions,
 especially performance but also aspects of the proof.
+
+\Cref{ch:conclusion} concludes with some discussion about the broader value of
+verification, lessons learned, and future work.
