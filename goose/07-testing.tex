@@ -14,7 +14,7 @@ Goose fails to translate some code, or the code does not compile in Coq, or the
 model has undefined behavior; in each of these cases it is impossible to verify
 incorrect code. These might still reflect a bug in Goose, or at least an
 unsupported feature, but they do not compromise soundness. Therefore the
-most important bugs are those where the translation's behavior differs
+most important bugs are those where the translation is well-defined but its behavior differs
 from that of Go; these can compromise soundness of the system and lead
 to a proof that is not borne out in practice.
 

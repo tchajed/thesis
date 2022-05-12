@@ -75,8 +75,9 @@ operations by augmenting the heap with extra information; each address in the
 semantics has a $\textdom{NonAtom}$ which can be
 $\nareading{n}{v}$ if there are $n$ readers and the value is $v$,
 or $\nawriting{v}$ if a thread is currently writing. For most
-pointers, stores are translated to a non-atomic store while loads are translated
-use GooseLang's atomic Load. GooseLang has support for non-atomic
+pointers, stores are translated to a non-atomic store while loads are translated to
+GooseLang's atomic Load (concurrent loads to the same address are permitted in
+both Go and GooseLang). GooseLang has support for non-atomic
 reads as well in order to model map iteration.
 
 Ordinarily values in the heap are of the form $\nareading{0}{v}$,
@@ -96,8 +97,7 @@ verifying programs. Separation logic turns out to provide the right
 language to reason about racy access. When a thread owns
 $\ell \mapsto v$, the logic guarantees no other thread can have access to location
 $\ell$, so the specifications for reads and writes are unaffected by the
-operations being non-atomic (although their proofs are a bit more
-complicated to deal with the new semantics). The only change is that the
+operations being non-atomic. The only change is that the
 Read operation is no longer an atomic primitive but a function that
 takes two execution steps. In Iris this means that two threads cannot
 share memory with an invariant and must mediate access with a lock,
@@ -110,7 +110,7 @@ steps.
 \newcommand{\Acquire}{\goosedef{Acquire}}
 \newcommand{\CAS}{\goosedef{CAS}}
 
-As is typical in Goose, locks (Go's \cc{(*sync.Mutex)} type) are not built-in to GooseLang but modeled
+Locks (Go's \cc{*sync.Mutex} type) are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
 only synchronization primitive, implementing them requires shared
 concurrent access, which ordinary pointers do not have in GooseLang.
@@ -165,10 +165,10 @@ potentially invalidate the condition (the code must therefore call \cc{Wait()}
 in a loop, waiting for the condition to be true afterward).
 
 Because condition variables provide few guarantees, the GooseLang model is
-simply that \cc{Wait()} release and then acquires the lock associated with the
+simply that \cc{Wait()} releases and then immediately re-acquires the lock associated with the
 condition variable. \cc{Signal()} in reality affects the scheduling of
-\cc{Wait()} calls. Go condition variables actually do provide a stronger
-guarantee than in some other systems that \cc{Wait()} will only return if
+\cc{Wait()} calls, but this model captures all executions. Go condition variables actually do provide a stronger
+guarantee than in some other systems: \cc{Wait()} is guaranteed to return only if
 \emph{some} thread has issued a \cc{Signal()}, but we did not attempt to model
 or use this for reasoning purposes.
 
@@ -254,7 +254,7 @@ through a pointer, particularly when some of its fields are themselves flattened
 structs. Any load of a value from memory is translated to a call to
 $\LoadTyped$. This is a Gallina definition of type
 $\textdom{GooseType} \to \textdom{Expr}$, where that expression is itself a
-GooseLang function that takes a pointer. Hence you can think of it is a macro
+GooseLang function that takes a pointer. Hence one can think of it as a macro
 for GooseLang that is represented in Gallina as a meta language. $\LoadTyped(t)$
 is directed by a type $t$ passed in Gallina to determine how to load and
 assemble the fields of a struct of type $t$.
@@ -319,7 +319,7 @@ $\hoare{\ell \mapsto_{s.f} v}{\loadField(t, f) \app \ell}{\Ret{v} \ell \mapsto_{
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
 offset calculations. In a sense the model is the trusted code, but the
-fact that the struct maps-to exploding lemma is true that all of the
+fact that the struct maps-to exploding lemma and all of the
 expected Hoare triples hold provides strong evidence that the model is
 also doing the right thing. For example, the exploding lemma shows that
 field offsets are disjoint, since the struct maps-to can be broken into
@@ -443,7 +443,13 @@ $\sliceFull(s, l)$ for the append specification, which is like $\sliceRep$ but a
 includes ownership over the capacity:
 %
 \begin{mathpar}
-\sliceFull(s, l) \defeq \sliceRep(s, l) * \sliceCap(s) \\
+\infer{}{
+  % need the extra curly braces
+{\begin{aligned}
+&\sliceFull(s, l) \defeq \\
+&\quad  \sliceRep(s, l) * \sliceCap(s)
+\end{aligned}}
+}
 
 \infer{}{\hoareV[t]{\sliceFull(s, l)}%
 {\mathtt{append(s, x)}}%
@@ -568,7 +574,8 @@ a Go map as a pointer to an abstract map value, a GooseLang value
 that encodes the entire map data as a list of key-value pairs. The
 specification is based on a pure relation $\mapVal(v, m)$ that relates
 this encoded value to a Gallina map $m$, which uses \cc{gmap} from
-stdpp; for simplicity $m$ is of type \cc{gmap u64 val} and Goose only supports
+stdpp;\footnote{\url{https://gitlab.mpi-sws.org/iris/stdpp}}
+for simplicity $m$ is of type \cc{gmap u64 val} and Goose only supports
 maps whose key type is \cc{uint64}.
 Map values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications

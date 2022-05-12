@@ -1,5 +1,5 @@
 This chapter is about Goose, which solves a practical
-problem of reasoning about efficient code. The developer writes
+problem of connecting formal reasoning to efficient code. The developer writes
 code in Go, uses the \cc{goose} translator to convert the code to a model in the Coq proof
 assistant, then carries out the proof on top of the model in the Perennial
 logic. Goose encompasses
@@ -10,7 +10,7 @@ supported by the translation tool.)
 
 Previously \cref{ch:txn} discussed the GoTxn proof. GoTxn is implemented in Go;
 Goose is the system that allows us to verify its implementation. The proof is
-carried out in the Perennial logic, described in way in \cref{ch:perennial}.
+carried out in the Perennial logic, described in \cref{ch:perennial}.
 Both the description and implementation of Perennial are language-independent.
 To verify GoTxn, we instantiate Perennial with GooseLang, the language that
 Goose provides to model Go code.
@@ -123,8 +123,8 @@ common iteration specification, so our proofs should remain unchanged if
 % 4089
 
 The Goose translator is implemented in Go, in about \loc{4000} lines of code.
-It takes advantage of a family of packages in under
-\cc{go} in the Go standard library, such as \cc{go/ast} and \cc{go/types}, to
+It takes advantage of a family of packages under
+the \cc{go/} prefix in the Go standard library, such as \cc{go/ast} and \cc{go/types}, to
 parse and type-check Go code; the \texttt{golang.org/x/tools/go/packages} package
 even makes it possible to work with Go packages and modules. These greatly
 simplify implementing Goose and also make it more trustworthy, since at least
