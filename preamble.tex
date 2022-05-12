@@ -63,9 +63,6 @@
 % for "on page NN" reference
 \usepackage[nospace]{varioref}
 
-% for \sfrac
-\usepackage{xfrac}
-
 % for \ifoptionfinal
 \usepackage{ifdraft}
 
@@ -95,6 +92,9 @@
     pdftitle={Verifying a concurrent file system with sequential reasoning},
     pdfauthor={Tej Chajed},
 }
+
+% set the format of figure numbers
+\renewcommand{\thefigure}{\arabic{chapter}-\arabic{figure}}
 
 % restore these definitions to color wp/wpc and braces
 % \newcommand{\syntax}[1]{\textcolor{blue}{#1}}

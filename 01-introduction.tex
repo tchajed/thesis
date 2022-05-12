@@ -136,34 +136,50 @@ physically represented as code in a verification system. The verification system
 checks the proof against the implementation and specification, ensuring that the
 proof is complete.
 
+\begin{figure}[ht]
+\includegraphics{fig/overview.png}
+\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
+\label{fig:overview}
+\end{figure}
+
 This thesis integrates interactive, foundational proofs using custom
 infrastructure (in Coq~\cite{coq}) as well as automated verification using a
 verification-aware programming language (Dafny~\cite{leino:dafny}). These are
 both machine-checked, formal proofs, but the interaction models of the two
 systems are different enough that this section describes them separately.
+\Cref{fig:overview} gives a high-level overview of how the pieces fit together,
+which this section introduces bit by bit. The system and proof are divided into
+two parts: the lower half of the figure represents GoTxn, a verified transaction
+system implemented in the Go programming language~\cite{lang:go} (in the lower
+left of the figure) and verified in Coq (in the lower right), while the upper
+half represents the remaining file-system code implemented and verified in
+Dafny.
 
+\paragraph{Goose to model GoTxn in Coq.}
 In Coq, the core feature is proofs based on dependent type theory, which is
-expressive enough to represent essentially any math. A first step when using Coq
-is to connect the code to the reasoning in the proof assistant. The particular
-approach in this thesis translates executable code to a model in Coq,
-implemented by a tool called Goose. The model
-and its semantics encodes the
-assumptions the proof makes about how the program behaves. The semantics is typically structured as a transition
-system, where an execution is a sequence of states the program goes through
-along with some notion of observable behavior, like external I/O or return
-values.
+expressive enough to represent essentially any math. The first step when using
+Coq is to connect the Go code implementing the GoTxn library to the reasoning in
+the proof assistant. The particular approach in this thesis translates
+executable code to a model in Coq, implemented by a tool called Goose. The model
+encodes the assumptions the proof makes about how the program behaves in the
+form of a semantics, structured as a transition system. For GoTxn, this
+transition system describes its execution as a sequence of states the program
+might go through along with return values from the library's methods.
 
-Once we have a program in Coq, we can reason about it. The goal of
+\paragraph{The Perennial program logic.}
+Once we have GoTxn modeled in Coq, we can reason about it. The goal of
 verification is to prove that all possible behaviors of the program are allowed
-by its specification, where behavior might be the return values of a library, or
-the network I/O for a server. The
-specifications in this work forbid universally incorrect behavior, like reading an
-out-of-bounds address in an array, but more precisely specify what the program
-is supposed to do.
+by its specification. The specifications in this work forbid universally
+incorrect behavior, like reading an out-of-bounds address in an array, but more
+precisely specify what the program is supposed to do. GoTxn has a particularly
+interesting specification that describes how it makes transactions appear to
+execute atomically, described in greater detail in \cref{ch:txn}.
 
+GoTxn has a large implementation, so it would be challenging to a direct proof
+reasoning about all of its behaviors.
 A common structure to tame the complexity of reasoning about a program is to use
-a \emph{program logic}. In principle it might be possible to prove a theorem
-about all the behaviors of a program directly, but such a proof would too
+a \emph{program logic}. In principle it might be possible to do this reasoning
+directly, but in practice such a proof would too
 complex to be feasible. The program logic organizes the proof with a structured
 way of expressing and proving statements about the program, such as breaking the
 proof down into theorems about individual functions. The proof in a program
@@ -175,12 +191,14 @@ recently have they reached the maturity to give completely mechanized proofs of
 moderate-sized programs. There are few logics that also can reason about crash
 safety. Our approach in this thesis is to build a new program logic called Perennial with all the
 concurrency-reasoning features of a modern program logic, plus new features for
-reasoning about crashes. Perennial builds upon Iris, a modular framework for
+reasoning about crashes. In \cref{fig:overview}, Perennial appears in the bottom
+of the Coq shaded box, since it is the basis for the GoTxn proofs. Perennial builds upon Iris, a modular framework for
 concurrency, preserving its concurrency features while extending it with
 crash-safety reasoning.
 
+\paragraph{Verifying GoTxn.}
 Using the new Perennial program logic, we verified GoTxn, a concurrent
-transaction system implemented in the Go programming language~\cite{lang:go}.
+transaction system.
 The transaction system's correctness theorem says that any program that uses
 transactions really has transactional behavior: its execution is equivalent to a
 version of the program where the transactions run atomically. The complete
@@ -188,14 +206,17 @@ specification includes some important details in order to formalize the
 intuition behind atomicity. GoTxn is a general-purpose library for transactions,
 and could be used independently for another storage system.
 
-Next, because transactions appear to run sequentially, and write to disk all at
-once, it is no longer necessary to use a sophisticated program logic like
-Perennial to reason about the body of each transaction. Instead, we switch to
-using Dafny, a verification-oriented programming language that only supports
+Because every transaction appears to run sequentially and persist its writes to
+disk all at once, it is no longer necessary to use a sophisticated program logic
+like Perennial to reason about the body of each transaction. Instead, we switch
+to using Dafny, a verification-oriented programming language that only supports
 sequential code but as a result is highly productive for this use case. The file
 system is written and verified in Dafny, then compiled to Go and linked with
 GoTxn.
 
+\paragraph{Implementing and verifying DaisyNFS in Dafny.}
+The top half of \cref{fig:overview} depicts the implementation and proof for the
+DaisyNFS file-system code, implemented on top of GoTxn in the Dafny programming language.
 Dafny verification works quite differently from Coq. Dafny is a programming
 language with verification features; contrast this with Coq, which supports
 general math that can \emph{model} programs. A Dafny method can be annotated
@@ -210,33 +231,34 @@ generally fewer annotations are needed than lines of proof for Coq. The main
 downside to this approach is that it fixes a sequential programming language, so
 unlike in Coq, it isn't possible to reason about concurrency and crashes.
 
-\Cref{fig:overview} depicts how all of the components of DaisyNFS and its proof
-fit together. The left-hand side depicts the implementation, split between GoTxn
+\paragraph{Linking the code and proofs together.}
+Outside of the Go, Coq, and Dafny boxes in \cref{fig:overview} are two outputs,
+one for the implementation and another for the proof.
+The left-hand side depicts the implementation, split between GoTxn
 and the file-system implemented in Dafny. The Dafny code is compiled to Go and
 then the two parts are linked together into one \cc{daisy-nfsd} binary in the
-usual Go build process. GoTxn is translated to a model using a tool called
-Goose. The right-hand side of the figure depicts all aspects related to the
-proof, which is written using the Perennial program logic. All of this happens
-in the Coq proof assistant, which checks that the proofs are valid. Meanwhile
+usual Go build process.
+
+The right-hand side of the figure depicts all aspects related to the
+proof. The GoTxn proof is carried out in the Coq proof assistant, which checks
+that the proofs are valid.
+Meanwhile
 the DaisyNFS file-system code is verified in Dafny, which integrates
 implementing, specifying, and verifying code. This proof is checked by the Dafny
 verifier. Finally, the proof of GoTxn is written in such a way that it can be
 composed with the proof of DaisyNFS for a theorem about the whole
 \cc{daisy-nfsd} binary. This is a conceptual composition, not one in either
-Dafny or Coq.
-
-\begin{figure}[ht]
-\includegraphics{fig/overview.png}
-\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
-\label{fig:overview}
-\end{figure}
+Dafny or Coq, which is described in greater detail in \cref{ch:daisy-nfs}.
 
 One of the contributions of this thesis is that the file-system design isolates
 concurrency and crash safety into the transaction system. The rest of the system
 implements the file-system logic and data structures. Because each operation is
 wrapped in a transaction that appears to run sequentially and without crashes,
 we use Dafny for this implementation and proof. Intuitively what the file-system
-proof shows is that it correctly implements the NFS protocol.
+proof shows is that it correctly implements the NFS protocol: the
+\cc{daisy-nfsd} server binary appears to atomically respond to requests
+according to (a mathematical description of) the NFS protocol, despite
+concurrent requests and even if the system crashes.
 
 In order to connect the file system's sequential proofs to its concurrent
 execution, we prove a general theorem about the transaction system's
