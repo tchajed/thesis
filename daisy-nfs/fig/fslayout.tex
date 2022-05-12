@@ -2,35 +2,40 @@
 
   \tikzstyle{circlog}=[thick,rectangle, draw,minimum height=1cm, align=center];
 
-  \node[circlog,minimum width=1cm,
-       label={[label position=below, align=center]Super\\block}] (logger) {};
-  \node[circlog,minimum width=1.7cm, right=0cm of logger,
+  \node[circlog,minimum width=1.2cm,
+       label={[label position=below, label distance=5pt, align=center]%
+Super\\block}] (logger) {};
+
+  \node[circlog,minimum width=2.8cm, right=0cm of logger,
     inner sep=0pt,
     rectangle split,
     rectangle split every empty part={},
-    rectangle split parts=6,
+    rectangle split parts=8,
     rectangle split empty part width={.2cm},
     rectangle split horizontal,
-       label={[label position=below, align=center]20 inode\\ blocks}] (installer) {};
+       label={[label position=below, label distance=5pt, align=center]%
+         600 inode\\ blocks}] (installer) {};
 
   \node[circlog, right=0cm of installer,
     inner sep=0pt,
     rectangle split,
     rectangle split every empty part={},
     rectangle split parts=20,
-    rectangle split empty part width={.1cm},
+    rectangle split empty part width={.15cm},
     rectangle split horizontal,
-       label={[label position=below, align=center]30 allocator\\ bitmap blocks}] (log) {};
+       label={[label position=below, label distance=5pt, align=center]%
+         200 allocator\\ bitmap blocks}] (log) {};
 
 
-  \node[circlog,minimum width=3.2cm, right=0cm of log,
+  \node[circlog,minimum width=4cm, right=0cm of log,
     inner sep=0pt,
     rectangle split,
     rectangle split every empty part={},
-    rectangle split parts=3,
+    rectangle split parts=4,
     rectangle split empty part width={1.15cm},
     rectangle split horizontal,
-       label={[label position=below, align=center]data blocks\\ (remainder of disk)}] (log2) {};
+       label={[label position=below, label distance=5pt, align=center]%
+         data blocks\\ (remainder of disk)}] (log2) {};
 
   \draw [line width=.05cm,black,transform canvas={yshift=.15cm}] (installer.south west)+(0,-.3cm) -- (installer.north west);
   \draw [line width=.05cm,black,transform canvas={yshift=.15cm}] (log.south west)+(0,-.3cm) -- (log.north west);
