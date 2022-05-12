@@ -60,25 +60,25 @@ system for persistent memory or new zoned storage (ZNS) SSDs.
 % NTFS: 1993
 % APFS: 2017
 
-\paragraph{Mechanized proofs can be adapted to change.} Informal
-reasoning even with a program logic can gain much of the value of formal
-reasoning in that it helps the author think systematically, and permits varying
-the level of detail to suit the author's needs. However, a complete and
-mechanized proof is especially valuable when it comes to \emph{changing} the
-code and proof: it is difficult and tedious to make a systematic change to an
-on-paper proof and be confident that all relevant parts of the proof have been
-re-analyzed and updated.
-
-In contrast, a mechanized proof can be updated and re-checked, particularly in
-an automated tool. In developing the DaisyNFS Dafny proof, I had a wonderful
-experience with adapting a proof when adding indirect blocks: at some point a
-function verified before I had even understood if or why it was correct!
-Adapting existing proofs in an interactive theorem prover is more challenging
-than with automated tools (although there is a relatively new field of \emph{proof
-repair}~\cite{ringer:proof-repair} that aims to address this), and we found
-adapting the GoTxn proofs in Perennial to be more challenging.
-\Cref{sec:eval:incremental} talks about incremental changes in the work
-described by this thesis in particular.
+% \paragraph{Mechanized proofs can be adapted to change.} Informal
+% reasoning even with a program logic can gain much of the value of formal
+% reasoning in that it helps the author think systematically, and permits varying
+% the level of detail to suit the author's needs. However, a complete and
+% mechanized proof is especially valuable when it comes to \emph{changing} the
+% code and proof: it is difficult and tedious to make a systematic change to an
+% on-paper proof and be confident that all relevant parts of the proof have been
+% re-analyzed and updated.
+%
+% In contrast, a mechanized proof can be updated and re-checked, particularly in
+% an automated tool. In developing the DaisyNFS Dafny proof, I had a wonderful
+% experience with adapting a proof when adding indirect blocks: at some point a
+% function verified before I had even understood if or why it was correct!
+% Adapting existing proofs in an interactive theorem prover is more challenging
+% than with automated tools (although there is a relatively new field of \emph{proof
+% repair}~\cite{ringer:proof-repair} that aims to address this), and we found
+% adapting the GoTxn proofs in Perennial to be more challenging.
+% \Cref{sec:eval:incremental} talks about incremental changes in the work
+% described by this thesis in particular.
 
 \paragraph{Verification helps discover accurate, precise specifications.} Some
 systems are extremely reliable, due to extensive testing, real-world usage, and
@@ -132,28 +132,29 @@ violating the assumptions in the verified code.
 % algorithms, or use of an SMT solver.
 
 
-\paragraph{Mechanized proofs help develop a sound logic.} Within verification
-there is a spectrum of formality that includes ``foundational'' techniques like
-Perennial with a soundness theorem as well as tools like Dafny that generate
-verification conditions for a solver but no proof of soundness. When developing
-a new program logic, one reason to go through the trouble of mechanizing the
-proofs and carrying out a soundness proof is to validate the program logic
-itself. For example, the formalism helps work out a specification for crash
-safety and concurrency, one that the mechanized proof shows has the right
-meaning (due to the soundness theorem) and is usable (due to the verified
-reasoning principles in the logic). After gaining confidence and intuition with
-the safety-net of a soundness proof, it is possible to make further progress
-with informal reasoning, or by implementing the logic in an automated system.
-
-Concurrency makes soundness especially challenging and important, since specifications can be quite
-subtle to use. One recent example is prophecy variables, where in the process of
-developing a mechanized proofs Jung et al.\ found an unsoundness in the use of
-prophecy variables in a proof from Viktor Vafeiadis's PhD
-thesis~\cite{jung:prophecy,vafeiadis-phd}, a proof that was conducted informally
-and on-paper. Higher-order reasoning, especially the ability to store procedures
-in the heap, has also led to some subtle reasoning principles like the
-anti-frame rule~\cite{pottier:anti-frame}, whose soundness proof was rather
-sophisticated~\cite{schwinghammer:semantic-anti-frame}.
+%% this sub-section is perhaps the most defensive of all of these points
+% \paragraph{Mechanized proofs help develop a sound logic.} Within verification
+% there is a spectrum of formality that includes ``foundational'' techniques like
+% Perennial with a soundness theorem as well as tools like Dafny that generate
+% verification conditions for a solver but no proof of soundness. When developing
+% a new program logic, one reason to go through the trouble of mechanizing the
+% proofs and carrying out a soundness proof is to validate the program logic
+% itself. For example, the formalism helps work out a specification for crash
+% safety and concurrency, one that the mechanized proof shows has the right
+% meaning (due to the soundness theorem) and is usable (due to the verified
+% reasoning principles in the logic). After gaining confidence and intuition with
+% the safety-net of a soundness proof, it is possible to make further progress
+% with informal reasoning, or by implementing the logic in an automated system.
+%
+% Concurrency makes soundness especially challenging and important, since specifications can be quite
+% subtle to use. One recent example is prophecy variables, where in the process of
+% developing a mechanized proofs Jung et al.\ found an unsoundness in the use of
+% prophecy variables in a proof from Viktor Vafeiadis's PhD
+% thesis~\cite{jung:prophecy,vafeiadis-phd}, a proof that was conducted informally
+% and on-paper. Higher-order reasoning, especially the ability to store procedures
+% in the heap, has also led to some subtle reasoning principles like the
+% anti-frame rule~\cite{pottier:anti-frame}, whose soundness proof was rather
+% sophisticated~\cite{schwinghammer:semantic-anti-frame}.
 
 
 \section{Discussion}
