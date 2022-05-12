@@ -34,7 +34,8 @@ operations supported by DaisyNFS are listed in \cref{fig:nfs}.
 \begin{figure}
   \centering
   \input{daisy-nfs/fig/fslayout.tex}
-  \caption[File-system disk layout]{The layout of the file system on top of the transaction system's
+  \caption[File-system disk layout]%
+  {The layout of the file system on top of the transaction system's
     disk. The number of inode blocks and data bitmap blocks are compile-time
     constants, but easy to change without affecting the proofs.}
   \label{fig:layout}

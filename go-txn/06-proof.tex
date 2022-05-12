@@ -427,9 +427,10 @@ before or after the read, but inode 1 will contain A in either case.
 \begin{figure}[ht]
 \centering
 \input{go-txn/fig/sub-block-concurrency}
-\caption{An example of a concurrent \cc{Read} of inode 1 and \cc{Commit}
-  modifying inode 4
-  in the \scc{obj} layer.}
+\caption[Example of sub-block object concurrency]%
+{An example of concurrent operations on sub-block objects in the \scc{obj}
+  layer. The example has a concurrent \cc{Read} to inode 1 and a \cc{Commit}
+  modifying inode 4.}
 \label{fig:txn-concur}
 \end{figure}
 
