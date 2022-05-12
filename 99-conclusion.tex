@@ -93,15 +93,26 @@ development, but they still lack a clear description of the interface exposed.
 The process of verification helps discover a precise, mathematical
 specification, and the proofs confirm that this specification is actually an
 accurate description of the implementation. Precise and accurate specifications
-are useful even for unverified software. Surprisingly perhaps, very few systems
-attempt to formalize their guarantees; even the long history of formal semantics
-of programming languages does not mean that real-world languages are formally
-specified.\footnote{The notable exception is WebAssembly, which was co-developed
-with its formal semantics~\cite{haas:wasm}. There are several languages with
-independent formalizations, such as for Standard ML~\cite{harper:standard-ml}, Python~\cite{politz:python-semantics}, and R5RS Scheme~\cite{matthews:r5rs-semantics},
-and then many specifications that focus on modeling a particular language
-feature like Featherweight Java~\cite{igarashi:featherweight-java} and
-Featherweight Go~\cite{griesemer:featherweight-go}.}.
+are useful even for unverified software. While documentation is a helpful form
+of informal specification, mathematical specifications have the advantage of
+reducing ambiguity.
+
+One example from the work in this thesis came up in the GoTxn write-ahead log
+specification. When we came up with the idea of a history of multiwrites as the
+specification, we able to explain absorption, where a value overwrites an older
+write that hasn't been logged yet, as an optimization and not a detail the
+caller should be concerned with. Merely writing down the specification also
+helped clarify some of the internal invariants. Another example was some
+difficulty we ran into interpreting the description of ``weak-cache consistency
+(WCC)'' metadata in the NFS protocol. The RFC explains this aspect in several
+places and combines describing what information should be returned, rationalizes
+the need for this feature, and describes how the client should use it. A
+mathematical description teases these apart so that the first is formally
+described and the rest are commentary on top. The end result was quite simple:
+the server should return both the old attributes and final attributes of
+whatever file or directory the WCC data pertains to. Because these attributes
+include modification timestamps, they permit the client to invalidate their
+local cache when the old timestamp doesn't match the client's cached value.
 
 \paragraph{Verification guides debugging.} With a verified system, bugs are
 still inevitable since there is unverified code surrounding the verified code,
