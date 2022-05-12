@@ -323,6 +323,23 @@ client. The process helped us find and fix several bugs in the unverified parts
 of DaisyNFS and in the specification itself, which are reported in
 \cref{fig:daisynfs-bugs}.
 
+Most of the bugs in unverified code were bugs in parsing and were readily caught
+by symbolic execution. The bug when attempting to call REMOVE on a directory was
+a type-safety issue in an untested code path, which was not caught statically
+due to limitations in the Go type system. The concurrent write issue is
+a particularly interesting bug in unverified code. It only triggered when using
+asynchronous writes (which are unverified), but the symptom was that \cc{git
+clone} resulted in incorrect data and git complained about consistency errors.
+The issue was that the unverified code directly passed a byte slice with the
+\cc{WRITE} data from the RPC library into DaisyNFS. This buffer went through the
+entire stack and was eventually passed to GoTxn, which retains the buffer.
+Unfortunately the RPC library \emph{also} re-uses the buffers that hold network
+requests, and eventually the buffer was corrupted due to a concurrent request.
+We fixed the bug by copying from the RPC before passing the buffer to the Dafny
+code. The subtle aspect of this bug is that it is the ownership implicit in the
+Dafny specification that was violated by the surrounding code, not a
+straightforward precondition.
+
 Two of the specification bugs are particularly interesting. The bounded inode bug
 was due to an \cc{ino} argument of type \cc{Ino}; this type is a Dafny
 \emph{subset type}, thus adding an implicit precondition that \cc{ino <
@@ -343,6 +360,7 @@ compatible.
     WRITE panics if not enough input bytes & Unverified \\
     Directory REMOVE panics in dynamic type cast & Unverified \\
     Panic on unexpected enum value & Unverified \\
+    Concurrent writes can conflict & Unverified \\
     The names \cc{.} and \cc{..} are allowed & Not in RFC 1813 \\
     RENAME can create circular directories & Not in RFC 1813 \\
     CREATE/MKDIR allow empty name & Specification \\

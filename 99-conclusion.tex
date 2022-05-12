@@ -7,55 +7,11 @@ approach for reasoning about Go code. DaisyNFS is designed around a verified
 transaction system called GoTxn, which makes it feasible to scale verification
 by enabling sequential reasoning for transactions on top.
 
-\section{What is the value of verifying a file system?}
+\section{What is the value of verification?}
 
-The reader might wonder what the value of verification is, more broadly. This
-section attempts to answer this question.
-
-\paragraph{Making verification feasible.}
-Prior to the work in this thesis, there simply didn't exist techniques for this
-kind of proof, with the combination of concurrency and crashes,
-thus we could not ask the question of whether it would be worth
-verifying a concurrent file system. This thesis makes it possible, and shows
-that the cost is not unreasonable --- we were able to verify a file system with
-a number of features, reasonable performance, and with a small team.
-
-\paragraph{Cost versus benefit.}
-There are many less formal ways to make
-software more reliable, including testing, fuzzing, and code auditing, so one
-might ask what the value of verification is. Formal
-verification also has a spectrum; we could potentially apply property-based
-testing, model checking, or symbolic execution to parts of the code. Rather than
-verifying the implementation, we could instead attempt to model and specify key
-parts of the algorithms or system design, then verify those. What is the
-additional value of fully machine-checked proofs, all the way down to the code?
-Verification in the real world needs to have benefits that outweigh the costs.
-
-This work helps give an upper bound on the cost, but further research would
-bring the costs down. A second implementation and proof of a concurrent file
-system would not be as challenging, building on these foundations. I hope the
-costs eventually come down to make verification an appealing alternative to
-verification for the next generation of storage systems.
-
-A real achievement for verification would be to use verification not just as
-alternative to the practices above, but to build something with more daring optimizations,
-features, or speed than would otherwise be possible. I think file systems (or
-more generally, some storage system that holds persistent state) have the
-potential to be just such an application. There aren't that many widely-used
-file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
-Windows, and APFS on macOS --- and new file systems are generally adopted very
-slowly. APFS was surprising for having only a 3-year development period before
-Apple widely deployed it. Ext4 is the next newest of that list, introduced in
-2008 (by extending ext3, which was first released in 2001). Verification has the
-potential to create a file system that is more rapidly adopted by virtue of its
-proof. This might be especially applicable for some new hardware, like a file
-system for persistent memory or new zoned storage (ZNS) SSDs.
-
-% ext4: 2008
-% ext3: 2001
-% XFS: 1994 (first released on IRIX OS for SGI)
-% NTFS: 1993
-% APFS: 2017
+The reader might wonder about the broader value of verification and the
+contribution of the thesis. This section makes some broader points about the
+value of verification, both in general and in the specific case of this thesis.
 
 \paragraph{Verification is valuable for critical systems.} It will never be cost
 effective to verify all software; at a minimum, for verification to be useful a
@@ -74,18 +30,55 @@ these criteria: bugs can lead to data loss which the application cannot
 mitigate, the interface is stable and relatively standard, and essentially all
 applications go through the file system to store persistent state.
 
-\paragraph{Mechanized proofs are good for change.} Informal
+\paragraph{Cost versus benefit.}
+I think about verification in terms of whether the benefits in terms of
+reliability outweigh the costs of writing the proofs. Research in verification
+generally aims to reduce the cost, or to identify areas with particularly large
+benefits. This thesis in particular focuses on making verification of crash-safe
+and concurrent systems possible, in order to give an upper bound on the cost.
+Further research would hopefully bring the costs down so that verification is an
+appealing approach for the next generation of storage systems.
+
+A real achievement for verification would be to use verification not just as
+alternative to the practices above, but to build something with more daring optimizations,
+features, or speed than would otherwise be possible; this would increase the
+benefits rather than decreasing the cost. Storage systems that holds persistent
+state have the potential to be just such an application. There aren't that many
+widely-used
+file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
+Windows, and APFS on macOS --- and new file systems are generally adopted
+slowly. APFS was surprising for having only a 3-year development period before
+Apple widely deployed it. Ext4 is the next newest of that list, introduced in
+2008 (by extending ext3, which was first released in 2001). Verification has the
+potential to create a file system that is more rapidly adopted by virtue of its
+proof. This might be especially applicable for some new hardware, like a file
+system for persistent memory or new zoned storage (ZNS) SSDs.
+
+% ext4: 2008
+% ext3: 2001
+% XFS: 1994 (first released on IRIX OS for SGI)
+% NTFS: 1993
+% APFS: 2017
+
+\paragraph{Mechanized proofs can be adapted to change.} Informal
 reasoning even with a program logic can gain much of the value of formal
 reasoning in that it helps the author think systematically, and permits varying
 the level of detail to suit the author's needs. However, a complete and
 mechanized proof is especially valuable when it comes to \emph{changing} the
-code and proof: it is difficult and tedious to make a systematic change to a
-proof and be confident that all relevant parts of the proof have been
-re-analyzed and updated. In contrast, a mechanized proof has a proof assistant
-that says clearly what parts are incomplete after changing the code or
-specification. In developing the DaisyNFS Dafny proof, I had a wonderful
+code and proof: it is difficult and tedious to make a systematic change to an
+on-paper proof and be confident that all relevant parts of the proof have been
+re-analyzed and updated.
+
+In contrast, a mechanized proof can be updated and re-checked, particularly in
+an automated tool. In developing the DaisyNFS Dafny proof, I had a wonderful
 experience with adapting a proof when adding indirect blocks: at some point a
 function verified before I had even understood if or why it was correct!
+Adapting existing proofs in an interactive theorem prover is more challenging
+than with automated tools (although there is a relatively new field of \emph{proof
+repair}~\cite{ringer:proof-repair} that aims to address this), and we found
+adapting the GoTxn proofs in Perennial to be more challenging.
+\Cref{sec:eval:incremental} talks about incremental changes in the work
+described by this thesis in particular.
 
 \paragraph{Verification helps discover accurate, precise specifications.} Some
 systems are extremely reliable, due to extensive testing, real-world usage, and
@@ -120,7 +113,12 @@ the assumptions of the proof can be violated, and the specification can be
 wrong. However, an advantage of formal verification, particularly fully
 machine-checked proofs, is that when bugs are discovered it's safe to start
 debugging with all the code outside the verification as well as looking at the
-specification.
+specification. We ran into several bugs while developing DaisyNFS; several are
+described in \cref{sec:eval:testing}. Some were due
+to incorrect specifications; for example, at one point we returned the wrong
+``before'' WCC data, causing Linux to constantly invalidate its cache and send
+extra RPCs and reducing performance. Others were due to unverified code
+violating the assumptions in the verified code.
 
 % \paragraph{Interactive theorem proving is a great way to prototype.} I do not
 % anticipate that busy engineers trying to write production code will write proofs
@@ -134,15 +132,18 @@ specification.
 % algorithms, or use of an SMT solver.
 
 
-\paragraph{Working out the details gives confidence in the program logic.} One
-reason to go through the trouble of mechanizing the proofs is to validate the
-program logic itself in a way that gives confidence, much like how mechanizing a program proof increases
-confidence in the correctness of the reasoning. For example, the formalism helps
-work out a specification for crash safety and concurrency, one that the
-mechanized proof shows has the right meaning (due to the soundness theorem) and
-is usable (due to the verified reasoning principles in the logic). After gaining
-confidence and intuition with the safety-net of a soundness proof, it is possible to make
-further progress with informal reasoning, or by implementing the logic in an automated system.
+\paragraph{Mechanized proofs help develop a sound logic.} Within verification
+there is a spectrum of formality that includes ``foundational'' techniques like
+Perennial with a soundness theorem as well as tools like Dafny that generate
+verification conditions for a solver but no proof of soundness. When developing
+a new program logic, one reason to go through the trouble of mechanizing the
+proofs and carrying out a soundness proof is to validate the program logic
+itself. For example, the formalism helps work out a specification for crash
+safety and concurrency, one that the mechanized proof shows has the right
+meaning (due to the soundness theorem) and is usable (due to the verified
+reasoning principles in the logic). After gaining confidence and intuition with
+the safety-net of a soundness proof, it is possible to make further progress
+with informal reasoning, or by implementing the logic in an automated system.
 
 Concurrency makes soundness especially challenging and important, since specifications can be quite
 subtle to use. One recent example is prophecy variables, where in the process of
