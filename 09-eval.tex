@@ -23,7 +23,7 @@ non-default \cc{data=journal} mode, forces all data to
 go through the journal and disables log-bypass writes, which gives the same
 crash-safety guarantees and makes the designs more comparable. In its default
 \cc{data=ordered} mode Linux achieves better performance on some benchmarks but
-can lose recently written data if the system crashes; we present some results to
+can lose recently written data if the system crashes; we also present some results to
 show the benefit of providing this weaker guarantee.
 
 All of these benchmarks were run using Linux~5.13, Dafny~3.5.0, Go~1.18.1 on an Amazon
@@ -98,8 +98,8 @@ tools---gcc, ld, ar---but also running dd to generate a kernel image.
 The first set of results are for the three benchmarks, run on an in-memory disk, all
 with a single client. These benchmarks are challenging to support efficiently
 since an in-memory disk means performance isn't dominated by slow I/O, and a
-single client demands single-core efficiency and not just parallelizing
-overhead. The results are shown in \cref{fig:eval:bench}. DaisyNFS achieves
+single client demands single-core efficiency.
+The results are shown in \cref{fig:eval:bench}. DaisyNFS achieves
 comparable performance on these benchmarks after implementing many optimizations
 (for example, parsing data structures in-place) and features (for example,
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
@@ -155,20 +155,18 @@ allowing concurrency between logging and installation in the write-ahead log.
 \paragraph{Scaling with number of clients.}
 
 The scalability experiment varies the number of concurrent smallfile clients,
-measuring the aggregate throughput of the whole system for each number of
-clients. The results are shown in \cref{fig:eval:scale}. Each data point is the
+measuring the aggregate throughput of all of the clients. The results are shown in \cref{fig:eval:scale}. Each data point is the
 result of running for 30 seconds. The graph shows that both DaisyNFS and Linux
-get better performance as the number of clients increase, though Linux has
+achieve better performance as the number of clients increase, though Linux has
 better scalability on this benchmark. The peak throughput of DaisyNFS is about
-60\% the throughput of Linux.
+60\% of the throughput of Linux.
 
 With a large number of clients, both file systems
 stop scaling due to lock contention; they are neither I/O bottlenecked nor are
 they using the entire CPU.\@ For example, with 30 clients Linux uses only 19\% CPU
 while DaisyNFS uses 19\% in userspace and an additional 8\% in the kernel; both
 numbers include the cost of the NFS client, which runs in the kernel. We
-confirmed this with an analogous experiment run on an in-memory disk to remove
-the effect of I/O, shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
+confirmed that I/O is not a bottleneck with an analogous experiment run on an in-memory disk, shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
 lock for installing sub-block object writes into a full block, which all
 operations go through to commit. The Go mutex profile points to this lock as
 being the biggest source of contention in DaisyNFS for both the NVMe and
@@ -184,12 +182,13 @@ in-memory benchmarks. The fact that scalability is limited by this common lock i
 \end{figure}
 
 
-The DaisyNFS seq WAL and seq txn variants evaluate where the concurrency in the
-system is important for performance with a concurrent workload. Even though in
+The DaisyNFS seq WAL and seq txn variants show even more clearly that
+concurrency is important for performance. In both configurations, throughput
+essentially doesn't increase beyond two clients. Going from one to two clients
+helps because even though in
 both of these configurations the server cannot process more than one request at
-a time, performance improves slightly with more than one client since a request
-can be received while another is being processed. Beyond just two clients the
-improvement is negligible.
+a time, performance improves slightly with a second client since a request can
+be received while another is being processed.
 
 \paragraph{Concurrency and log bypass for largefile.}
 
@@ -219,7 +218,8 @@ improvement is negligible.
 The final set of experiments aims to understand the performance of DaisyNFS on
 the largefile and app benchmarks as well. We compare against the same variants
 of DaisyNFS with reduced concurrency, as well as against Linux with its
-log-bypass optimization. The results are presented in \cref{fig:bench-configs},
+log-bypass optimization (that is, \cc{data=journal} mode).
+The results are presented in \cref{fig:bench-configs},
 on both an NVMe disk and an in-memory disk. The results for the NVMe disk have
 most of the interesting trends, but there are a few interesting differences
 worth noting.
@@ -227,12 +227,14 @@ worth noting.
 The \cc{smallfile-25} and \cc{smallfile-1} numbers repeat individual points from
 the \cref{fig:eval:scale}, but presented as throughput relative to Linux so that
 it is easier to compare across file systems. The \cc{smallfile-1} results shown
-here make it much clearer that DaisyNFS gets worse performance than Linux with
+here make it clearer that DaisyNFS has worse performance than Linux with
 only a single client on a physical disk, even though performance is comparable with an in-memory disk. This is due to less efficient use of
 the NVMe drive; looking at the kernel's I/O statistics, both file systems have
 similar total disk bandwidth (130 MB/s for Linux and 120 MB/s for DaisyNFS), but
-DaisyNFS is issuing requests that are half the size on average. DaisyNFS spends
-most of its time waiting on disk I/O in this benchmark.
+DaisyNFS's I/O patterns result in about 4KB I/O requests which have higher
+latency than with Linux. DaisyNFS spends most of its time waiting on disk I/O in
+this benchmark. \tej{can still double-check this by looking at the addresses
+being written with \cc{blktrace}}
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
 operation at a time, and yet seq WAL performs noticeably worse. This is because
@@ -247,7 +249,7 @@ between disk and memory (even in absolute performance).
 
 The \cc{largefile} benchmark is interesting because the client issues many
 concurrent operations, but they all conflict since they write to the same file.
-Linux and DaisyNFS handle this contention fine, still getting good throughput
+Linux and DaisyNFS handle this contention fine, still achieving good throughput
 given that all writes have to be written to both the journal and data region in
 both systems. However, we can see that a global txn lock actually performs
 \emph{better} than the per-address locking, showing a case where with enough
@@ -262,7 +264,7 @@ is barely affected by concurrency in DaisyNFS.
 Another comparison shown in the same figure is to Linux with its log bypass
 optimization (the default \cc{data=ordered} mode), where writes can be written
 directly to a file's data blocks rather than going through the journal. This optimization
-only makes a difference for asynchronous NFS writes, since synchronous writes
+makes a difference only for asynchronous (``unstable'') NFS writes, since synchronous writes
 are journaled even with this option. The smallfile benchmark has only
 synchronous writes, so unsurprisingly performance is the same, but on the
 largefile benchmark Linux with log bypass achieves 80\% higher throughput. An
@@ -410,7 +412,7 @@ client reliably caches attribute information. The RFC says these post-operation
 attributes are optional but encouraged for the server, but without this
 information in practice the Linux client issues additional \cc{GETATTR} and
 \cc{ACCESS} RPCs, significantly slowing down DaisyNFS. A big part of the
-performance improvement while developing the system involved returning more
+performance improvement while developing DaisyNFS involved returning more
 attribute information, and at the same time expanding the specifications to say
 the additional metadata is correct. These improvements were carried out in many
 small steps, but they were similar to the incremental improvements above in
@@ -427,7 +429,7 @@ GoTxn, with the largest lines of code even after splitting off these two data
 structures, so factoring its complexity was essential to the proof. The second
 change was an optimization Mark Theng made to improve performance. Installation
 absorbed multiple writes to the same address before installing as a way of
-simplifying the proof, but Mark found this hurt performance and was able to
+simplifying the proof, but Mark found this hurt performance since typically absorption had already ocurred earlier, and the process had a non-trivial CPU cost. He was able to
 eliminate it and fix the proof; notably this change incrementally changed an
 already-complete proof. Finally, the transactional part of GoTxn implemented
 with two-phase locking was a later idea,
