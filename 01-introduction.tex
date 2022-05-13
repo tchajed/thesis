@@ -114,11 +114,10 @@ The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
 Flashix~\cite{bodenmuller:concurrent-flashix}, a verified, concurrent file
 system that runs on flash devices. This thesis develops the Perennial program
-logic, which has the benefit of supporting general concurrency reasoning
-principles, whereas Flashix has its own methodology based primarily around
-locks. This thesis also isolates crash and concurrency reasoning using
-transactions, while Flashix reasons about crashes and concurrency throughout the
-entire stack.
+logic, a general framework for reasoning about crash safety in concurrent
+software (Flashix has a different methodology for its proofs). This thesis also
+isolates crash and concurrency reasoning using transactions, while Flashix
+reasons about crashes and concurrency throughout the entire stack.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
