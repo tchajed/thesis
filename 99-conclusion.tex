@@ -198,9 +198,9 @@ independent of the implementation language.
 Another challenge, related to memory safety, was reasoning about read-only
 sharing in the internals of GoTxn. Changing data structures after they were written to support read-only
 sharing was difficult, since every specification needs to incorporate fractional
-permissions. Read-only locking was challenging to retrofit support for, even
-though it may have improved read-read concurrency in GoTxn and DaisyNFS. This
-also showed up in the data structure for the in-memory log, which needs to share
+permissions. Read-only locking would be challenging to retrofit support for, even
+though it might improve read-read concurrency in GoTxn and DaisyNFS.\@ This challenge
+also shows up in the data structure for the in-memory log, which needs to share
 read-only data blocks between threads issuing reads to the write-ahead log, the logger
 thread, and the installer thread.
 
