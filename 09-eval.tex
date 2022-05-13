@@ -230,13 +230,12 @@ The \cc{smallfile-25} and \cc{smallfile-1} numbers repeat individual points from
 the \cref{fig:eval:scale}, but presented as throughput relative to Linux so that
 it is easier to compare across file systems. The \cc{smallfile-1} results shown
 here make it clearer that DaisyNFS has worse performance than Linux with
-only a single client on a physical disk, even though performance is comparable with an in-memory disk. This is due to less efficient use of
-the NVMe drive; looking at the kernel's I/O statistics, both file systems have
-similar total disk bandwidth (130 MB/s for Linux and 120 MB/s for DaisyNFS), but
-DaisyNFS's I/O patterns result in about 4KB I/O requests which have higher
-latency than with Linux. DaisyNFS spends most of its time waiting on disk I/O in
-this benchmark. \tej{can still double-check this by looking at the addresses
-being written with \cc{blktrace}}
+only a single client on a physical disk, even though performance is comparable
+with an in-memory disk. This is due to less efficient I/O;
+looking at the kernel's I/O statistics, both file systems have similar total
+disk bandwidth (130 MB/s for Linux and 120 MB/s for DaisyNFS), even though
+DaisyNFS is only completing 60\% as many iterations of smallfile per second.
+DaisyNFS spends most of its time waiting on disk I/O in this benchmark.
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
 operation at a time, and yet seq WAL performs noticeably worse. This is because
