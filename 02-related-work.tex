@@ -267,27 +267,31 @@ concurrent and crash-safe file system (carried out concurrently with the work in
 Flashix targets flash storage, a lower-level storage technology than the drives
 that DaisyNFS targets. Crash and concurrency reasoning in Flashix is based based
 on refinement, in particular using Lipton's theory of
-reduction~\cite{lipton:movers}, extended with conditions for crash
+movers~\cite{lipton:movers}, extended with conditions for crash
 safety~\cite[\S 13.3]{Pfaehler2018}. Flashix is implemented using abstract data
 types in a high-level language; a code generator transforms this code into
 executable C, but this process is both not verified and has difficulty producing
 the most efficient code using in-place updates.
 
-The methodology for crash and concurrency reasoning used in Flashix is quite
-different from the approach of this thesis. Refinement in Flashix is defined in terms of ``components,'' which are like a class in an object-oriented language. The proof is split into two parts,
+Refinement in Flashix is defined in terms of
+``components'' which are like the classes in an object-oriented language. The
+proof is split into two parts,
 corresponding to concurrency and then crash reasoning. First, the proof shows
 that the entire file-system implementation component is refines an abstract
 file-system component where the operations have \cc{atomic} blocks in their
-implementation. This proof is carried out using a mover-style argument,
+implementation. This proof is carried out using \emph{movers},
 mostly automated due to the use of locks. Next, the proof reasons
 about the effect of a crash and abstracts those to a simple transition in the
 top-level specification. The former is an atomicity refinement that shows
 operations appear to behave atomically, while the latter is a crash refinement
-that shows crash safety.
+that shows crash safety. We also have some experience with mover-style reasoning
+from CSPEC~\cite{chajed:cspec}, but ultimately decided to build on top of
+concurrent separation logic instead and developed Perennial to verify GoTxn.
 
-The Perennial program logic is based on a specification of an individual
-procedure, rather than for a whole component. This specification covers crash and
-concurrency behavior together, rather than separating them into two refinement
+The Perennial program logic gives both specifications and proofs in a different
+way than Flashix. The smallest unit of specification is a judgment in the logic about an
+individual procedure rather than a whole component. This specification covers
+crash and concurrency behavior together, rather than separating them into two refinement
 steps. The GoTxn implementation naturally has libraries whose methods are
 specified together, much like a component, for which on top of Perennial we
 developed a pattern for logically atomic crash specifications. The advantage of
@@ -309,14 +313,16 @@ the theory for a program being verified. However, the connection between the
 obligations and the desired theorem about executions is given by a set of
 on-paper proofs showing the methodology is sound.
 
-The concurrency in Flashix is a bit different from DaisyNFS. At the file-system
+The concurrency in Flashix is different from in DaisyNFS. At the file-system
 layer, the system has a reader-writer lock over the entire directory structure,
 and additionally supports concurrent writes to different files. Internally, the
 system can also perform garbage collection and erase-block management
 concurrently with file-system operations. DaisyNFS in contrast can concurrently
 write to distinct files or directories, and concurrently installs from the
 write-ahead log to the data region, but does not support read-read concurrency
-to the same file. Flashix achieves comparable performance to UBIFS (an
+to the same file. Flashix has only lock-based concurrency, whereas DaisyNFS also
+has lock-free access to the disk in the write-ahead log. Flashix achieves
+comparable performance to UBIFS (an
 existing flash file system in Linux)~\cite{bodenmuller:concurrent-flashix}, and
 DaisyNFS achieves comparable performance to the Linux kernel NFS server.
 The Flashix benchmarks do not evaluate scalability to many cores, focusing on
