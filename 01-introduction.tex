@@ -1,4 +1,4 @@
-A promising approach for improving reliability is \emph{formal verification}, in which
+A promising approach for improving reliability of software is \emph{formal verification}, in which
 a system is developed along with a proof that it always follows a high-level
 specification of its intended behavior. The first contribution of this
 thesis is to develop ideas and techniques for formal verification of a class of
@@ -113,12 +113,12 @@ potentially missing bugs.
 The research community has also recognized the value of formal verification for
 reasoning about a file-system implementation. The closest related work is
 Flashix~\cite{bodenmuller:concurrent-flashix}, a verified, concurrent file
-system that runs on flash devices. Flashix is based on a different methodology for
-reasoning about crashes and concurrency, using refinement-based techniques to
-first show that operations are atomic and then to show that a crash preserves
-the specification's semantics. The artifact is also structured differently,
-following the traditional approach of using journaling for crash atomicity,
-unlike the system design described in this thesis based on transactions.
+system that runs on flash devices. This thesis develops the Perennial program
+logic, which has the benefit of supporting general concurrency reasoning
+principles, whereas Flashix has its own methodology based primarily around
+locks. This thesis also isolates crash and concurrency reasoning using
+transactions, while Flashix reasons about crashes and concurrency throughout the
+entire stack.
 
 There are other verified file systems, especially the sequential file systems
 FSCQ~\cite{chen:fscq} and Yggdrasil~\cite{sigurbjarnarson:yggdrasil} and an
@@ -135,13 +135,6 @@ specification, and a proof. When doing machine-checked proofs, all three are
 physically represented as code in a verification system. The verification system
 checks the proof against the implementation and specification, ensuring that the
 proof is complete.
-
-\begin{figure}[ht]
-\includegraphics{fig/overview.png}
-\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
-\label{fig:overview}
-\end{figure}
-
 This thesis integrates interactive, foundational proofs using custom
 infrastructure (in Coq~\cite{coq}) as well as automated verification using a
 verification-aware programming language (Dafny~\cite{leino:dafny}). These are
@@ -155,12 +148,18 @@ left of the figure) and verified in Coq (in the lower right), while the upper
 half represents the remaining file-system code implemented and verified in
 Dafny.
 
+\begin{figure}[ht]
+\includegraphics{fig/overview.png}
+\caption{Overview of how GoTxn, DaisyNFS, and the proofs fit together.}
+\label{fig:overview}
+\end{figure}
+
 \paragraph{Goose to model GoTxn in Coq.}
 In Coq, the core feature is proofs based on dependent type theory, which is
 expressive enough to represent essentially any math. The first step when using
 Coq is to connect the Go code implementing the GoTxn library to the reasoning in
 the proof assistant. The particular approach in this thesis translates
-executable code to a model in Coq, implemented by a tool called Goose. The model
+executable code to a model in Coq, implemented by a new tool called Goose. The model
 encodes the assumptions the proof makes about how the program behaves in the
 form of a semantics, structured as a transition system. For GoTxn, this
 transition system describes its execution as a sequence of states the program
@@ -170,8 +169,8 @@ might go through along with return values from the library's methods.
 Once we have GoTxn modeled in Coq, we can reason about it. The goal of
 verification is to prove that all possible behaviors of the program are allowed
 by its specification. The specifications in this work forbid universally
-incorrect behavior, like reading an out-of-bounds address in an array, but more
-precisely specify what the program is supposed to do. GoTxn has a particularly
+incorrect behavior, like reading an out-of-bounds address in an array, but also
+precisely specifies what the program is supposed to do. GoTxn has a particularly
 interesting specification that describes how it makes transactions appear to
 execute atomically, described in greater detail in \cref{ch:txn}.
 
@@ -304,12 +303,6 @@ its internal complexity, simplifying reasoning about the rest of the GoTxn
 code that uses it. Finally, GoTxn exports a \textbf{transaction refinement}
 specification that captures how transactions appear to run atomically.
 
-The ideas in Perennial and Goose are applied to GoTxn, but they could be used
-for reasoning about other concurrent storage systems. Similarly,
-this thesis uses GoTxn to build a verified file system, but it could also be used
-as the basis for other verified storage systems, like a persistent key-value
-store.
-
 \paragraph{Verifying efficient code.}
 \textbf{Goose} connects efficient code implemented in Go to a model of that code
 in Perennial. A general contribution here is a design for systems verification
@@ -328,6 +321,12 @@ sequential verification language, with much lower proof burden than would
 otherwise be possible. The specification for DaisyNFS uses a mathematical
 formulation of RFC 1813, the document that (in prose) specifies what a NFSv3
 server should do.
+
+The ideas in Perennial and Goose are applied to GoTxn, but they could be used
+for reasoning about other concurrent storage systems. Similarly,
+this thesis uses GoTxn to build a verified file system, but it could also be used
+as the basis for other verified storage systems, like a persistent key-value
+store.
 
 The techniques and artifacts in this thesis do have some limitations, described
 in more detail in the appropriate chapters. Some examples include: Perennial can reason

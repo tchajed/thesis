@@ -1,21 +1,22 @@
 Critical systems software such as the file system is challenging to make correct
 due to the combination of concurrency in the implementation for good performance
 and the requirement to preserve data even on crash, where the whole computer
-stops and reboots unexpectedly. To build reliable systems, this thesis focuses
-on formal verification, proving that a system always meets a mathematical
-specification of its behavior, and contributes new techniques to enable
-verification of systems software with a combination of concurrency and crash
-guarantees.
+stops and reboots unexpectedly. To build reliable systems, this thesis extends
+formal verification --- proving that a system always meets a mathematical
+specification of its behavior --- to reason about the concurrency and crash safety.
 
-The thesis applies these techniques to the verification of DaisyNFS, a new
+The thesis applies the new verification techniques to the verification of DaisyNFS, a new
 concurrent file system. The file system is an important service of an operating
 system, because nearly all persistent data is ultimately stored in a file system
-and bugs can lead to permanent data loss in any application running on top. Part
-of the contribution of the thesis is a system design and verification techniques
+and bugs can lead to permanent data loss in any application running on top.
+Another contribution of the thesis is a system design and verification techniques
 to scale verification to a system of the size and complexity of a file system.
 In particular, the file system is designed around a transaction system that
 addresses the core challenges of crashes and concurrency, so that the rest of
-the code can be verified with comparatively simpler sequential reasoning. The
-overall file system is performant compared to Linux NFS exporting ext4 over a
+the code can be verified with comparatively simpler sequential reasoning.
+The result is $2\times$ as many lines of proof as code for the sequential
+reasoning, compared to $20\times$ for the crash safety and concurrency proofs.
+The overall file system comes with a proof of correctness and
+is performant compared to Linux NFS exporting ext4 over a
 range of benchmarks --- and at least 60\% the throughput even on the most
 challenging concurrent benchmarks, and 90\% on other workloads.

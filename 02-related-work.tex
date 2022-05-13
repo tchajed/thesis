@@ -263,7 +263,7 @@ the kernel.
 \label{sec:rel:flashix}
 
 The Flashix project deserves special attention since it also develops a verified
-concurrent and crash-safe file system~\cite{bodenmuller:concurrent-flashix}.
+concurrent and crash-safe file system (carried out concurrently with the work in this thesis)~\cite{bodenmuller:concurrent-flashix}.
 Flashix targets flash storage, a lower-level storage technology than the drives
 that DaisyNFS targets. Crash and concurrency reasoning in Flashix is based based
 on refinement, in particular using Lipton's theory of
@@ -281,7 +281,8 @@ The Perennial program logic on the other hand is implemented in Coq with an
 associated soundness theorem that allows to extract a final theorem that is a
 simple statement about executions. Flashix reasons about crashes in both the
 journaling and file-system layers, whereas DaisyNFS factors out this reasoning
-to GoTxn and then layers sequential proofs on top.
+to GoTxn and then layers sequential proofs on top, reducing proof overhead for
+the file-system layer.
 
 The concurrency in Flashix is a bit different from DaisyNFS. At the file-system
 layer, the system has a reader-writer lock over the entire directory structure,
