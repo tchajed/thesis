@@ -274,19 +274,22 @@ executable C, but this process is both not verified and has difficulty producing
 the most efficient code using in-place updates.
 
 The methodology for crash and concurrency reasoning used in Flashix is quite
-different from the approach of this thesis. The proof is split into two parts,
+different from the approach of this thesis. Refinement in Flashix is defined in terms of ``components,'' which are like a class in an object-oriented language. The proof is split into two parts,
 corresponding to concurrency and then crash reasoning. First, the proof shows
-that the entire file system is refines an abstract file system which by
-definition has \cc{atomic} blocks in its implementation. This proof is carried
-out using a mover-style argument, primarily relying on locks to automate the
-reasoning. Next, the proof reasons about the effect of a crash and abstracts
-those to a simple transition in the top-level specification.
+that the entire file-system implementation component is refines an abstract
+file-system component where the operations have \cc{atomic} blocks in their
+implementation. This proof is carried out using a mover-style argument,
+mostly automated due to the use of locks. Next, the proof reasons
+about the effect of a crash and abstracts those to a simple transition in the
+top-level specification. The former is an atomicity refinement that shows
+operations appear to behave atomically, while the latter is a crash refinement
+that shows crash safety.
 
 The Perennial program logic is based on a specification of an individual
-procedure, rather than for a whole ASM. This specification covers crash and
+procedure, rather than for a whole component. This specification covers crash and
 concurrency behavior together, rather than separating them into two refinement
 steps. The GoTxn implementation naturally has libraries whose methods are
-specified together, much like an ASM or class, for which on top of Perennial we
+specified together, much like a component, for which on top of Perennial we
 developed a pattern for logically atomic crash specifications. The advantage of
 reasoning about crashes and concurrency together is that Perennial can also
 reason about lock-free code, including code that persists data without holding
@@ -297,7 +300,7 @@ disk without locks.
 
 Perennial comes with a soundness theorem that allows to extract a final theorem
 about executions, proven in the Coq proof assistant. It is used to show a
-sophisticated transaction refinement theorem for GoTxn: unlike the ASM
+sophisticated transaction refinement theorem for GoTxn: unlike the component
 refinements in Flashix which are about fixed operations, this specification
 involves showing arbitrary code inside transactions has serializable behavior.
 In contrast the Flashix refinement approach is implemented in the KIV theorem
