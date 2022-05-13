@@ -871,3 +871,18 @@ numpages = {16}
   year = 2022,
   month = jan,
 }
+
+@inproceedings{vangoor:fuse,
+author = {Vangoor, Bharath Kumar Reddy and Tarasov, Vasily and Zadok, Erez},
+title = {To {FUSE} or Not to {FUSE}: Performance of User-Space File Systems},
+year = {2017},
+isbn = {9781931971362},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {Traditionally, file systems were implemented as part of OS kernels. However, as complexity of file systems grew, many new file systems began being developed in user space. Nowadays, user-space file systems are often used to prototype and evaluate new approaches to file system design. Low performance is considered the main disadvantage of user-space file systems but the extent of this problem has never been explored systematically. As a result, the topic of user-space file systems remains rather controversial: while some consider user-space file systems a toy not to be used in production, others develop full-fledged production file systems in user space. In this paper we analyze the design and implementation of the most widely known user-space file system framework--FUSE--and characterize its performance for a wide range of workloads. We instrumented FUSE to extract useful statistics and traces, which helped us analyze its performance bottlenecks and present our analysis results. Our experiments indicate that depending on the workload and hardware used, performance degradation caused by FUSE can be completely imperceptible or as high as -83% even when optimized; and relative CPU utilization can increase by 31%.},
+booktitle = {Proceedings of the 15th Usenix Conference on File and Storage Technologies},
+pages = {59–72},
+numpages = {14},
+location = {Santa clara, CA, USA},
+series = {FAST'17}
+}

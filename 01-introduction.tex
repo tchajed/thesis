@@ -25,7 +25,8 @@ makes it more difficult. File systems are a good instance of such a system where
 handling concurrency and crashes is important for correctness.
 
 A file system is an especially critical system for
-three reasons. First, the file system is widely used --- essentially all applications have
+three reasons. First, the file system is at a ``narrow waist'' in the overall
+software stack --- essentially all applications have
 data that is ultimately stored in a file system. Second, implementations are
 concurrent and optimized to improve performance, which increases the potential
 for bugs. Finally, bugs are particularly costly since they can lead to permanent

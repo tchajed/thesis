@@ -7,58 +7,27 @@ approach for reasoning about Go code. DaisyNFS is designed around a verified
 transaction system called GoTxn, which makes it feasible to scale verification
 by enabling sequential reasoning for transactions on top.
 
-\section{What is the value of verification?}
+\section{Lessons learned about verification}
 
-The reader might wonder about the broader value of verification and the
-contribution of the thesis. This section makes some broader points about the
-value of verification, both in general and in the specific case of this thesis.
+In the process of conducting this research, we made some interesting
+observations about verification more broadly that this section shares.
 
-\paragraph{Verification is valuable for critical systems.} It will never be cost
-effective to verify all software; at a minimum, for verification to be useful a
-piece of software needs a specification that is more likely to be correct than
-the implementation.
-Instead, the aim is to use verification for critical systems, \emph{critical}
-because failures are especially bad, and \emph{systems} that have well-defined
-guarantees to make to other systems and applications running on top. It is also
-helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
-used by many other pieces of software, since then the impact of bugs is felt to
-a greater extent. Finally, alongside the need for a specification it is also
-important that the verification respond to changes in both specification and
-implementation. If both change rapidly and the proofs cannot be re-done, then
-verification won't keep up with the pace of development. File systems fit all of
-these criteria: bugs can lead to data loss which the application cannot
-mitigate, the interface is stable and relatively standard, and essentially all
-applications go through the file system to store persistent state.
-
-\paragraph{Cost versus benefit.}
-I think about verification in terms of whether the benefits in terms of
-reliability outweigh the costs of writing the proofs. Research in verification
-generally aims to reduce the cost, or to identify areas with particularly large
-benefits. This thesis in particular focuses on making verification of crash-safe
-and concurrent systems possible, in order to give an upper bound on the cost.
-Further research would hopefully bring the costs down so that verification is an
-appealing approach for the next generation of storage systems.
-
-A real achievement for verification would be to use verification not just as
-alternative to the practices above, but to build something with more daring optimizations,
-features, or speed than would otherwise be possible; this would increase the
-benefits rather than decreasing the cost. Storage systems that holds persistent
-state have the potential to be just such an application. There aren't that many
-widely-used
-file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
-Windows, and APFS on macOS --- and new file systems are generally adopted
-slowly. APFS was surprising for having only a 3-year development period before
-Apple widely deployed it. Ext4 is the next newest of that list, introduced in
-2008 (by extending ext3, which was first released in 2001). Verification has the
-potential to create a file system that is more rapidly adopted by virtue of its
-proof. This might be especially applicable for some new hardware, like a file
-system for persistent memory or new zoned storage (ZNS) SSDs.
-
-% ext4: 2008
-% ext3: 2001
-% XFS: 1994 (first released on IRIX OS for SGI)
-% NTFS: 1993
-% APFS: 2017
+% \paragraph{Verification is valuable for critical systems.} It will never be cost
+% effective to verify all software; at a minimum, for verification to be useful a
+% piece of software needs a specification that is more likely to be correct than
+% the implementation.
+% Instead, the aim is to use verification for critical systems, \emph{critical}
+% because failures are especially bad, and \emph{systems} that have well-defined
+% guarantees to make to other systems and applications running on top. It is also
+% helpful in the cost-benefit tradeoff if the system is part of a ``narrow waist''
+% used by many other pieces of software, since then the impact of bugs is felt to
+% a greater extent. Finally, alongside the need for a specification it is also
+% important that the verification respond to changes in both specification and
+% implementation. If both change rapidly and the proofs cannot be re-done, then
+% verification won't keep up with the pace of development. File systems fit all of
+% these criteria: bugs can lead to data loss which the application cannot
+% mitigate, the interface is stable and relatively standard, and essentially all
+% applications go through the file system to store persistent state.
 
 % \paragraph{Mechanized proofs can be adapted to change.} Informal
 % reasoning even with a program logic can gain much of the value of formal
@@ -119,6 +88,52 @@ to incorrect specifications; for example, at one point we returned the wrong
 ``before'' WCC data, causing Linux to constantly invalidate its cache and send
 extra RPCs and reducing performance. Others were due to unverified code
 violating the assumptions in the verified code.
+
+\paragraph{Verification as an enabler.}
+A real achievement for verification would be to use verification not just as
+alternative to the practices above, but to build something with more daring optimizations,
+features, or speed than would otherwise be possible. Storage systems that holds persistent
+state have the potential to be just such an application. There aren't that many
+widely-used
+file systems --- most people use one of ext4, btrfs, or XFS on Linux, NTFS on
+Windows, and APFS on macOS --- and new file systems are generally adopted
+slowly. APFS was surprising for having only a 3-year development period before
+Apple widely deployed it. Ext4 is the next newest of that list, introduced in
+2008 (by extending ext3, which was first released in 2001). Verification has the
+potential to create a file system that is more rapidly adopted by virtue of its
+proof. This might be especially applicable for some new hardware, like a file
+system for persistent memory or new zoned storage (ZNS) SSDs.
+
+% ext4: 2008
+% ext3: 2001
+% XFS: 1994 (first released on IRIX OS for SGI)
+% NTFS: 1993
+% APFS: 2017
+
+While GoTxn and DaisyNFS don't have any radical optimizations, this observation
+did come up in our work. Making the logger and installer concurrent complicated
+the proof, but verification gave confidence that this was implemented correctly.
+Another example was the change Mark made to the installer, removing additional
+absorption; normally such a change would be considered subtle and would require
+thinking carefully about why the code was correct before and whether it still is
+correct. Mark made the change and verified it within a couple weeks, and we
+could accept the new code readily once the proof was complete.
+
+\paragraph{Choosing what to verify carefully.}
+In prior work on verified file systems, we typically exposed the file system via
+Filesystem in Userspace (FUSE). This path had two problems that switching to
+NFS solved. First, FUSE can be inefficient~\cite{vangoor:fuse}, adding overhead
+before even getting to the underlying file system's performance. Second, the API
+that FUSE file systems implement is not exactly the same as the POSIX or Linux
+APIs, so it can be challenging to know what the right specification for the file
+system should be and how this relates to what clients observe.
+
+The lesson we learned here is that it is important to carefully choose what part
+of the system to verify, thinking about how it interfaces with the rest of the
+world. Both NFS and FUSE require unverified code to take system calls and invoke
+the server or userspace file system respectively, but NFS has the important
+advantage that the interface the server exposes is written down in the form of
+an RFC.
 
 % \paragraph{Interactive theorem proving is a great way to prototype.} I do not
 % anticipate that busy engineers trying to write production code will write proofs
@@ -217,13 +232,15 @@ all follow the best practices developed along the way.
 
 \section{Future work}
 
-\paragraph{Apply the approach to Rust or C.} It would be interesting to port
-the Goose approach to Rust or C. This would not necessarily be for better
-performance but as a first step towards better systems integration. For example,
-Rust or C would be more practical for verifying critical parts of the Linux
-kernel. An important challenge for verifying in-kernel code would be modeling
-the specifications, both those assumed by the verified code and what is promised
-to the rest of the kernel.
+\paragraph{Apply the approach to the kernel.} It would be interesting to port
+the Goose approach to Rust or C and then apply it to code in the kernel. Go
+already gets good performance, but because it has a runtime a Go library cannot
+be made to run in the kernel (an interesting exception is to use Goose for
+Biscuit~\cite{cutler:biscuit}, an OS kernel written in Go). An important
+challenge for verifying in-kernel code would be modeling the specifications,
+both those assumed by the verified code and what is promised to the rest of the
+kernel. Since these are trusted specifications, it would be interesting to more
+carefully validate them, perhaps with dynamic instrumentation.
 
 \paragraph{Asynchronous model of the disk.} The disk model in Goose assumes
 writes are durable as soon as the write returns, but real disks typically buffer
