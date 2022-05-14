@@ -29,8 +29,8 @@ which obey some restrictions that the specification assumes the caller follows.
 
 The second challenge is supporting an in-memory allocator, which is necessary
 for the file system to get good performance but appears to violate GoTxn's rule
-that transactions do not access shared memory --- a transactions allocations and
-free operations affect other transactions immediately, not at commit time.
+that transactions do not access shared memory since allocating and
+freeing affect other transactions immediately, not at commit time.
 To address this challenge we include an
 allocator in the GoTxn API and proof. A non-deterministic,
 \emph{under-specification} of the allocator makes its behavior serializable, and
