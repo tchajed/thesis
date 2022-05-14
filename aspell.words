@@ -349,6 +349,7 @@ installOneBit
 instantiations
 inv
 invariants
+irreducibility
 isCrashLock
 isLock
 jbd
@@ -449,7 +450,6 @@ preLock
 preborrow
 pred
 printMode
-prophesize
 protobuf
 prover
 ptr

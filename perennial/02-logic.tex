@@ -55,8 +55,8 @@ terminology: though we use the term ``crash,'' these postconditions hold
 \emph{just prior} to the system actually shutting down, so that the contents of
 memory is unchanged.\footnote{They might more properly be called \emph{halt
 conditions}, but the original FSCQ paper~\cite{chen:fscq} used ``crash conditions'' and the term has
-stuck since then.} In \cref{sec:perennial:recovery} we'll connect these
-crash specifications to the memory wipe and reboot that happens right afterward.
+stuck since then.} \Cref{sec:perennial:recovery} connects these
+crash specifications to the memory wipe and reboot that happens immediately afterward.
 
 Some basic structural rules for these crash weakest preconditions are given in
 \cref{fig:wpc-structural}. These largely mirror structural rules from Iris and do not
@@ -67,7 +67,7 @@ the crash condition $Q_{c}$ with a weaker assertion $P_{c}$. The rule
 reasoning about $e_{1}$ followed by $e_{2}$. What it expresses is that to verify
 $\gooselet{x}{e_1}{e_2}$, a proof can verify $e_{1}$ first, then in its post-condition
 reason about $e_{2}$ with the return value $v$ from $e_{1}$ substituted for the
-bound variable $x$. The crash condition $P_{c}$  is carried throughout, since
+bound variable $x$ (denoted $\subst{e_2}{x}{v}$). The crash condition $P_{c}$  is carried throughout, since
 both $e_{1}$ and $e_{2}$ must maintain it.  Perennial has a similar but more
 general rule for arbitrary \emph{evaluation contexts} (of which $\goosekw{let}$
 is just an example), to reason about sequencing between a sub-expression and its
@@ -192,7 +192,7 @@ about the locked state if the system crashes in the middle of a critical
 section --- this is fine if the lock protects in-memory state that is anyway
 lost on crash, but insufficient for reasoning about locks that protect durable
 state. One intuition for what goes wrong is that a crash ``steals'' ownership of
-the locked state and forcibly transfers it to recovery, which is something the
+the locked state and forcibly transfers it to recovery, which is a possibility the
 proof of a concurrent, crash-safe system needs to reason about.
 
 \begin{figure}
@@ -223,7 +223,8 @@ section. Compared to the regular lock spec (\ruleref{wp-lock-alloc} and
 \ruleref{wp-lock-use}), the crash-aware specification (\ruleref{wpc-lock-alloc}
 and \ruleref{wpc-lock-use}) associates both a regular lock invariant $P$ with
 the lock and a crash condition $P_{c}$. The rule for allocating a lock dismisses
-the crash condition, similar to allocating an invariant, and intuitively the
+$P_{c}$ from the caller's
+crash condition, similar to allocating an invariant, and intuitively the
 reason why this rule is sound is that when the lock is used with
 \ruleref{wpc-lock-use} the caller is obliged to prove $P_{c}$ holds throughout
 the entire critical section (whereas the stronger lock invariant $P$ only needs
@@ -245,7 +246,7 @@ disk).
 A crash transition resets the heap to empty while preserving the disk state.
 Encoding the effect on the heap in separation logic is a bit tricky, since it would appear that
 assertions about in-memory pointers like $\ell \mapsto v$ need to be
-invalidated. The logic handles this by instead parameterizing all heap
+invalidated. The logic handles this by parameterizing all heap
 assertions and weakest preconditions with a \emph{generation number}. Across a
 crash, the generation number is incremented, so that old assertions are true but
 no longer work for loads and stores since they do not apply to the current heap.
@@ -286,7 +287,7 @@ where the crash condition implies the precondition:
 
 \begin{mathpar}
   \inferH{wpr-idempotence}%
-{\operatorname{durable}(P_{c}) \and P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}}%
+{\durable(P_{c}) \and P_{c} \proves \wpc{e_{r}}{P_{r}}{P_{c}}}%
 {\wpc{e}{P}{P_{c}} \proves \wpr{e}{e_{r}}{P}{P_{r}}}
 \end{mathpar}
 
@@ -322,7 +323,8 @@ invariants or crash locks, and the rest of the recovery proof no longer needs to
 prove them as part of the crash condition). The separating conjunction of all of these invariants will be
 $P_{c}$. Then the proof rules in Perennial guarantee that recovery can assume
 $P_{c}$ holds if the system crashes and reboots at any time, as given by the
-idempotence rule.
+idempotence rule. \Cref{ch:crash-logatom} gives more detail on how systems are
+specified in Perennial.
 
 \section{Soundness}%
 \label{sec:perennial:soundness}
@@ -368,8 +370,8 @@ basic version of the soundness theorem says:
 To satisfy the premise of the soundness theorem, the user gets to assume points-to
 facts for all of the addresses in the initial disk (the assertion $\bigast\limits_{a \mapsto v \in d} a \dmapsto v$). In return the theorem has
 several postconditions. First, the theorem promises
-that $e$ runs ``safely'' in the sense of encountering an irreducible expression;
-the semantics uses stuckness to indicate an expression that has hit an error. This immediately
+that $e$ runs ``safely'' in the sense of never encountering an irreducible expression;
+the semantics uses irreducibility (``stuckness'') to indicate an expression that has hit an error. This immediately
 rules out a number of errors, including any calls to Go's built-in \cc{panic()}
 function and lower-level issues like reading slices out-of-bounds and data
 races.  Second, the properties (1) and (2) state that the normal postcondition and
@@ -431,10 +433,10 @@ One aspect of the implementation that should be noted is that the rules as
 presented in this thesis have been simplified for exposition and are not sound
 as written. The real theorem statements require Iris features like the later modality,
 invariant namespaces, and masks to be sound. The later modality addresses issues with circularity that
-arises from Iris's flexible ghost state. Namespaces and masks are used to
+arise from Iris's flexible ghost state. Namespaces and masks are used to
 prevent re-entrancy where an invariant is opened twice by the same thread, which
 would be unsound. The
-on-paper presentation still aims to capture the essence, but the code is again
+on-paper presentation still aims to capture the essence, but the code is
 the source of truth for the Perennial logic. The soundness proof ensures that
 the code's rules are sound, and Coq checks that these details and their side
 conditions are all written correctly.

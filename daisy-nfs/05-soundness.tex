@@ -33,7 +33,7 @@ $\seqrefinement \targ{T, S}(i)$ says that $i$ is a correct sequential
 implementation of $S$ using $T$. The effect of each operation is given by a
 transition relation $\sigma \overset{\opv}{\leadsto} \sigma'$ that is part of the layer
 $S$. To specify correctness under crashes, the
-definition of sequential refinement refers to $\operatorname{crash}(\sigma, \sigma')$, which is a
+definition of sequential refinement refers to $\crash(\sigma, \sigma')$, which is a
 layer-specific crash transition that models, for example, clearing the
 contents of memory.
 
@@ -49,9 +49,9 @@ contents of memory.
   \]
 (2) $\mathrm{init}(\sigma_{S}, \sigma_{T})$ implies
 $R(\sigma_{S}, \sigma_{T})$, and \\
-(3) if $R(\sigma_{S}, \sigma_{T})$ holds and $\operatorname{crash}(\sigma_{T}$, $\sigma_{T}')$,
+(3) if $R(\sigma_{S}, \sigma_{T})$ holds and $\crash(\sigma_{T}$, $\sigma_{T}')$,
 then there exists a $\sigma_{S}'$ such that $R(\sigma_{S}', \sigma_{T}')$ and
-$\operatorname{crash}(\sigma_{S}, \sigma_{S}')$.%
+$\crash(\sigma_{S}, \sigma_{S}')$.%
   \label{def:seqrefinement}
 \end{definition}
 %

@@ -22,8 +22,8 @@ chapters.
 Perennial has some limitations. The logic can prove \emph{safety} properties
 (``nothing bad happens'') but not \emph{liveness} (``something good eventually
 happens''), a limitation inherited from Iris and in fact due to deeper
-theoretical reasons related to step indexing --- Transfinite Iris is an approach
-to solve this issue that discusses the reasons well~\cite{spies:transfinite}.
+theoretical reasons related to step indexing --- Transfinite Iris~\cite{spies:transfinite} is an approach
+to solve this issue, and the paper explains the difficulties well.
 Due to different technical reasons related to step indexing, it is not currently
 possible to put weakest precondition assertions inside crash conditions; such a
 feature is useful for reasoning about procedures stored on disk, something that
@@ -36,7 +36,7 @@ completes an operation from before the crash. As described here, operations must
 be simulated during the crash. It also does not implement Iris's support for
 prophecy variables~\cite{jung:prophecy}, though we believe this is doable --- an
 interesting extension to work out would be prophecies that predict a crash, or
-prophesize actions during recovery.
+prophecies over the behavior of a future recovery execution.
 
 \section{Takeaways beyond formal verification}
 
