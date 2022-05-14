@@ -53,7 +53,7 @@ simulation proof that captures how two-phase locking's concurrency control works
 \section{Limitations}
 \label{sec:txn:limitations}
 
-GoTxn has some limitations. The transaction refinement proof currently only support
+GoTxn has some limitations. The transaction-refinement proof currently only support
 \emph{synchronous} \cc{Commit}, which makes writes durable when it returns. The
 code also implements an asynchronous version of \cc{Commit} that makes the
 writes atomically visible to other threads, but durable only at a later point.

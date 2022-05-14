@@ -6,7 +6,7 @@ proof. The caller wraps a sequence of reads and writes in a transaction, which
 the transaction system promises to make atomic. GoTxn has a relatively
 sophisticated implementation. The write-ahead log supports buffering new writes,
 logging for durability, and installation concurrently since the logger and
-installer threads access disk without locks. The object layer implements
+installer threads access the disk without holding locks. The object layer implements
 safe concurrent access to objects within the same block. Two-phase locking
 ensures transactions do not conflict, guaranteeing isolation.
 
@@ -24,4 +24,5 @@ GoTxn is verified against its transaction-refinement specification using Perenni
 The proof is modular, using Perennial's logically atomic crash specifications to
 verify each layer separately and compose the proofs together. Of particular note
 in the proof is the \emph{lifting-based specification} of the
-journaling layer that captures what concurrent transactions do.
+journaling layer that captures what concurrent transactions do, and the
+\emph{history of multiwrites} abstract state to specify the write-ahead log's behavior.

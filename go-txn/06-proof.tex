@@ -74,17 +74,6 @@ space for new multiwrites.
 If a crash happens before the updates in an entry are fully installed,
 recovery installs the updates again from the on-disk log.
 
-A contribution from this part of the proof is a new \emph{abstract state} for
-the write-ahead log, which represents its state in terms of a history of all the
-multiwrites that have ever been issued. The abstract state is useful for giving
-a specification for the WAL's operations that is consumed by the rest of the
-proof concerning the code using the write-ahead log. It is not materialized at
-run time; there is no overhead to logically tracking the history in the proof.
-This section presents two variants of this state, an internal one that is closer
-to the implementation but less convenient for the caller, and a more abstract
-external one that is easier to use in the rest of the proof. Both variants are
-based on the key idea of using an append-only history as the state of the WAL.
-
 The write-ahead log implements two optimizations related to combining
 multiwrites. Two or more multiwrites can be \emph{group committed} by logging
 them together, which still guarantees their atomicity. If multiwrites being
@@ -92,6 +81,18 @@ committed together update the same block, the first update can be
 \emph{absorbed} and replaced with the second. These optimizations trigger both
 for multiwrites that are committed without waiting for durability and also for
 concurrent, synchronous multiwrites.
+
+A contribution from this part of the proof is a new \emph{abstract state} for
+the write-ahead log, which represents its state in terms of a history of all the
+multiwrites that have ever been issued. The abstract state is useful for giving
+a specification for the WAL's operations that is consumed by the proof of the
+\scc{obj} layer, which uses the write-ahead log.
+It is not materialized at
+run time; there is no overhead to logically tracking the history in the proof.
+This section presents two variants of this state, an internal one that is closer
+to the implementation but less convenient for the caller, and a more abstract
+external one that is easier to use in the rest of the proof. Both variants are
+based on the key idea of using an append-only history as the state of the WAL.
 
 % When a transaction is written in the log,
 % updates to the on-disk log is made atomic by first writing the updates
@@ -126,9 +127,10 @@ concurrent, synchronous multiwrites.
 % crash-safety at all times.
 
 
-\paragraph{Internal abstract state: logical log.}
+\paragraph{Internal abstract state: logical history of multiwrites.}
 To prove the write-ahead log layer correct, the proof represents the
-state of the write-ahead log as a logical list of multiwrites, as
+state of the write-ahead log as a logical history of multiwrites together with
+some important internal pointers, as
 shown in \cref{fig:log}.  Multiwrites before \cc{memStart} have
 already been installed, and their log entries do not physically exist in memory or on disk.
 Multiwrites from \cc{memStart} to \cc{diskEnd} are already logged on
@@ -162,10 +164,10 @@ an arbitrary suffix of the log from \cc{diskEnd} onwards is discarded.
 \paragraph{External abstract state: durable lower bound.}
 Although the details of the logical log are important for proving the
 \scc{wal} layer, the caller (i.e., the \scc{obj} layer) does not need
-to know about installation, group commit, etc. To abstract away these
+to know about installation, group commit, and absorption. To abstract away these
 details, the \scc{wal} provides a simplified state as its interface,
 as shown in \cref{fig:wal-spec}.  The simplified state consists of
-the same list of multiwrites, together with \cc{durable_lb}, which is
+the same history of multiwrites, together with \cc{durable_lb}, which is
 a lower bound on what set of multiwrites will be preserved on crash.
 Using a lower bound instead of precisely exporting \cc{diskEnd} means
 that this abstract view does not need to change if the logger thread
@@ -225,14 +227,15 @@ in memory. GoTxn's proof uses the notion of \emph{monotonic counters} to reason
 about the safety of the logger and installer's lock-free operations.
 
 The logger thread needs to check that \cc{memStart} is far enough along that the
-log will have space for the new multiwrite. The proof gets a \emph{lower bound}
-on the \cc{memStart} variable while holding a lock, which remains true even
-after releasing the lock. Even though \cc{memStart} might grow after the initial
-check, the log will only have more space and thus the multiwrite will still fit.
+log will have space for the new multiwrite. The proof reasons that the
+\cc{memStart} variable read while holding a lock is a \emph{lower bound},
+which remains valid even
+after releasing the lock. Even though \cc{memStart} might grow after it is initially
+read, the log will only have more space and thus the multiwrite will still fit.
 
-The installer has a similar lock-free region that also reasons using a lower
+The installer has a similar lock-free region which the proof reasons about using a lower
 bound. The installer retrieves the updates from the current \cc{memStart} to
-\cc{diskEnd} in order to start installing them to disk. When the installer
+\cc{diskEnd} in order to start installing them to disk while holding a lock. When the installer
 eventually trims the log, it needs to be sure not to advance beyond the current
 logger position, which the proof demonstrates using a lower bound on
 \cc{diskEnd} from when the logger initially started.
@@ -240,7 +243,7 @@ logger position, which the proof demonstrates using a lower bound on
 The proof of this aspect of the write-ahead log is one of the trickiest parts of
 GoTxn, because of the lock-free concurrency in the write-ahead log. For more
 details on the proof strategy, see Mark Theng's thesis~\cite{mtheng-meng}. Mark
-helped complete the proof and described the complete proof and its invariants in
+helped complete the proof and described the proof and its invariants in
 more detail in his thesis.
 
 \paragraph{Specifying lock-free reads.}
@@ -312,9 +315,9 @@ needs to be after that write).
 linearization point for \cc{Read(a)} depends on future operations. In
 this example, there is a concurrent write to the address being read
 (highlighted in red). Because this write is installed before the
-\cc{ReadInstalled} operation, the correct linearization point is after the read,
-but if the installation had not happened yet the \cc{Read} would return the old
-value and the linearization point is earlier.}
+\cc{ReadInstalled} operation, the correct linearization point is after the write,
+but if the installation had not happened yet the \cc{Read(a)} operation would return the old
+value and the linearization point needs to be before the concurrent write.}
 \label{fig:wal:future-read}
 \end{figure}
 
@@ -324,7 +327,8 @@ abstract state includes a lower bound on its installed point in order to
 describe \cc{ReadInstalled()} in isolation. This installed lower-bound is a
 lower-bound on the \cc{memStart} pointer from the internal abstract state, in
 much the same way that the durable lower bound gives a bound on \cc{diskEnd}.
-The specification for \cc{ReadMem(a)} if the address \cc{a} is not in the log says that it
+The specification for \cc{ReadMem(a)} says that if the address $a$ is not in the
+log, the operation
 advances the installed lower bound enough to guarantee that there are no writes
 to that address after the new installed lower-bound. The specification for
 \cc{ReadInstalled()} can return any value the address had after the
@@ -357,11 +361,11 @@ layers.
 As a motivating example, consider the moment when the logger thread commits a
 new batch of multiwrites to the physical log in order to advance the durable
 point \cc{diskEnd} in the logical log of the \scc{wal} layer. It does this by calling into the
-\cc{Append} method of the \scc{circular} layer, which appends to the small
+\cc{Append} method of the \scc{circ} layer, which appends to the small
 buffer of logged multiwrites. The code for \cc{Append} commits at some internal
 step when it writes the header block and makes the data valid, and it is at this
 instant that the logical log's \cc{diskEnd} should be incremented.
-How can we verify \cc{Append} in the \scc{circular} layer separately from the \scc{wal} layer,
+How can we verify \cc{Append} in the \scc{circ} layer separately from the \scc{wal} layer,
 while still executing the right update in the logger proof?
 
 Logically atomic specifications achieve this separation by having the precondition to \cc{Append}
@@ -407,7 +411,7 @@ logger passes a callback that adds \cc{len(txns)} to the \cc{diskEnd} ghost vari
 \subsection{Concurrency within a block (\scc{obj})}
 \label{s:proof:obj}
 
-\txn's \scc{obj} layer allows the caller to issue reads and writes that
+GoTxn's \scc{obj} layer allows the caller to issue reads and writes that
 are smaller than a full block.  This finer granularity helps increase
 concurrency: for example, the NFS file server packs multiple inodes into
 a single disk block, and \scc{obj} allows threads to concurrently read
@@ -466,7 +470,7 @@ the caller is guaranteed to see the correct object $o$.
 
 The object layer supports \emph{bit-sized} objects, which create a verification
 challenge since the operations involved are implemented with low-level bit
-manipulation. One example is a function \cc{installBit(src u8, dst u8, off
+manipulation. One example is a function \texttt{installBit(src byte, dst byte, off
 uint64) uint64} that returns \cc{src} with the \cc{off}th bit replaced with
 the corresponding bit from \cc{dst}. The specification for this code uses a pair
 of conversion functions \cc{byte_to_bits} and \cc{bit_to_bytes} that go between

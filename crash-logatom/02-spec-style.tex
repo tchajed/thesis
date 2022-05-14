@@ -192,7 +192,7 @@ logical disk, while $a \mapstoOp o$ gives the value at address $a$ that
 an in-progress operation $op$ would observe. The lifting-based specification
 gets its name from a logical ``lift'' operation that trades $a \mapstoDisk o$
 for $a \mapstoOp o \sep a \mapstoLftd o$. This brings us to the
-third type of GoJournal resource, $a \mapstoLftd o$, which is
+third type of journaling resource, $a \mapstoLftd o$, which is
 almost identical to $a \mapstoDisk o$ except that it has been lifted and thus
 cannot be lifted again.\footnote{In the implementation,
 $a \mapstoLftd o$ is the primitive resource. There is a
