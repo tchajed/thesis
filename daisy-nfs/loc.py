@@ -175,6 +175,7 @@ def main():
 
     if args.latex:
         with open(join(args.latex, "loc-cmds.tex"), "w") as f:
+            print("% auto-generated with daisy-nfs/loc.py", file=f)
             for cat, lines in lines.items():
                 cmd_name = "\\daisy" + "".join([s.capitalize() for s in cat.split()])
                 # triple {{{ }}} means one layer of literal curly braces, then
