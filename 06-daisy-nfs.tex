@@ -1,10 +1,10 @@
 DaisyNFS is a verified, concurrent, and crash-safe file system, built on top of
 GoTxn. This chapter describes its specification, implementation, and proof. A
 key aspect of DaisyNFS is that the proofs of the file-system code use \emph{sequential
-reasoning}, even though DaisyNFS is a concurrent file system --- this is possible
-due to a \emph{simulation-transfer theorem}. The theorem uses the strong
+reasoning}, even though DaisyNFS is a concurrent file system. This is possible
+due to a \emph{simulation-transfer theorem} that uses the strong
 guarantee of GoTxn to enable verifying a system written with transactions using
-entirely different techniques, so that the file-system proofs are carried out in
+a different proof strategy, so that the file-system proofs are carried out in
 Dafny, a sequential verification-oriented programming language.
 
 \input{daisy-nfs/01-intro}
