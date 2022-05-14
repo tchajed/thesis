@@ -6,7 +6,7 @@ Lifting is defined at an intermediate layer, \scc{jrnl} (for journaling), rather
 than for \scc{txn} which is the top-level API of GoTxn. Journaling uses what we
 call ``operations'' to distinguish them from ``transactions'' --- reads and
 writes are performed from within the context of an operation, and like a
-transaction the writes can be committed atomically to
+transaction the writes are committed atomically to
 disk, but the difference is that the calling library is responsible for guaranteeing
 concurrent operations manipulate disjoint sets of addresses. The complete API is
 shown in \cref{fig:jrnl-api}. In the case of GoTxn, that caller is
@@ -23,7 +23,7 @@ func (op *Op) Write(a Addr, szBits uint64, d []byte)
   \caption[API for the journaling layer.]{The API for the journaling layer, \scc{jrnl}. There is no
     \cc{Abort()} method (the caller simply abandons the \cc{op} struct). Reads
     and writes support bit-sized objects within the same API.\@ The \cc{Addr}
-    struct is the same as the GoTxn API (\cref{fig:txn-api}).}
+    struct is the same as one given in the GoTxn API (\cref{fig:txn-api}).}
   \label{fig:jrnl-api}
 \end{figure}
 
@@ -50,7 +50,7 @@ address $a$. The second resource, $a \mapstoOp o$, asserts ownership of the
 operation-local view associated with an in-memory operation $\mathit{op}$; it
 mean that either the on-disk value is $o$ or that $\mathit{op}$ contains a
 buffered write with the value $o$ to address $a$. The last resource,
-$a \mapstoLftd o$ is similar to $a \mapstoDisk o$, but the details are related
+$a \mapstoLftd o$ is similar to $a \mapstoDisk o$, but the difference is related
 to lifting and explained below.
 
 The life cycle of these resources, as they are modified by lifting, writes,
@@ -71,38 +71,46 @@ specifications are detailed in the remainder of this section.
 The first step in using the journaling specification is to initialize the whole
 system. Initialization is somewhat complicated by restrictions GoTxn places
 on how sub-block objects are used. The proof requires the caller to fix ahead of
-time (when the whole journaling system is initialized) for each block a size for
-the objects within. Currently our proofs assume that objects are either a single bit, 128
-bytes, or a full block, but supporting an arbitrary power of two should be a
+time (when the whole journaling system is initialized) a size for
+the objects within each block. Currently our proofs assume that objects are either a single bit, 128
+bytes (to hold inodes), or a full block, but supporting an arbitrary
+power-of-two-sized block should be a
 straightforward extension. To initialize the system, the caller supplies a
 ``schema'' which gives a size for the objects in each disk offset (that is, every 4KB
 aligned offset, not the journal's logical sub-block addresses); this enforces
-that all the objects within a block are of the same size, which also simplifies
-the proof.
+that all the objects within a block are of the same size.
 
 The journal's initialization is specified by giving the caller a lemma that
 transform ownership over the entire physical disk into the precondition for the
 journal's recovery procedure; from this point forward the usual crash and
 recovery reasoning in Perennial applies. For each offset $i$ and block size $k$, the initial ownership for that disk
-block consists of the address $(i, k \times o)$ within that block:
+block consists of the address $(i, k \times o)$ within that block (this is
+mathematical notation for the Go struct
+\texttt{Addr\{Blkno:\;i, Offset:\;k*o\}}).
+More formally the initial ownership for a given $i$ and $k$ is given by the
+following definition:
 \[
   \operatorname{zeroObjects}(i, k) \defeq \bigast_{0 \leq k \times o < 4096} (i, k \times o) \mapstoDisk 0
 \]
 
 
-The initialization lemma creates resources for all of these initial objects,
+The initialization lemma \ruleref{jrnl-init} creates resources
+for all of these initial objects,
 starting from an all-zero disk. The lemma takes a schema
 $\mathit{kinds}$ that maps disk addresses to block sizes and a disk size $s$;
 this schema is arbitrary but fixed at initialization time. We use
 $i \mapsto_{\mathrm{disk}} 0$ to denote ownership over a physical disk offset $i$
 (not to be confused by the $a \mapstoDisk o$ issued by the journaling proof).
-\begin{align*}
-  &513 \leq s \land {} \\
-  &\operatorname{dom}(\mathit{kinds}) = \{ i \mid 513 \leq i < s \} \land {} \\
+\begin{mathpar}
+  \inferH{jrnl-init}{}{
+{\begin{aligned}
+  &513 \leq s \land \dom(\mathit{kinds}) = \{ i \mid 513 \leq i < s \} \land {} \\
   &\bigast_{0 \leq i < s} i \mapsto_{\mathrm{disk}} 0 \wand {} \\
   &\vs \cc{is_txn_crash_condition}(\mathit{kinds}) \sep {} \\
   &\quad \bigast_{(i,k) \in \mathit{kinds}} \operatorname{zeroObjects}(i, k)
-\end{align*}
+\end{aligned}}
+}
+\end{mathpar}
 
 Notice that this initialization is just a logical operation; the schema is not
 even required at runtime for the code. It creates \cc{is_txn_crash_condition},
@@ -120,13 +128,11 @@ $a \mapstoDisk o$ by protecting it with a per-address lock.
 
 The specification for \cc{Begin()} is straightforward, since the operation has
 not yet interacted with the disk:
-\hypertarget{tgt:begin-spec}{}
 %
 \begin{align*}
   \hoareV{\TRUE}%
   {\cc{Begin}()}%
   {\Ret{op} \isop}
-   %\tagH{BeginSpec}
 \end{align*}
 The specification has a trivial precondition of $\TRUE$ and its postcondition
 returns an assertion \cc{is_op}, which says that $\mathit{op}$ is a valid
@@ -140,10 +146,10 @@ $\cc{is_op}(\mathit{op})$.
 In order to interact with an address within an operation, the specification
 requires the caller to start with $a \mapstoDisk o$ and then \emph{lift} it to
 obtain an operation-local resource, where lifting is the following purely
-logical operation:
-\[
-  \isop \sep a \mapstoDisk o \vs \isop \sep a \mapstoOp o \sep a \mapstoLftd o
-\]
+logical operation \ruleref{jrnl-lift}:
+\begin{mathpar}
+  \inferH{jrnl-lift}{}{\isop \sep a \mapstoDisk o \vs \isop \sep a \mapstoOp o \sep a \mapstoLftd o}
+\end{mathpar}
 
 Notice that the result of lifting is both an operation-local assertion and
 $a \mapstoLftd o$; this latter assertion is much like $a \mapstoDisk o$ in that
@@ -193,7 +199,7 @@ The wand says that if
 the caller returns ownership of $\cc{buf_obj}(\mathit{buf}, o)$, it can get back
 the $\cc{is_op}(\mathit{op})$ predicate. This allows the caller to use the
 buffer to read the data before continuing to read and write within the
-operation. The complete specification in GoJournal also supports modifying the
+operation. The complete specification in the \scc{jrnl} layer also supports modifying the
 object using the buffer returned by \cc{ReadBuf}~\cite{chajed:gojournal}, but
 GoTxn does not expose that feature.
 
@@ -234,8 +240,8 @@ the left- or right-hand side depends on exactly when the system crashes; see
 this.
 
 It's a little easier to see the overall structure of \cc{Commit}'s specification
-if we specialize it to a single address (although the specification is powerful
-because it captures atomicity across multiple addresses):
+when specialized to a single address (although the real specification is powerful
+precisely because it captures atomicity across multiple addresses):
 \begin{align*}
   \hoareCV{a \mapstoLftd o \sep a \mapstoOp o'} %
   {\mathit{op}.\cc{Commit}()}%

@@ -13,14 +13,14 @@ That is, given a program
 $p : \gooselayer{Txn}$, if the transaction operations of $p$ are linked with
 GoTxn (implemented in $\gooselayer{Disk}$), the implementation program's
 observable behaviors (from running on a disk) are a subset of the
-specification's behaviors (with high-level transaction-system operations, and in
-particular atomicity for transactions). The proof of this theorem leverages the
+specification's behaviors (with high-level transaction-system operations and
+atomic execution for transactions). The proof of this theorem leverages the
 journaling specification from \cref{sec:txn:lifting}, extending it to also
 reason about the concurrency control implemented with two-phase locking.
 
 In general, the Perennial framework supports proving crash-safe, concurrent refinements between a
 specification layer $\gooselayer{S}$ and an implementation layer $\gooselayer{I}$ by constructing
-a simulation between the specification and its implementation. The simulation is
+a \emph{forward simulation} between the specification and its implementation. The simulation is
 expressed in terms of refinement conditions that are written using the usual
 Perennial Hoare triples specifications (with pre- and postconditions),
 so that they can be proven using the full spectrum of techniques in Perennial.
@@ -30,8 +30,8 @@ approach developed by \citet{turon:caresl}, in a refinement proof in Perennial t
 program is represented by \emph{ghost state}. The logic then has assertions for
 describing this ghost state.  For example, for the Txn layer, the assertion $\cc{a}
 \txnmapsto b$ says that address $a$ contains the value $b$ in the ghost
-transaction system's state. In addition, there are \emph{thread points-to}
-assertions, written $j \thdmapsto \cc{e}$, which says that thread $j$ in the
+transaction system's state. In addition, there is the \emph{thread points-to}
+assertion, written $j \thdmapsto \cc{e}$, which says that thread $j$ in the
 specification program is executing program $\cc{e}$. Perennial has rules
 for updating the ghost state by ``executing'' these ghost threads, such as the
 following view shift:
@@ -64,7 +64,7 @@ soundness theorem. The soundness theorem combines
 the classic technique of \emph{logical relations} with a low-level
 soundness theorem from Perennial to derive the desired refinement between the two
 programs, rather than the usual Hoare triple soundness theorem about a single
-program's executions. The resulting theorem statement expresses refinement
+program's execution. The resulting theorem statement expresses refinement
 directly (without referencing the Perennial logic), while its proof has access
 to the full range of Perennial's features.
 
@@ -132,14 +132,14 @@ the operation-local points-to assertion.
 
 \item Executing $n$ steps of $\cc{f}$ in \emph{any} starting state that has the same
   values as $J$ for the addresses in $\Sigma$ can lead to a state with values given
-  by $J'$.
+  by $J'$, and the same value for the other addresses.
 
 \end{enumerate}
 %
 When the transaction is about to commit, the locking described by the first part of the
 invariant ensures that the durable value of each address still match the values
 in $J$. The second part of the invariant means that even though other
-parts of the state outside of $\Sigma$ may have changed, those changes do not
+parts of the state outside of $\Sigma$ may have changed since the transaction started, those changes do not
 affect execution of $\cc{f}$. Thus, the ghost execution of $\cc{f}$ at this point will
 have the same behavior as the implementation. The transaction's invariant
 maintains ownership of the resources to use the journal's \cc{Commit}
@@ -154,7 +154,7 @@ Showing that the second part of the invariant holds requires that code within a
 transaction must not access global state outside of the
 transaction system, as mentioned in \cref{sec:txn:transaction-refinement}. Accesses to such global state
 would violate the invariant because their behavior would then depend upon
-things outside of the footprint $\Sigma$. Because those global values could change
+state outside of the footprint $\Sigma$. Because those global values could change
 by the time the transaction commits, the above argument would no longer work if they were allowed.
 
 The allocator creates another subtlety related to the second part of this
@@ -165,15 +165,3 @@ the fact that an allocated address is no longer free. As described in
 \cref{sec:txn:transaction-refinement}, GoTxn under-specifies the allocator's behavior so that it
 atomically follows its (non-deterministic) specification even though it is not
 protected by the 2PL locking discipline.
-
-% Suppose the transaction being simulated is $\operatorname{Atomically}{f}$, and the implementation
-% has executed $n$ steps of $f$, accessing addresses in the set $\sigma$.
-
-% Let $J_1 : \cc{addr} \rightarrow Obj$ be a map giving the durable state of the journal at the start of the transaction, and let $J_2$ be the current buffered in-memory view of the state from the perspective of the transaction.
-% Then, the invariant requires that:
-% \begin{enumerate}
-% \item the transaction holds the lock for every address $a \in \sigma$
-% \item for each $a$, $J_1(a)$ matches the ghost state value for the address $a$
-% \item if $J_1'$ is a mapping such that $\forall a \in \sigma$, $J_1(a) = J_1'(a)$, then executing $f$ for $n$ steps with an initial journal $J_1'$
-% \end{enumearte}
-% \joe{this would probably be vastly improved by using math notation that matches whatever will have been used in the previous two sections}
