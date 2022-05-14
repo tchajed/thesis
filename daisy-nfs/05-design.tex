@@ -3,7 +3,7 @@
 
 \Cref{sec:daisy:proof-dafny}
 explains how DaisyNFS connects sequential verification in Dafny to concurrency
-and crash safety in GoTxn. This instead section focuses on the sequential
+and crash safety in GoTxn. This section focuses on the sequential
 verification and file-system design themselves.
 
 % The proof is given by annotating the code with proof steps, which include
@@ -45,12 +45,13 @@ indirect and block layers), translating byte-level operations into
 block operations (the byte and typed layers), and implementing
 directories as special files that the file system itself reads and
 writes (the dir layer). The modularity was essential to complete the proof in
-manageable chunks (to avoid overwhelming the developer and prover), and it would
-have been natural even without verification.
+manageable chunks (to avoid overwhelming both the developer and prover), and
+these intermediate interfaces would
+have been natural to implement even without verification.
 
 \subsection{Implementing the file system using transactions}
 
-The design of DaisyNFS is broadly similar to the file system in xv6~\cite{xv6},
+Aspects of the design of DaisyNFS are similar to the file system in xv6~\cite{xv6},
 as well as Yggdrasil~\cite{sigurbjarnarson:yggdrasil}, a verified sequential
 file system. We also adopt the recursive strategy for implementing and
 verifying indirect blocks from DFSCQ~\cite{akonradi-meng}; recursion simplifies
@@ -65,7 +66,7 @@ files.
 \subsubsection{Rename}
 \label{sec:dafny:rename}
 
-The NFS RENAME operation is similar to the \cc{rename} system call: it moves a
+The NFS \cc{RENAME} operation is similar to the \cc{rename} system call: it moves a
 source file or directory to a destination location. What makes it tricky is that
 it involves more than one inode and hence introduces the possibility for
 deadlock.
@@ -79,16 +80,17 @@ In a rename operation, the source and destination are each specified by a
 combination of the parent directory inode and name within that directory. Rename
 has an additional functionality of overwriting the destination if the source and
 destination are files, or if both are directories and the destination is empty.
-It is this latter check that makes deadlock avoidance difficult: it is necessary
+It is this overwrite-compatibility check that makes deadlock avoidance difficult: it is necessary
 to lock the source and destination directories first to lookup the source and
 destination names, but those might be files that are earlier in the inode lock
 order. We address this in the code by returning an error from the Dafny
 transaction before the lock order would be violated. The error comes with the
 set of inodes that should have been acquired.  The rename is then re-run with
-this set of inodes as a lock hint which are all acquired in the correct
+this set of inodes as a lock hint, and they are all acquired in the correct
 order at the beginning of the operation. The inodes to lock are only a hint and must be compared
-against the current source and destination in case those inodes have changed in
-the mean time. The rename operation runs in a loop until the lock hint succeeds;
+against the current source and destination, in case those inodes have changed
+since the last transaction. The overall rename operation runs in a loop until
+the locking succeeds;
 the loop is potentially unbounded, but each iteration can only fail due to
 concurrent renames that involve the same inodes.
 
@@ -98,7 +100,7 @@ system, rather than generically in GoTxn. The transaction system could
 avoid deadlocks by either enforcing a global order over addresses or by
 timing-out operations. Enforcing a global order is inefficient for the file
 system; data blocks will never cause deadlock because the file system only
-accesses a block after locking the (unique) inode that owns it. Timing-out
+accesses a block after locking the (unique) inode that contains it. Timing-out
 operations would lead to slow and spurious transaction failures that could more
 rapidly be avoided in the higher-level code, hence we do not attempt to detect
 deadlock dynamically.
@@ -111,7 +113,7 @@ Freeing space becomes surprisingly tricky with large files. The problem is that
 a large-enough file may reference too many blocks to be
 freed in a single transaction. Transactions are bounded by the size of the
 on-disk log (which can hold 511 blocks), whereas freeing a file requires
-writing 0s to the block allocator for all of its formerly used blocks to mark them as free.
+writing zeros to the block allocator for all of its formerly used blocks to mark them as free.
 DaisyNFS handles this issue by splitting file removal and space reclamation
 into separate transactions. The latter is implemented with an operation
 \cc{ZeroFreeSpace(ino)} which frees and zeros the unused space in an inode that
@@ -161,8 +163,9 @@ sequence of blocks, hiding the fact that some of the blocks are used as
 metadata. These sequences are always of the maximum size, and only the next
 layer reasons about file sizes. To efficiently represent files of the maximum
 size, the code uses a convention that a zero block address is treated implicitly
-as encoding a zero block, including for indirect blocks, an idea borrowed from
-DFSCQ~\cite{akonradi-meng}. Indirect blocks are implemented recursively, where a
+as encoding a zero block, including for indirect blocks, an idea borrowed Alex
+Konradi's work on DFSCQ, a sequential verified file system~\cite{akonradi-meng}.
+Indirect blocks are implemented recursively, where a
 $k$-indirect block is always treated as containing 512 pointers to
 $(k-1)$-indirect blocks, and a 0-indirect block contains file data. Zeros are
 also treated recursively so that a single zero in an inode for the root of a
@@ -171,15 +174,16 @@ gigabytes of zeros.
 
 An inode has space for twelve 64-bit block addresses, after accounting for space
 used by its attributes and type information. In principle all of these addresses
-could be uniformly used as triply-indirect blocks. However, this would create a
-lot of indirection for small files and lower performance for the common case.
-Thus instead of organizing them in this way, the code uses a whole range, with
+could be used uniformly as triply-indirect blocks. However, this would create a
+lot of indirection and lower performance for the common case of small files.
+Thus instead of organizing them in this way, the code uses a range of indirection, with
 mostly direct blocks and a handful of indirect blocks. To keep the code general,
 the indirection level of each of the twelve blocks is given in a global
 indirect-block configuration, and most of the code is generic over the configuration. We currently
-configure DaisyNFS with 8 direct blocks, two 1-indirect blocks, a 2-indirect
-block, and a 3-indirect block. Just the direct and indirect blocks can address 4
-MB fairly efficiently, but the triply-indirect block allows files to be large.
+configure DaisyNFS with 8 direct blocks, two indirect blocks, a doubly-indirect
+block, and a triply-indirect block. Just the direct and indirect blocks can address 4
+MB fairly efficiently, but the triply-indirect block allows files to be large
+(up to 512~GB).
 
 Indirect blocks pose a challenge for verification due to the classic problem of
 \emph{aliasing}. The proof must show that modifying a data block or indirect
@@ -196,15 +200,15 @@ only affects its owner and nothing else.
 To encode the reverse mapping, the code uses a ``position'' datatype \cc{Pos} to
 represent the location of a block within an inode. With indirect blocks, the
 metadata blocks themselves also need to be considered locations, since the
-invariant must also rule out metadata aliasing with data or other metadata. A
-\cc{Pos} encodes an inode, an indirection level, and an offset for the blocks at
+invariant must also rule out aliasing between metadata and data. A
+\cc{Pos} encodes an inode, an indirection level, and an offset within
 that indirection level to uniquely identify where a block is used. If we imagine
 that an inode's block pointers are organized in a tree, the roots are stored
 directly in the inode while the leaves are direct blocks. An indirection level
 which is higher than the leaf level describes a metadata block.
 
 The indirect block proof is split into the indirect and blocks layers. In the
-indirect layer, the abstract state maps a \cc{Pos} to a block, and separately
+indirect layer, the abstract state maps a \cc{Pos} to the 4KB data block stored there, and separately
 tracks the size and attributes of each inode. The invariant also expresses that
 the block allocator's used blocks have an associated \cc{Pos} and that the free
 ones do not. The interface for the indirect layer exposes reads and writes for

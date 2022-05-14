@@ -39,7 +39,8 @@ contents of memory.
 
 \begin{definition}
   The implementation $i : S \to \gooselayer{T}$ is a \emph{sequential
-    refinement}, written
+    refinement}, written \newline
+  % latex makes a really overfull line, hence a manual line break
   $\seqrefinement \targ{T, S}(i)$, if there exists an abstraction relation
   $R : \Sigma_{S} \to \Sigma_{T} \to \textdom{bool}$ such that: \newline
 (1) for every operation
@@ -56,7 +57,7 @@ $\crash(\sigma_{S}, \sigma_{S}')$.%
 \end{definition}
 %
 Conditions (1) and (2) in this definition are standard for sequential
-verification of refinement, while condition (3) is a standard condition for sequential crash-safety~\citep{chajed:argosy}. Though condition (3) requires the
+verification of refinement, while condition (3) is a condition for sequential crash-safety~\citep{sigurbjarnarson:yggdrasil,chajed:argosy}. Though condition (3) requires the
 abstraction relation to be preserved by crashes, the proof engineer does \emph{not} have to reason about crashes in the middle of operations.
 % is a standard condition for sequential crash-safety~\cite{chajed:argosy}
 % for sequential crash safety~\cite{chajed:argosy}.
@@ -110,14 +111,13 @@ $\forall \opv.\, \safe(i(\opv))$ hold. Then
 \label{thm:gotxn-transfer}
 \end{theorem}
 \nopagebreak
-
 The theorem is about a program $p$ using some API $\Sys$, such as the server
 loop for DaisyNFS seen in \cref{sec:daisy:refinement-spec}, and an
 implementation $i$ of this API.\@
 The conclusion is a refinement that uses $p$ as the \emph{specification}; recall
-that the semantics of $p$ defines all the $\Sys$ operations to be atomic at this
-layer. The left-hand side is the executable code for this program, derived in
-two steps: first $\mathrm{link}(p, \atomiccomp i)$ takes each abstract operation
+that the semantics of $p$ defines all of the $\Sys$ operations to be atomic at this
+layer. The left-hand side is the executable code for this program, derived by
+composing two functions: first $\mathrm{link}(p, \atomiccomp i)$ takes each abstract operation
 $\opv$ in $p$ and replaces it with $\atomically{i(\opv)}$, and second
 $\linked{\mathrm{link}(p, \atomiccomp i)}$ takes the result of this process and
 further replaces $\atomically{i(\opv)}$ with executable code that uses the GoTxn
@@ -141,7 +141,7 @@ correctly simulate $p$ at the $\mathit{Sys}$ abstraction level.
 
 Simulation transfer reduces verifying DaisyNFS's correctness to reasoning about
 the transaction that implements each NFS operation. Because this reasoning is
-sequential, we carry it out in Dafny, a verification-oriented programming language.
+sequential, we carry it out in Dafny~\cite{leino:dafny}, a verification-oriented programming language.
 Let $\infs : \mathrm{NFS} \to \gooselayer{Txn}$ denote a model of the
 Dafny implementation of each NFS operation, as a program using the GoTxn
 interface. Note that this is merely a hypothetical model of the Dafny code,
@@ -149,15 +149,16 @@ since Goose does not support enough of Go to explicitly construct these terms in
 GooseLang. The Dafny annotations on these methods prove sequential refinement
 conditions that we will denote $\seqrefinementdfy(i)$, as
 illustrated in \cref{fig:refinement}. This sequential refinement is indexed by
-``dfy'' to indicate that it captures what is proven in Dafny. It is intended
+``dfy'' to indicate that it refers to what is proven in Dafny. It is intended
 that this obligation captures $\seqrefinement(i)$ from the simulation-transfer
-theorem, but using a formal distinction always to say that the connection
+theorem, but using a formal distinction allows to say that the connection
 between these definitions is trusted. Dafny checks the following lemma that
 $\infs$ is correct, which will eventually be used to show the overall DaisyNFS
 correctness theorem:
 %
 \nopagebreak
-\begin{lemma} $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
+\begin{lemma}
+  $\seqrefinementdfy(\infs)$ holds, as checked by Dafny.
   \label{thm:dafny}
 \end{lemma}
 
@@ -196,16 +197,17 @@ class Filesys {
   \label{fig:dafny-outline}
 \end{figure}
 
-\newcommand{\Op}{\mathcal{O}}
+\newcommand{\Op}{\mathbb{M}}
 
 To describe how Dafny encodes this form of refinement, we start by describing its
 specification transition system in more formal detail. The specification
 transition system is
 a triple $S = (\Sigma, \Op, \delta)$ where $\sigma \in \Sigma$ is a set of states,
-$o \in \Op$ is a set of operations, and $\delta$ is a relation, where
-$\delta(\sigma, o, \sigma', v)$ is true when in state $\sigma$ operation $o$ can
+$m \in \Op$ is a set of operations,\footnote{we use the metavariable $m$ to
+suggest that these are methods} and $\delta$ is a relation, where
+$\delta(\sigma, m, \sigma', v)$ is true when in state $\sigma$ operation $m$ can
 transition to $\sigma'$ and return $v$. To simplify the notation, the transition
-system has a special operation $\mathsf{crash}$ to represent a crash transition.
+system has a special operation $\mathsf{crash} \in \Op$ to represent a crash transition.
 
 \newcommand{\altsys}[1]{\tilde{#1}}
 
@@ -215,16 +217,16 @@ A state $\sigma \in \altsys{\Sigma}$ of this sub-transition system
 consists of the values for all the ghost variables that define the API; in the
 case of the file system this is just the \cc{data} field of type
 \cc{FilesysData}, which was defined in \cref{fig:dafny-state}. Each NFS method and its
-arguments is an operation $o \in \altsys{\Op}$, and predicates like \cc{GETSZ_spec}
+arguments is an operation $m \in \altsys{\Op}$, and predicates like \cc{GETSZ_spec}
 define the transition relation $\altsys{\delta}$. Building on $\altsys{S}$, we
 can now define $S$ by incorporating
 initialization and recovery, which are implemented
 in Dafny as \emph{constructors} \cc{Init} and \cc{Recover}. Constructors are
 needed to set up the system's global constants, and to initially establish the
 abstraction relation. Below we define $S$ in terms of $\altsys{S}$.
-To define $\delta$, we write $\sigma \xrightarrow[v]{o} \sigma'$ to mean that
-$\delta(\sigma, o, \sigma', v)$ is true, and let $\delta$ implicitly be false
-elsewhere for undefined transitions.
+To write down the definition of $\delta$, we use $\sigma \xrightarrow[v]{m} \sigma'$ to mean that
+$\delta(\sigma, m, \sigma', v)$ is true, and let $\delta$ implicitly be false
+elsewhere if not specified.
 
 \begin{figure}[ht!]
   \begin{mathpar}
@@ -232,9 +234,9 @@ elsewhere for undefined transitions.
     &\Sigma &\defeq & \mathsf{UnInit} \ALT \mathsf{Running}(\sigma:
                       \altsys{\Sigma}) \ALT \mathsf{Crashed}(\sigma:
                       \altsys{\Sigma}) \\
-    &\Op &\defeq & \mathsf{Init} \ALT \mathsf{Recover} \ALT \mathsf{Method}(o:
+    &\Op &\defeq & \mathsf{Init} \ALT \mathsf{Recover} \ALT \mathsf{Method}(m:
                    \altsys{\Op}) \\
-    &\delta& \defeq& \mathsf{Running}(\sigma) \xrightarrow[v]{\mathsf{Method}(o)}
+    &\delta& \defeq& \mathsf{Running}(\sigma) \xrightarrow[v]{\mathsf{Method}(m)}
         \mathsf{Running}(\sigma') \text{ when } \sigma \xrightarrow[v]{o}
 
         \sigma' \text{ (in  $\altsys{\delta}$)} \\
@@ -267,7 +269,7 @@ In the Dafny code, $\mathsf{Running}(\sigma)$ corresponds to when there \emph{is
 an instance} of the \cc{Filesys} class. The formal $\mathsf{Init}$ and
 $\mathsf{Recover}$ operations are special insofar as they are implemented as
 \emph{constructors} \cc{Init} and \cc{Recover}, which set up the system's global
-constants.
+constants and create the instance in the first place.
 
 The Dafny code implements the initialization using a \cc{NewTxnSystem} method
 that creates a fresh instance of GoTxn and sets up its initial object schema, as
@@ -287,7 +289,7 @@ constructor Init()
 
 The \cc{Recover} constructor has a more interesting verification story.
 According to $S$ above,
-it is permitted to assume that the system starts out in the state
+it is permitted to assume that when recovery runs, the system starts out in the state
 $\mathsf{Crashed}(\sigma)$. The only difference between
 $\mathsf{Crashed}(\sigma)$ and $\mathsf{Running}(\sigma)$ as far as the
 simulation is concerned is that in $\mathsf{Crashed}(\sigma)$, the \cc{Filesys}
@@ -318,7 +320,8 @@ satisfies the abstraction relation \cc{Valid()} and has the same underlying
 state $\sigma$ as before (written \cc{data == fs.data} in Dafny). The proof of
 recovery is not that involved, since all that must be verified is that recovery
 restores the global constants of the file system to their old values, which is
-implemented by storing them on disk in a fixed-location file-system super block.
+implemented by storing them on disk during initialization in a fixed-location
+file-system super block and reading them back in the recovery procedure.
 
 The methods in Dafny are verified with the usual pre- and post-conditions. By
 virtue of being methods, they implicitly assume that the system in the state
@@ -409,11 +412,12 @@ themselves are correct.
 
 There are two assumptions needed for the theorems to compose. First,
 $\seqrefinement_{\mathrm{dfy}}(i_{NFS})$ should imply $\seqrefinement(i_{NFS})$,
-to bridge the assumption and theorem being proven in Dafny. That is, the
+to bridge the premise in simulation transfer and the theorem being proven in
+Dafny. That is, the
 encoding of the refinement conditions in Dafny must be correct, but also the
 semantics of the transaction system operations modeled in Dafny must match the
-Coq proof. Second, every Dafny transaction must be valid, meaning
-$\safe(i_{NFS}(op))$. Safety has a static restriction that transactions
+Coq proof. Second, every Dafny transaction must be safe, that is
+$\safe(i_{NFS}(op))$ must hold. Safety has a static restriction that transactions
 should not modify global state, which the Dafny code satisfies because the only
 mutable state in the file-system Dafny class is the transaction system, so
 file-system operations cannot make mutations other than through GoTxn. The
