@@ -1,7 +1,7 @@
 \section{Circular buffer API}
 \label{sec:circ-api}
 
-The circular buffer (``circ'' for short) is a fixed-size, \emph{on-disk} queue of
+The circular buffer is a fixed-size, \emph{on-disk} queue of
 updates, which are pairs of an address and a disk block. It is used to implement
 write-ahead logging: updates are first stored in the circular buffer, and
 then eventually moved to a separate data region. It supports two operations
@@ -155,7 +155,7 @@ following custom separation-logic resources:
   any time there is only one circular buffer, but this name will change every
   time the system crashes and reboots and thus distinguishes different
   ``generations'' of the circular buffer.
-  \item $\cc{is_circular}(\gamma)$, defined to be
+  \item $\cc{is_circular}(\gamma)$, defined to be the invariant assertion
   $\knowInv{}{\exists \sigma, \circstate(\gamma, \sigma) * P(\sigma)}$.
   The $P(\sigma)$ part of this invariant is part of the HOCAP specification
   style, explained below.
@@ -190,7 +190,7 @@ aspect of Perennial is inherited from Iris and described in more detail in
 \cref{sec:perennial:concurrency}. In this chapter we use the \emph{view-shift
 assertion} $R \vs Q$ to express ghost updates, which are used to update the
 predicate $P(\sigma)$ that the library maintains.\footnote{Note that this is a slight
-notation shift, compared to the update modality used in the Perennial chapter; the view shift is equivalent to
+change in notation, compared to the update modality used in the Perennial chapter; the view shift is equivalent to
 $R \wand \upd Q$.} The intuition for $R \vs Q$ is that it represents some
 resources which allow the holder of the assertion to take
 $R \sep (R \vs Q)$ and ``fire'' the view shift, updating the underlying ghost

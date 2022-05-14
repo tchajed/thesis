@@ -7,8 +7,8 @@ section focuses on the specification and proof intuition for the circular
 buffer, a library used in GoTxn that has interesting crash safety and
 concurrency behavior. One feature of this specification style, the idea of an
 \emph{exchanger}, only appears in the journaling code which is much higher in
-the software stack for GoTxn, so \cref{sec:perennial:exchanging} does discuss a
-more sophisticated specification. The circular buffer is relatively independent
+the software stack for GoTxn, so \cref{sec:perennial:exchanging} does discuss this
+higher-level specification. The circular buffer is relatively independent
 of other details in GoTxn, since it operates directly on top of the disk, but
 journaling is covered in more detail within the GoTxn chapter, in
 \cref{sec:txn:lifting}.

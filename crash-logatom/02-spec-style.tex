@@ -7,7 +7,7 @@ theorem applies to the server's main loop that receives a message from the
 network, processes it in a background thread, and replies over the network.
 Immediately following boot, before processing any requests, the server runs a
 recovery procedure to restore in-memory state. This whole procedure --- recovery
-followed by running the system --- gets an idempotent specification that is
+followed by running the system --- is given an idempotent specification that is
 proven with \ruleref{wpr-idempotence} from \cref{sec:perennial:recovery}. The
 crash condition for this theorem is a description of the state of the whole
 system at any intermediate step; describing this directly would be daunting, but
@@ -149,7 +149,7 @@ each of these
 theorems is invoked in the proof of a program like \cc{RunSystem()} after
 running all the recovery code and just
 before normal processing (after line 4 in the code above). Firing these view shifts allocates all the layers'
-invariants while simultaneously getting ``credit'' for this allocation in the
+invariants while simultaneously getting credit for this allocation in the
 form of the $\cfupdw$ assertions, similar to how \ruleref{wpc-inv-alloc} works.
 Prior to calling this initialization, the recovery procedure has access to the
 inner contents of all the invariants, reflecting that it has exclusive access,
@@ -259,7 +259,7 @@ The reason this proof works is that $a \mapstoLftd o$ is \emph{exclusive}, thus
 from the premise the proof can rule out that $\cc{exchange_addr}(a)$ is proven with the
 left disjunct and learn that the right-hand side holds. The proof takes out this
 right disjunct ($a \mapsto^{\gamma'}_{d} o$) and gives up
-$a \mapsto^{\gamma, \mathrm{lftd}}_{d} o$ re-prove $\cc{exchange_addr}(a)$, this time using
+$a \mapsto^{\gamma, \mathrm{lftd}}_{d} o$ to re-prove $\cc{exchange_addr}(a)$, this time using
 the left disjunct. This all ensures that exchanging is only performed once,
 which is necessary since all the resources involved are exclusive.
 
