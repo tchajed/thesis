@@ -56,8 +56,8 @@ of the most interesting aspects.
 
 The write-ahead log layer is responsible for atomically updating multiple disk
 blocks according to the write.
-The API supports commiting a multiwrite, which is a list
-of updates, and an update consists of a disk block number together with the new
+The API supports writing a multiwrite to disk, a list
+of updates which each consist of a disk block number together with the new
 data to write in that block.
 %The write-ahead log makes transactions atomic by first writing the
 % updates to an on-disk log, and then installing them to their respective
@@ -73,6 +73,17 @@ Meanwhile, an installer thread applies entries in the log to the disk, clearing
 space for new multiwrites.
 If a crash happens before the updates in an entry are fully installed,
 recovery installs the updates again from the on-disk log.
+
+A contribution from this part of the proof is a new \emph{abstract state} for
+the write-ahead log, which represents its state in terms of a history of all the
+multiwrites that have ever been issued. The abstract state is useful for giving
+a specification for the WAL's operations that is consumed by the rest of the
+proof concerning the code using the write-ahead log. It is not materialized at
+run time; there is no overhead to logically tracking the history in the proof.
+This section presents two variants of this state, an internal one that is closer
+to the implementation but less convenient for the caller, and a more abstract
+external one that is easier to use in the rest of the proof. Both variants are
+based on the key idea of using an append-only history as the state of the WAL.
 
 The write-ahead log implements two optimizations related to combining
 multiwrites. Two or more multiwrites can be \emph{group committed} by logging
@@ -310,15 +321,18 @@ value and the linearization point is earlier.}
 Instead of proving that \cc{Read} is atomic, we instead give atomic specifications to
 \cc{ReadMem()} and \cc{ReadInstalled()} individually. The write-ahead log's
 abstract state includes a lower bound on its installed point in order to
-describe \cc{ReadInstalled()} in isolation. The specification for \cc{ReadMem}
-if the address is not in the log says that it
+describe \cc{ReadInstalled()} in isolation. This installed lower-bound is a
+lower-bound on the \cc{memStart} pointer from the internal abstract state, in
+much the same way that the durable lower bound gives a bound on \cc{diskEnd}.
+The specification for \cc{ReadMem(a)} if the address \cc{a} is not in the log says that it
 advances the installed lower bound enough to guarantee that there are no writes
-to that address after the new installed point. The specification for
-\cc{ReadInstalled()} can return any value the address has after the
+to that address after the new installed lower-bound. The specification for
+\cc{ReadInstalled()} can return any value the address had after the
 installed lower-bound. To reason about the combination of these operations, the
 \scc{obj} layer maintains a strong invariant about all the possible blocks that
 \cc{Read} could return from the installed point onward, and this is enough to
-reason about a block returned from either the cache or the installed data.
+reason about a block returned from either the in-memory cache or the on-disk
+installed data.
 
 Formally, we believe that it is possible to prove that the \scc{wal} \cc{Read()}
 operation is linearizable, but because of the future-dependence this
