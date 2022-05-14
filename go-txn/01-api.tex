@@ -36,7 +36,7 @@ func (a *Allocator) MarkUsed(n uint64)
 The transaction system exports a transactional API for durable, on-disk objects. The caller can wrap a whole
 sequence of reads and writes in a transaction between a call to \cc{Begin()} and
 \cc{Commit()}, and the transaction system guarantees that all of the operations
-appear to atomically (that is, all at once). The
+appear to execute atomically (that is, all at once). The
 programming interface is listed in \cref{fig:txn-api}. Reads and writes can be
 for objects smaller than a full 4KB block, which improves concurrency.
 Transactions make it much easier to implement a correct storage system by
@@ -44,13 +44,13 @@ handling the challenges of crash safety and concurrency, so that the system on
 top only needs to implement its own data structures and operations on top of
 disk objects.
 
-To use GoTxn, a storage system follows a similar pattern for each operation of
-wrapping all of the code for that operation in a single transaction. Operations
-start by creating an empty transaction with \cc{Begin()}.
-The entire
+To use GoTxn, a storage system wraps all of the code for every operation in a
+single transaction in order to make it atomic. The \cc{Begin()} call creates an
+empty transaction.
+The body of the
 transaction appears to execute atomically when the operation finishes it
 with \cc{Commit}, or the transaction is discarded with no effect on
-\cc{Abort}. Reads and writes operate on addresses which specify a
+\cc{Abort}. Reads and writes operate on addresses that specify a
 position by giving a block number and an offset in bits (always less
 than $4096 \cdot 8$, the number of bits in a block). The \cc{Read}
 method requires an explicit size argument while the size of a
@@ -60,7 +60,7 @@ than using a single-element byte slice) to simplify the specification.
 
 \Cref{fig:txn-api} also includes an API for allocation alongside the transaction
 API.\@ The allocator should be considered part of the transaction system API
-insofar as its operations are allowed within a transaction. In contrast using
+insofar as its operations are allowed within a transaction. In contrast, using
 other shared memory within a transaction is not permitted since it would
 compromise the atomicity guarantees --- the transaction system acquires locks to
 make reads and writes seem atomic, but it doesn't have any locking discipline
@@ -84,11 +84,11 @@ in-memory allocator API into GoTxn's atomicity guarantee.
 As described in \cref{sec:txn:impl}, GoTxn is implemented using two-phase
 locking. As a result, a transaction acquires a per-address lock on every address
 it reads or writes along the way. Acquiring multiple locks during a transaction
-creates the possibility for deadlocks, if two threads acquire a pair of locks in
-the opposite order, and the specification does not forbid
+creates the possibility for deadlocks, if two threads acquire a locks with
+different orderings, and the specification does not forbid
 deadlocks.\footnote{Liveness reasoning is quite challenging when
 combined with concurrency. However, it would be interesting to specify and
-verify deadlock freedom, a safety property, without verifying liveness of the
+verify deadlock freedom, a safety property, without verifying the liveness of the
 whole system.} The two-phase locking
 implementation does not implement a specific lock acquisition order, leaving it
 to the calling code to avoid deadlock --- for example, in DaisyNFS the

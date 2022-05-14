@@ -94,7 +94,7 @@ func runTxn[T any](f txnBody[T]) (v T, ok bool) {
 \end{minted}
 
 In order for simulation transfer to work, every transaction must satisfy some
-conditions to ensure atomicity. We write $\mathrm{safe}(i(\opv))$ to say that $i(\opv)$ is a
+conditions to ensure atomicity. We write $\safe(i(\opv))$ to say that $i(\opv)$ is a
 valid transaction. The main restriction is that $i(\opv)$ cannot access global state
 such as the heap, since the transaction system does not make such accesses
 atomic; further details are discussed in \cref{sec:txn:transaction-refinement}.
@@ -103,7 +103,7 @@ atomic; further details are discussed in \cref{sec:txn:transaction-refinement}.
   Let $\textdom{Sys}$ be a layer implemented using transactions with
 $i : \textdom{Sys} \to \gooselayer{Txn}$, such that
 $\seqrefinement\targ{\gooselayer{Txn}, \textdom{Sys}}(i)$ and
-$\forall \opv.\, \mathrm{safe}(i(\opv))$ hold. Then
+$\forall \opv.\, \safe(i(\opv))$ hold. Then
 \[
   \forall p : \gooselayervar{Sys}, \linked{\mathrm{link}(p, \atomiccomp i)} \refines p.
 \]
@@ -413,7 +413,7 @@ to bridge the assumption and theorem being proven in Dafny. That is, the
 encoding of the refinement conditions in Dafny must be correct, but also the
 semantics of the transaction system operations modeled in Dafny must match the
 Coq proof. Second, every Dafny transaction must be valid, meaning
-$\mathrm{safe}(i_{NFS}(op))$. Safety has a static restriction that transactions
+$\safe(i_{NFS}(op))$. Safety has a static restriction that transactions
 should not modify global state, which the Dafny code satisfies because the only
 mutable state in the file-system Dafny class is the transaction system, so
 file-system operations cannot make mutations other than through GoTxn. The

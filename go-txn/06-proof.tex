@@ -13,16 +13,16 @@ the lower layers.
 
 Recall that transaction refinement is a statement about an arbitrary program that
 uses transactions. It would be infeasible to directly reason about the execution of an
-arbitrary use of GoTxn, including handling concurrently issued transactions and
+arbitrary program using GoTxn, including handling concurrently issued transactions and
 crashes at any time. Instead, the first step is to give a specification to the
 individual methods of the GoTxn API, such as \cc{Read}, \cc{Write}, and
 \cc{Commit}. Next, the proof considers an arbitrary transaction, but this part
 of the proof can now invoke the specifications for each method.
 
-In order to give a specification at the method level, we first
+To give a specification at the method level, we first
 develop the right representation of the intermediate state of a transaction.
 This representation needs to capture buffered writes (which will eventually be
-durable at commit time) and the old values in the logical disk (which it will
+durable at commit time) and the old state of the logical disk (which it will
 revert to if the system crashes or the transaction aborts). It also needs to
 handle concurrent transactions --- the tricky thing here is that the logical
 disk can change in the middle of a transaction due to a concurrently committed
@@ -31,14 +31,15 @@ to the disk at the start of the transaction.
 
 A new lifting-based specification for journaling solves these problems. We
 introduce a purely logical operation called \emph{lifting} that moves ownership
-of a subset of the logical, durable disk into each concurrently executing
-transaction. The transaction then operates freely on that part of the disk. This
+of a subset of the logical, durable disk into a
+transaction. The transaction then operates freely on that part of the disk,
+regardless of concurrent transactions. This
 works because the proof can only lift disjoint parts of the disk, which is
 physically guaranteed by using a per-address lock in the \scc{txn} layer.
 Eventually the transaction finishes reading and writing, and when it commits any
-buffered changes can be merged into the global disk. Aborts are similarly
-modeled, returning ownership and merging back the old values of just the local
-disk.
+buffered changes can be merged into the global disk. Aborts are
+modeled as returning ownership and merging back the old values of just the
+lifted part of the disk.
 
 \input{go-txn/lifting-spec.tex}
 \input{go-txn/refinement-proof.tex}
@@ -46,17 +47,18 @@ disk.
 \section{Verifying GoTxn's implementation layers}
 \label{sec:txn:lower-layers}
 
-This section walks through the proof of lower layers of GoTxn's implementation.
+This section walks through the proof of the lower layers of GoTxn's implementation.
 Rather than give complete specifications and proof sections, it focuses on some
 of the most interesting aspects.
 
 \subsection[Write-ahead logging (WAL)]{Write-ahead logging (\scc{wal})}
 \label{sec:txn:wal}
 
-The write-ahead log layer is responsible for updating multiple disk
-blocks (a multiwrite) atomically.
-Each multiwrite is a list
-of updates, where an update consists of a disk block number and the new data to write in that block.
+The write-ahead log layer is responsible for atomically updating multiple disk
+blocks according to the write.
+The API supports commiting a multiwrite, which is a list
+of updates, and an update consists of a disk block number together with the new
+data to write in that block.
 %The write-ahead log makes transactions atomic by first writing the
 % updates to an on-disk log, and then installing them to their respective
 % disk blocks.

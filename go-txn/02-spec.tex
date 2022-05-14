@@ -64,7 +64,8 @@ and assumes reads and writes of 4KB blocks are atomic.
 
 The concept of a layer is part of how GooseLang formalizes Go. The definition of
 GooseLang is parameterized by some ``external'' operations and state, as
-described in \cref{sec:goose:lang}. Regardless of layer, the type
+described in \cref{sec:goose:lang}, and these two together comprise a layer. In
+all layers, the type
 $\gooselayer{X}$ includes a $\goosekw{Fork}$ expression to spawn a thread, heap operations
 on pointers, slices, and maps, and computation on primitives like integers and
 structs. A program $p : \gooselayer{X}$ represents a Go program which uses any
@@ -103,7 +104,7 @@ top of a disk.
 Transactions in the linked program continue to have the expected atomic
 behavior, so long as transaction code in $p$ follows certain restrictions, such
 as not accessing shared state outside the journal system.  We write
-$\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these restrictions.
+$\safe(p)$ to mean $p$ is ``safe'' in the sense that it follows these restrictions.
 
 % At a high level of abstraction, the main difficulty is to give a specification
 % for the transaction system, which we do in several steps:
@@ -119,7 +120,7 @@ $\mathrm{safe}(p)$ to mean $p$ is ``safe'' in the sense that it follows these re
 %         that the whole transaction transitions at once, without interleaving
 %         other threads. The program can issue reads and writes within a
 %         transaction, and they follow a simple state machine.
-%   \item The final idea is to define ``safe'' programs $\mathrm{safe}(p)$, those
+%   \item The final idea is to define ``safe'' programs $\safe(p)$, those
 %         that follow the restrictions of the transaction system. The
 %         specification only applies to safe programs.
 % \end{enumerate}
@@ -128,9 +129,9 @@ The correctness of the transaction system is expressed by the following theorem:
 %
 \begin{theorem}[Transaction refinement]
   The transaction system's implementation $\txncode$ is a \emph{transaction refinement}, meaning for
-  all $p : \gooselayer{Txn}$, if $\mathrm{safe}(p)$, then
+  all $p : \gooselayer{Txn}$, if $\safe(p)$, then
   $\mathrm{link}(p, \txncode) \refines p$. The definition of
-  $init(\sigma_{s}, \sigma_{c})$ in this refinement relates an all-zero physical
+  $\init(\sigma_{s}, \sigma_{c})$ in this refinement relates an all-zero physical
   disk to an all-zero transactional disk of the same size.
   \label{thm:gotxn-transaction-refinement}
 \end{theorem}
@@ -143,7 +144,7 @@ refinement is a \emph{contextual refinement} property about a library that is
 stated in terms of all callers of that library.
 The theorem is stated in Coq and has a fully mechanized proof in Perennial.
 
-The definition of $\mathrm{safe}(p)$ formalized in Coq requires that any code
+The definition of $\safe(p)$ formalized in Coq requires that any code
 within a transaction not access any shared memory outside of the transaction
 layer; other than that, transactions can use the GoTxn operations to interact
 with the logical disk and the allocator, and do any computation in between these
@@ -183,8 +184,8 @@ which is easily done since GoTxn supports accessing an individual bit with
 \cc{ReadBit}. There is a chance that \cc{Alloc} returns a used address, if it was
 freed in memory by a concurrent transaction that hasn't committed to disk, but the allocator
 is designed not to return recently freed addresses to avoid this issue.
-Similarly in addition to calling \cc{Free} the caller also issues
-$\cc{WriteBit}(a, \goosefalse)$ to mark the correct bit free on disk. During
+Similarly, in addition to calling \cc{Free} the caller also issues
+$\cc{tx.WriteBit}(a, \goosefalse)$ to mark the correct bit free on disk. During
 recovery, for the in-memory allocator to be useful it must know what numbers
 have already been allocated. The caller initializes the in-memory allocator to
-the same state as what is stored on disk with\cc{MarkUsed(n)}.
+the same state as what is stored on disk with \cc{MarkUsed(n)}.
