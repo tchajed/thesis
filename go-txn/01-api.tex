@@ -84,7 +84,7 @@ in-memory allocator API into GoTxn's atomicity guarantee.
 As described in \cref{sec:txn:impl}, GoTxn is implemented using two-phase
 locking. As a result, a transaction acquires a per-address lock on every address
 it reads or writes along the way. Acquiring multiple locks during a transaction
-creates the possibility for deadlocks, if two threads acquire a locks with
+creates the possibility for deadlocks, if two threads acquire locks with
 different orderings, and the specification does not forbid
 deadlocks.\footnote{Liveness reasoning is quite challenging when
 combined with concurrency. However, it would be interesting to specify and

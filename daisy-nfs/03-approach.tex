@@ -1,9 +1,7 @@
 \section{Specifying DaisyNFS}%
 \label{sec:daisy:spec}
 
-Specifying DaisyNFS takes two steps: first formalizing the NFS protocol, and
-then stating how the implementation relates to this formalization.
-The specification for NFS is a state machine describing an ideal NFS server in
+The specification for DaisyNFS is a state machine describing an ideal NFS server in
 the form of an abstract state and a transition for each operation. The
 implementation of DaisyNFS is a binary \cc{daisy-nfsd} that implements the NFS
 protocol, running on top of a
@@ -22,8 +20,8 @@ implementation.
 RFC 1813 specifies the NFS protocol, which we make mathematically precise with a
 state-machine representation defined in Dafny.
 The formalization requires first
-defining what state operations modify, and then a transition for each
-NFS operation that specifies how it changes the state and what return
+defining an abstract state, and then a transition for each
+NFS operation that specifies how it changes that state and what return
 values are allowed. While most of the specification is deterministic,
 some operations have to be specified with non-determinism; for
 example, we allow returning an out-of-space error in many operations,
@@ -164,6 +162,18 @@ the link count of every file in the state, the specification for \cc{REMOVE}
 needs to say that the link count is decremented and that the file is deleted if
 its link count drops to zero.
 
+The current implementation of \cc{READDIR} always returns the entire directory,
+which is impractical for large directories; NFS supports a paginated API, where
+\cc{READDIR} returns some directory entries and then an offset to resume
+iteration. The complication with this API is that the directory could change
+between reads, so the interface has provisions to handle
+this kind of \emph{iterator invalidation} and the specification would need
+similar adaptations. We believe it would be possible to adapt the work in
+SibylFS~\cite{ridge:sibylfs}, a specification for the POSIX file-system API, which gives a
+specification for the analogous \cc{readdir} system call. DaisyNFS does not
+support \cc{READDIRPLUS}, which differs from \cc{READDIR} only in that it also
+returns attributes along with names and inode numbers.
+
 \subsection{Specifying correctness for DaisyNFS}%
 \label{sec:daisy:refinement-spec}
 
@@ -191,8 +201,8 @@ The previous section (\cref{sec:daisy:nfs}) defines the transition system for NF
 which this section relates to the actual DaisyNFS implementation in order to
 define correctness. The definition uses the ideas from
 \cref{sec:txn:refinement-def,sec:txn:go-layers}, namely the definition of
-refinement and the definitions of $\gooselayer{Txn}$ and
-$\gooselayer{NFS}$. The NFS layer has a primitive for each operation supported by
+refinement and the definition of $\gooselayer{X}$, where X is instantiated
+separately with both the Txn and NFS layers. \gooselayer{NFS} has a primitive for each operation supported by
 DaisyNFS, and the semantics of these primitives is defined to be the NFS
 transition system written in Dafny. Implicit in such a semantics is that each
 operation is atomic both with respect to other threads and on crash.
@@ -200,9 +210,9 @@ operation is atomic both with respect to other threads and on crash.
 With the NFS layer we can model a \emph{server loop} that recovers the
 file-system state, then repeatedly accepts a new request, processes it with the
 appropriate NFS transition, and sends the reply back. Let us denote this server
-loop with $s_{NFS} : \gooselayer{NFS}$. Note that when this (abstract) server
+loop with $\snfs : \gooselayer{NFS}$. Note that when this (abstract) server
 processes an NFS operation, it does so by definition atomically, and its state
-is again by definition preserved on crash. $s_{NFS}$ can be viewed as an
+is again by definition preserved on crash. $\snfs$ can be viewed as an
 abstraction of the following pseudo-code that represents the essence of the
 real \cc{daisy-nfsd} binary:
 

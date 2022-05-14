@@ -12,12 +12,12 @@
 \tikzstyle{genlayer}=[dashed, layer={}];
 \tikzstyle{edge}=[->,thick];
 
-\draw node (dispatch) [layer=Go] {Dispatch Loop};
+\draw node (dispatch) [layer=Go] {Dispatch loop};
 \draw node (goout) [genlayer,below of=dispatch] {Go output};
 \draw node (txn) [layer=Go,below of=goout] {GoTxn};
 
 \draw node (coq) [left=1.5cm of txn, align=center] {Verification \\ in Perennial};
-\draw node (dafny) [left=1.25cm of goout, layer=Dafny] {File-system \\ Operations};
+\draw node (dafny) [left=1.25cm of goout, layer=Dafny] {File-system \\ operations};
 
 \draw node (out) [below=1cm of txn] {\texttt{daisy-nfsd} binary};
 

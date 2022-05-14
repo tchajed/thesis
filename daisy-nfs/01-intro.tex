@@ -3,7 +3,7 @@
 
 DaisyNFS is an implementation of the Network File System (NFS) API.\@ This is a
 standard file-system interface, specified in RFC 1813~\cite{RFC:1813}
-(specifically this is the standard for NFS version 3, which is what DaisyNFS
+(specifically, this is the standard for NFS version 3, which is what DaisyNFS
 implements). NFS is widely used, generally to export a file system across a
 network to multiple clients, and widely supported by operating systems ---
 Windows Server, macOS, and Linux each include an implementation of both an NFS
@@ -16,8 +16,8 @@ which is unsuitable for a mathematical proof. Thus the first step is
 to turn the RFC into something more precise. DaisyNFS's specification (described in
 \cref{sec:daisy:nfs}) uses a
 transition system defined in Dafny for this purpose, defining the behavior of
-the protocol with an abstract state and transitions that define
-for each NFS operation how the state evolves and what the return value is. The
+the protocol with an abstract state and transitions for each NFS operation that define
+how it evolves the state and what value it returns. The
 transition system allows non-determinism in the specification to give the
 implementation some flexibility.
 
@@ -27,26 +27,25 @@ DaisyNFS's correctness we use the same \emph{concurrent, crash-safe refinement}
 that was used in the GoTxn
 specification. The server binary is a refinement of the NFS transition
 system if every execution of the code --- including with concurrent operations
-and on crash --- has
+crashes --- has
 user-visible behavior that the specification could also produce (that is, the
 behavior is allowed by the specification). In DaisyNFS's specification the visible
 behavior is defined to be network requests and responses.
 
 DaisyNFS's concurrent, crash-safe refinement is a much more sophisticated property to verify
-than sequential refinement. For both forms of refinement, the basic proof technique is to construct a
+than sequential refinement. \Cref{fig:concurrent-refinement} illustrates the difference between the
+concurrent and sequential simulation obligations.  For both forms of refinement, the basic proof technique is to construct a
 \emph{forward simulation} from the code execution to the specification
 transition system, which requires an invariant connecting their states and a
-proof that shows the invariant is preserved. In a sequential, non-crash
-simulation it is sufficient to show that each operation restores the invariant
-when it returns, since its intermediate states are invisible.
-\Cref{fig:concurrent-refinement} illustrates the difference between the
-concurrent and sequential simulation obligations. The complication in a
+proof that shows the invariant is preserved by operations. In a sequential, non-crash
+simulation, it is sufficient to show that each operation restores the invariant
+when it returns since its intermediate states are invisible.
+The complication in a
 concurrent simulation is that the code can have many concurrent threads, each
 running a different operation at the specification level. The
-proof of any given operation must show the intermediate states as well as the
-final one satisfy the invariant, since at any
+proof of any given operation must also show that the intermediate states satisfy the invariant, since at any
 time other threads might run. Similarly, the proof of each operation's implementation must
-consider interference on its execution from other threads at any time.
+consider interference with its execution from other threads at any time.
 
 \begin{figure}
   \begin{subfigure}[m]{0.6\textwidth}
@@ -93,7 +92,7 @@ some specification refines the same specification in the sense of a concurrent,
 crash-safe refinement when run through GoTxn. The proof of this theorem is an
 extension of the transaction-refinement specification from \cref{sec:txn:spec}.
 
-Due to simulation transfer, we are able to use a simpler verification
+Due to simulation transfer, we can use the simpler verification
 methodology of sequential simulation for the DaisyNFS file-system code, compared
 to the Perennial program logic used to verify the transaction system underneath.
 To fully take advantage of this difference, DaisyNFS is verified using
@@ -112,7 +111,7 @@ the incremental development of DaisyNFS, which \cref{sec:eval:incremental}
 further elaborates on.
 
 Simulation transfer greatly reduces the proof burden for verifying DaisyNFS.
-There still remains a challenge of actually implementing the file system using
+There remains the task of actually implementing the file system using
 transactions. \Cref{sec:daisy:design} discusses some key challenges to address,
 in particular how to ensure transactions are bounded in size (since GoTxn
 transactions cannot exceed the size of the on-disk circular buffer) and avoiding
@@ -121,7 +120,7 @@ deadlocks in transactions.
 \paragraph{Limitations.}
 The design of DaisyNFS does impose limitations. The proof approach relies on
 transactions appearing to run sequentially, which prevents modifying state
-outside the transaction system. An example which would benefit from combining
+outside the transaction system. An example that would benefit from combining
 the transaction system with other state is a
 persistent key-value store, which needs atomic metadata updates but manages data
 separately to minimize I/O --- the proof of such a system would

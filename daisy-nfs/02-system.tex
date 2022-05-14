@@ -13,8 +13,9 @@ As shown in \cref{fig:system}, DaisyNFS is implemented in three layers:
 appropriate method for each operation; 2) a Dafny class that
 implements each method; and 3) a transaction system that applies the
 updates of each method to the disk atomically.  The dispatch loop is
-unverified; we assume that the server correctly decodes messages,
-calls the right method for an operation, and encodes the response. The
+unverified; we assume that the server correctly decodes messages, invokes the
+verified code with the right arguments, and correctly encodes the response to
+the client. The
 middle layer implementing the file-system operations is written
 and verified in Dafny, which has a backend for Go.  The
 third layer is directly written in Go and verified using Coq and
@@ -70,8 +71,8 @@ file and directory data (including indirect blocks). The file system statically
 allocates regions for these three kinds of blocks, much like ext4.
 
 Acquiring multiple locks during a transaction creates the possibility
-for deadlocks, for example if two threads acquire a pair of locks in the opposite
-order. The two-phase locking implementation does not implement a
+for deadlocks, for example if two threads acquire two locks in different orders.
+The two-phase locking implementation does not implement a
 specific lock acquisition order, leaving it to the file system to
 avoid deadlock --- the most interesting case is \cc{RENAME}, which is discussed
 in more detail in \cref{sec:dafny:rename}.
