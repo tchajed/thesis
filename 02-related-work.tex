@@ -366,7 +366,7 @@ the file system and VFS layers perform locking. This locking is inherited when
 these file systems are exported with the Linux NFS server. WAFL~\cite{wafl:hitz}
 is an NFS appliance that provides snapshots and logs NFS requests to
 NVRAM.\@  It has evolved its locking plan to obtain good
-parallelism~\cite{curtis:wafl}.  Both the Linux NFS server and WAFL
+parallelism~\cite{curtis-maury:waffinity}.  Both the Linux NFS server and WAFL
 are more complicated and have more features than DaisyNFS.\@
 
 Isotope~\cite{shin:isotope} is a block-level transaction system similar to GoTxn
