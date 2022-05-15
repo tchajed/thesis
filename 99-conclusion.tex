@@ -1,16 +1,17 @@
 This thesis describes an approach to verify software with a combination of
-concurrency in the implementation and crash-safety guarantees, applied to the
-DaisyNFS file system. It spans from general verification foundations
+concurrency in the implementation and crash-safety guarantees. The approach is applied to the
+DaisyNFS file system. The work spans from general verification foundations
 through the design and proof of the file system itself. The foundations
 include Perennial, a program logic for crashes and concurrency, and Goose, an
 approach for reasoning about Go code. DaisyNFS is designed around a verified
 transaction system called GoTxn, which makes it feasible to scale verification
-by enabling sequential reasoning for transactions on top.
+by enabling sequential reasoning for the transactions that implement the
+file-system operations.
 
 \section{Lessons learned about verification}
 
-In the process of conducting this research, we made some interesting
-observations about verification more broadly that this section shares.
+In the process of conducting this research, we made some broader
+observations about verification that this section shares.
 
 % \paragraph{Verification is valuable for critical systems.} It will never be cost
 % effective to verify all software; at a minimum, for verification to be useful a
@@ -65,13 +66,13 @@ specification, we able to explain absorption, where a value overwrites an older
 write that hasn't been logged yet, as an optimization and not a detail the
 caller should be concerned with. Merely writing down the specification also
 helped clarify some of the internal invariants. Another example was some
-difficulty we ran into interpreting the description of ``weak-cache consistency
+difficulty we ran into while interpreting the description of ``weak-cache consistency
 (WCC)'' metadata in the NFS protocol. The RFC explains this aspect in several
-places and combines describing what information should be returned, rationalizes
-the need for this feature, and describes how the client should use it. A
+places and combines describing what information should be returned, rationalizing
+the need for this feature, and describing how the client should use it. A
 mathematical description teases these apart so that the first is formally
 described and the rest are commentary on top. The end result was quite simple:
-the server should return both the old attributes and final attributes of
+the server should fetch and return the old attributes along with the post-operation attributes of
 whatever file or directory the WCC data pertains to. Because these attributes
 include modification timestamps, they permit the client to invalidate their
 local cache when the old timestamp doesn't match the client's cached value.
@@ -81,17 +82,17 @@ still inevitable since there is unverified code surrounding the verified code,
 the assumptions of the proof can be violated, and the specification can be
 wrong. However, an advantage of formal verification, particularly fully
 machine-checked proofs, is that when bugs are discovered it's safe to start
-debugging with all the code outside the verification as well as looking at the
+debugging by investigating the code \emph{outside} the verification, including
+carefully looking at the
 specification. We ran into several bugs while developing DaisyNFS; several are
 described in \cref{sec:eval:testing}. Some were due
-to incorrect specifications; for example, at one point we returned the wrong
-``before'' WCC data, causing Linux to constantly invalidate its cache and send
-extra RPCs and reducing performance. Others were due to unverified code
+to incorrect specifications; for example, at one point the \cc{CREATE} and
+\cc{MKDIR} specs did not forbid empty names. Others were due to unverified code
 violating the assumptions in the verified code.
 
 \paragraph{Verification as an enabler.}
 A real achievement for verification would be to use verification not just as
-alternative to the practices above, but to build something with more daring optimizations,
+alternative to testing, but to build something with more daring optimizations,
 features, or speed than would otherwise be possible. Storage systems that holds persistent
 state have the potential to be just such an application. There aren't that many
 widely-used
@@ -112,10 +113,10 @@ system for persistent memory or new zoned storage (ZNS) SSDs.
 
 While GoTxn and DaisyNFS don't have any radical optimizations, this observation
 did come up in our work. Making the logger and installer concurrent complicated
-the proof, but verification gave confidence that this was implemented correctly.
+the implementation and informal reasoning, and verification gave confidence that this was implemented correctly.
 Another example was the change Mark made to the installer, removing additional
 absorption; normally such a change would be considered subtle and would require
-thinking carefully about why the code was correct before and whether it still is
+thinking carefully about whether the code is still
 correct. Mark made the change and verified it within a couple weeks, and we
 could accept the new code readily once the proof was complete.
 
@@ -185,14 +186,15 @@ operation passes a buffer \cc{v} to the disk. It could be that ownership of
 \cc{v} needs to be transferred to the disk, since it uses the buffer later, or
 that \cc{v} should be read-only for the duration of the call and ownership is
 returned to the caller, or that if \cc{v} is permanently read-only the disk and
-caller can share the buffer.
+caller can share the buffer. It is important for the proof to be sound that the
+correct ownership discipline is enforced.
 
 Expressing ownership as a logical idea in the logic is relatively easy using
 separation logic, but the semantics of \cc{DiskWrite(a, v)} has to be
-axiomatized since it is part of an external interface. In order to simplify expressing the ownership transfer, the
+given operationally and not just given as a specification. In order to simplify expressing the ownership transfer, the
 GooseLang \cc{DiskRead} returns a freshly allocated buffer, but it would have
 been better for performance if the caller supplied a buffer that the
-\cc{DiskRead} wrote to (as in the usual \cc{read} system call). Similarly, the
+\cc{DiskRead} filled (as in the usual \cc{read} system call). Similarly, the
 GoTxn interface to Dafny makes additional copies to simplify ownership
 reasoning, especially in the transaction refinement proof. A better solution would
 have been to develop a specification style for expressing ownership in the
@@ -202,18 +204,19 @@ principles.
 Rust would assist with better handling of ownership in interfaces, but does
 not completely solve the problem. Where it would fit in is that if an interface
 makes \emph{assumptions} about ownership transfer, Rust would help in enforcing
-those assumptions at compile time. While convenient for the verified code to
-know if ownership is violated before attempting a proof, this would be
-especially good for enforcing that code calling into a verified interface
-respects its assumptions about ownership. What Rust doesn't solve is that it is
-still necessary to express ownership assumptions in the interface, a challenge
+those assumptions at compile time. It is convenient for the verified code to
+know if ownership is violated before attempting a proof, but automatic
+enforcement would be even more important for ensuring that the code calling into
+a verified interface respects its ownership assumptions.
+What Rust doesn't solve is that it is
+still necessary to express ownership assumptions in the interface's semantics, a challenge
 independent of the implementation language.
 
 \paragraph{Read-only sharing.}
-Another challenge, related to memory safety, was reasoning about read-only
+Another challenge was reasoning about read-only
 sharing in the internals of GoTxn. Changing data structures after they were written to support read-only
 sharing was difficult, since every specification needs to incorporate fractional
-permissions. Read-only locking would be challenging to retrofit support for, even
+permissions. As a result read-only locking in GoTxn would be challenging to retrofit support for, even
 though it might improve read-read concurrency in GoTxn and DaisyNFS.\@ This challenge
 also shows up in the data structure for the in-memory log, which needs to share
 read-only data blocks between threads issuing reads to the write-ahead log, the logger
@@ -244,8 +247,8 @@ carefully validate them, perhaps with dynamic instrumentation.
 
 \paragraph{Asynchronous model of the disk.} The disk model in Goose assumes
 writes are durable as soon as the write returns, but real disks typically buffer
-writes internally. Goose has a new asynchronous disk model, used for an
-independent example, but it would be good future work to change GoTxn to use
+writes internally. Goose has a new asynchronous disk model,
+and it would be good future work to port GoTxn to
 this new model. Above the write-ahead log this should have no effect on the
 specifications. Going beyond asynchronous durability, it would also be
 interesting to model a different interface entirely like that of libaio where
@@ -296,6 +299,6 @@ interesting project in its own right to turn this into a complete, well-tested
 formalization of the RFC. For example, the Dafny specification could make a serious
 attempt to capture all the non-determinism allowed by the RFC. As a standalone
 artifact the specification could also be used to test servers (comparing to the
-allowed behaviors). An executable version of the specification (though perhaps
-inefficient and not durable) would be valuable to test the specification itself
+allowed behaviors). An executable version of the specification, even if
+inefficient and not durable, would be valuable to test the specification itself
 and explore what clients do when faced with different server behavior.
