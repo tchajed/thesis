@@ -20,6 +20,7 @@ func (op *Op) Commit()
 func (op *Op) Read(a Addr, szBits uint64) []byte
 func (op *Op) Write(a Addr, szBits uint64, d []byte)
   \end{minted}
+  \tightenspace
   \caption[API for the journaling layer.]{The API for the journaling layer, \scc{jrnl}. There is no
     \cc{Abort()} method (the caller simply abandons the \cc{op} struct). Reads
     and writes support bit-sized objects within the same API.\@ The \cc{Addr}
@@ -60,7 +61,6 @@ specifications are detailed in the remainder of this section.
 \begin{figure}[hb]
   \centering
   \includegraphics{fig/gojournal-resources.png}
-  \vspace{0.5\baselineskip}
   \caption{Life cycle for the resources in the lifting specification.}
   \label{fig:gojournal-resources}
 \end{figure}

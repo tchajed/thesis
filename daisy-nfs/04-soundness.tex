@@ -59,19 +59,9 @@ $\crash(\sigma_{S}, \sigma_{S}')$.%
 Conditions (1) and (2) in this definition are standard for sequential
 verification of refinement, while condition (3) is a condition for sequential crash-safety~\citep{sigurbjarnarson:yggdrasil,chajed:argosy}. Though condition (3) requires the
 abstraction relation to be preserved by crashes, the proof engineer does \emph{not} have to reason about crashes in the middle of operations.
-% is a standard condition for sequential crash-safety~\cite{chajed:argosy}
-% for sequential crash safety~\cite{chajed:argosy}.
 The
 diagram in \cref{fig:refinement:seq} depicts the main
 refinement condition (1) diagrammatically.
-% For example, it is fairly easy to use them to show
-% that for any sequential program $p : \gooselayer{S}$, the traces of the code
-% $\mathrm{link}(p, i)$ are a subset of the traces of the spec $p$ (we will not
-% use exactly this theorem since we are interested in concurrent code using
-% transactions).
-% \tej{I mentioned this but maybe we don't want/need to say it?}. Such reasoning would be familiar in previous sequential verified
-% systems like FSCQ~\cite{chen:fscq}, IronFleet~\cite{hawblitzel:ironfleet}, and
-% VeriBetrKV~\cite{hance:veribetrkv}.
 
 The simulation transfer theorem takes a proof of \emph{sequential} refinement
 conditions for a system implemented using transactions and derives a
@@ -173,7 +163,7 @@ clauses. Condition (2) for initialization and condition (3) for crashes relate
 to the Dafny code in a slightly more subtle way.
 
 \begin{figure}
-  \begin{verbatim}
+  \begin{minted}[frame=lines]{csharp}
 class Filesys {
   // the external abstract state
   ghost data: FilesysData;
@@ -192,7 +182,8 @@ class Filesys {
 
   // ... methods for other NFS operations ...
 }
-  \end{verbatim}
+  \end{minted}
+  \tightenspace
   \caption{Outline of how the Dafny proof is expressed.}
   \label{fig:dafny-outline}
 \end{figure}

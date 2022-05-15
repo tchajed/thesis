@@ -33,7 +33,7 @@ mathematically precise.  We define
 the NFS server state as shown in \cref{fig:dafny-state}.
 
 \begin{figure}[ht!]
-\begin{verbatim}
+\begin{minted}[frame=lines]{csharp}
 // the abstract state of the file system
 type FilesysData = map<Ino, File>
 
@@ -44,7 +44,8 @@ datatype File =
 type Ino = uint64
 type FileName = seq<byte>
 datatype Attrs = Attrs(mode: uint32, ...)
-\end{verbatim}
+\end{minted}
+  \tightenspace
 \caption{Dafny definition of the NFS server state (simplified).}
 \label{fig:dafny-state}
 \end{figure}
@@ -79,7 +80,9 @@ specification for a (hypothetical) \cc{GETSZ} operation that returns the size of
 the inode \cc{ino}.
 
 \begin{figure}[ht]
-\begin{verbatim}
+  % make this text because csharp doesn't add much, and incorrectly highlights
+  % the 's as errors
+\begin{minted}[frame=lines]{text}
 predicate GETSZ_spec(ino: Ino, fs: FilesysData,
   fs': FilesysData, r: Result<uint64>)
 {
@@ -89,7 +92,8 @@ predicate GETSZ_spec(ino: Ino, fs: FilesysData,
   (r.Ok? ==> (ino in fs) && fs[ino].ByteFile? &&
              r.v == |fs[ino].data|)
 }
-\end{verbatim}
+\end{minted}
+  \tightenspace
   \caption[Transition-system specification for a hypothetical \cc{GETSZ} operation.]%
   {Specification of a hypothetical \cc{GETSZ} operation, a simplification
   of the real \cc{GETATTR} operation. When \texttt{GETSZ\_spec(ino, fs, fs', r)}
@@ -177,26 +181,6 @@ returns attributes along with names and inode numbers.
 \subsection{Specifying correctness for DaisyNFS}%
 \label{sec:daisy:refinement-spec}
 
-\begin{figure}[ht]
-\small
-\centering
-\begin{tabular}{@{~}llr@{~}}
-\toprule
-\bf Layer & \bf Operations & \\
-\midrule
-  NFS
-      & \cc{CREATE(d_ino, name)}, \cc{READDIR(d_ino)}, \dots & \cref{sec:daisy:spec} \\
-  Txn
-      & \cc{Read(tx, a, sz)}, \cc{Commit(tx)}, \cc{Alloc(a)},
-        \dots & \cref{sec:txn:api} \\
-  Disk
-      & \cc{Read(a)}, \cc{Write(a, b)} & \\
-\bottomrule
-\end{tabular}
-\caption{API layers of DaisyNFS.}
-\label{fig:layers}
-\end{figure}
-
 The previous section (\cref{sec:daisy:nfs}) defines the transition system for NFS,
 which this section relates to the actual DaisyNFS implementation in order to
 define correctness. The definition uses the ideas from
@@ -216,6 +200,8 @@ is again by definition preserved on crash. $\snfs$ can be viewed as an
 abstraction of the following pseudo-code that represents the essence of the
 real \cc{daisy-nfsd} binary:
 
+% minipage prevents splitting this code across pages
+\begin{minipage}{\textwidth}
 \begin{minted}[linenos]{go}
 // this is the core of daisy-nfsd
 func main() {
@@ -237,6 +223,7 @@ func main() {
   }
 }
 \end{minted}
+\end{minipage}
 
 This code starts by recovering the state of the system, starting with the
 transaction system on line 3 and then continuing on to the file-system state on

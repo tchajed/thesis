@@ -28,6 +28,7 @@ type Update {
   Block []byte
 }
 \end{minted}
+  \tightenspace
   \caption{The Go API for the circular buffer.}%
   \label{fig:circ:api}
 \end{figure}
@@ -108,6 +109,7 @@ Definition trim_till (s: circ_state) (new_start: u64) : circ_state :=
   s <[ start := new_start ]>
     <[ upds := drop num_removed s.(upds) ]>.
 \end{minted}
+  \tightenspace
   \caption[Specification for the circular buffer]%
   {The specification for the circular buffer, described as transitions
     on the abstract state.}

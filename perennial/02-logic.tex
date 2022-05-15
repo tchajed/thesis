@@ -75,6 +75,8 @@ context.
 
 \begin{figure}[ht]
   \wpcseqfig
+  % slightly tightens the spacing
+\vspace{-1.5\baselineskip}
 \caption{Basic structural rules for crash weakest preconditions.}%
 \label{fig:wpc-structural}
 \end{figure}
@@ -87,6 +89,8 @@ context.
     \inferH{wp-wpc}
     {}{\wpre\expr{\Ret\var \prop} \dashv\proves \wpc\expr{\Ret\var \prop}{\TRUE}}
   \end{mathpar}
+  % slightly tightens the spacing
+  \vspace{-1.5\baselineskip}
   \caption{Interesting crash-related structural rules for crash weakest
     preconditions.}%
 \label{fig:wpc-seq}
@@ -416,6 +420,7 @@ defined as theorems in the base logic, using the definition of $\wpw$.
 \midrule
   \input{go-txn/tables/perennial-loc.tex}
 \end{tabular}
+\tightenspace
 \caption[Lines of code for Perennial.]%
 {Lines of code (including proofs) for Perennial.}
 \label{fig:perennial:lines}

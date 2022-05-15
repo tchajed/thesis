@@ -196,6 +196,7 @@ Definition crash : transition State unit :=
   modify (set durable_lb (fun _ => durable));
   ret tt.
   \end{minted}
+  \tightenspace
 \caption{Parts of the specification for the \scc{wal} interface.}
 \label{fig:wal-spec}
 \end{figure}

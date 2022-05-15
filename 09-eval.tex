@@ -33,8 +33,10 @@ socket, disable turbo boost, and disable processor sleep states; the coefficient
 of variation for all experiments is under 5\% so we omit error bars for visual
 clarity.
 
-\vspace{0.5\baselineskip}
-The evaluation uses three benchmarks, which test different aspects of file system performance:
+% manual spacing moves this paragraph closer to the three \paragraphs
+\vspace{\baselineskip}
+The evaluation uses three benchmarks, \cc{smallfile}, \cc{largefile}, and
+\cc{app}, which test different aspects of file system performance.
 \vspace{-\baselineskip}
 
 \paragraph{Smallfile.}
@@ -141,7 +143,6 @@ master's thesis~\cite{mtheng-meng}.
 \begin{figure}[ht]
   \centering
   \includegraphics{daisy-nfs/fig/scale.pdf}
-  \vspace{0.5\baselineskip}
   \caption[Concurrent smallfile performance]%
   {Combined throughput of the \cc{smallfile} microbenchmark, varying the number
     of concurrent clients. DaisyNFS's performance scales with the number of
@@ -181,7 +182,6 @@ in-memory benchmarks. The fact that scalability is limited by this common lock i
 \begin{figure}[ht]
   \centering
   \includegraphics{daisy-nfs/fig/scale-ram.pdf}
-  \vspace{0.5\baselineskip}
   \caption[Concurrent smallfile performance on in-memory disk]%
   {Scalability on the \cc{smallfile} benchmark, running on an in-memory disk.}
   \label{fig:eval:scale:ram}
@@ -210,7 +210,6 @@ be received while another is being processed.
     \caption{On an in-memory disk}
     \label{fig:bench-configs:ram}
   \end{subfigure}
-  \vspace{0.5\baselineskip}
   \caption[Benchmarks across file-system configurations]%
   {Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
@@ -375,6 +374,7 @@ compatible.
     \bottomrule
   \end{tabular}
   \end{center}
+  \tightenspace
   \caption{Bugs found by testing at the NFS protocol level.}
   \label{fig:daisynfs-bugs}
 \end{figure}
@@ -424,6 +424,7 @@ of sequential reasoning and proof automation.
   \bottomrule
 \end{tabular}
 \end{center}
+\tightenspace
 \caption[Effort for incremental improvements to the file system]%
 {Incremental improvements to the file-system code were implemented
   quickly and without much code (which includes both implementation and proof).}
