@@ -16,10 +16,10 @@ The implementation of DaisyNFS is split into several public code repositories:
         evaluation code relies on scripts here, even if not comparing against
         this server.
   \item \url{https://github.com/mit-pdos/perennial} has the Perennial framework,
-        GooseLang, and GoTxn. The repository also holds several other proofs
+        GooseLang, and GoTxn's proofs. The repository also holds several other proofs
         built using Perennial not described in this thesis.
   \item \url{https://github.com/tchajed/goose} has the Goose translator and some
-        small support libraries, in particular the library that exposes the disk
+        small Go support libraries, in particular the library that exposes the disk
         to verified code.
   \item \url{https://github.com/tchajed/marshal} is the code for a verified
         serialization library used in GoTxn. The proofs are in the Perennial
@@ -41,14 +41,14 @@ that is substituted with a real implementation that calls the GoTxn library. A
 similar approach is used to represent Go byte slices.
 
 Similar to VeriBetrKV~\cite{hance:veribetrkv}, we followed a
-discipline of identifying and addressing timeouts in the proof.
+discipline of identifying and addressing timeouts in the Dafny proofs.
 % , which
 % hamper development by giving the developer slower feedback (because
 % proofs fail only after 30s) and less specific feedback (because Dafny
 % is unable to pinpoint which assertion or postcondition failed and
 % reports a timeout for an entire method).
 As a result, the overall
-build is fast: compiling the proofs takes only 12 minutes on a slow
+build is fast: compiling the Dafny proofs takes only 12 minutes on a slow
 machine in continuous integration and 4 minutes on a laptop
 using eight CPU cores.
 
@@ -105,12 +105,13 @@ Ratio is the proof:code ratio, a rough measure of verification overhead.}
   \cc{daisy-nfsd} & \emph{unverified} & \loc{\daisyTrustedCode} & --- \\
   \bottomrule
 \end{tabular}
+\vspace{0.5\baselineskip}
 \caption{Lines of proof, code, and trusted specification for DaisyNFS.}
 \label{fig:daisy:loc}
 \end{figure}
 
 The lines of proof, code, and specification for the layers of GoTxn are
-summarized in \cref{fig:txn:loc}. The GoTxn correctness proof, \cref{thm:gotxn-transfer}, is
+summarized in \cref{fig:txn:loc}. The GoTxn simulation transfer theorem's proof is
 relatively large because code executed in atomically blocks can include many Go
 operations modeled by Perennial, and the proof has cases to handle
 each operation. However the result of the proof is a relatively concise
