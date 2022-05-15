@@ -142,7 +142,8 @@ and \cc{memEnd} are purely in-memory, and are eligible for absorption.
   \centering
     \input{go-txn/fig/log}
     \vspace{0.5 \baselineskip}
-    \caption{The logical write-ahead log.  Vertical arrows indicate
+    \caption[Internal abstraction for the write-ahead log]%
+    {The internal abstract state of the write-ahead log.  Vertical arrows indicate
         designated positions in the logical log.  Labels below the arrows
         indicate what thread or function is responsible for advancing
         that logical position to the right.}

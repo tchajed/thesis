@@ -108,7 +108,8 @@ Definition trim_till (s: circ_state) (new_start: u64) : circ_state :=
   s <[ start := new_start ]>
     <[ upds := drop num_removed s.(upds) ]>.
 \end{minted}
-  \caption{The specification for the circular buffer, described as transitions
+  \caption[Specification for the circular buffer]%
+  {The specification for the circular buffer, described as transitions
     on the abstract state.}
   \label{fig:circ:spec}
 \end{figure}
