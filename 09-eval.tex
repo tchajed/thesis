@@ -33,17 +33,20 @@ socket, disable turbo boost, and disable processor sleep states; the coefficient
 of variation for all experiments is under 5\% so we omit error bars for visual
 clarity.
 
-The three benchmarks test different aspects of file system performance:
+\vspace{0.5\baselineskip}
+The evaluation uses three benchmarks, which test different aspects of file system performance:
+\vspace{-\baselineskip}
 
 \paragraph{Smallfile.}
-The smallfile benchmark is a metadata-heavy benchmark that repeatedly creates a
+The \cc{smallfile} benchmark is a metadata-heavy benchmark that repeatedly creates a
 file, writes 100 bytes to it, calls \cc{fsync()}, and then deletes the file. The
 performance reported is the throughput in terms of files/s for this whole process. At
 the NFS level each iteration results in four RPCs issued to the server: \cc{LOOKUP} for the file
 being created (which fails), \cc{CREATE}, \cc{WRITE}, and \cc{REMOVE}. Because
-both systems run the same RPCs, the comparison is meaningful.
+both DaisyNFS and the Linux NFS server run these same RPCs, the comparison is
+meaningful.
 
-The smallfile benchmark is also used to measure the scalability of the file
+The \cc{smallfile} benchmark is also used to measure the scalability of the file
 system. We run several concurrent clients, each repeatedly running the
 create-write-delete sequence above, for several seconds, then report the
 aggregate throughput of all of these clients. A concurrent file system should be
@@ -54,7 +57,7 @@ combined (an optimization called \emph{group commit}), resulting in less I/O
 than separate commits.
 
 \paragraph{Largefile.}
-The largefile benchmark is a data-heavy benchmark that creates a file, then
+The \cc{largefile} benchmark is a data-heavy benchmark that creates a file, then
 repeatedly appends to the file until it is 300 MB, and finally calls
 \cc{fsync()} and closes the file. The performance reported is the throughput in
 terms of MB/s for these appends. The Linux NFS client buffers the entire append
@@ -64,7 +67,7 @@ writes at the NFS server do not come in order, so some are past the end of the
 file and then the gap is filled in by later RPCs.
 
 \paragraph{App.}
-The application workload ``app'' consists of running \cc{git clone} on the xv6
+The application workload \cc{app} consists of running \cc{git clone} on the xv6
 repository followed by \cc{make}. The main purpose of including this workload is to
 demonstrate that DaisyNFS covers a useful range of the NFS interface, since
 \cc{git clone} especially uses a wider mix of operations and arguments than the
@@ -105,7 +108,7 @@ comparable performance on these benchmarks after implementing many optimizations
 returning attributes to enable client-side caching). Both CPU and I/O efficiency
 are important to get good performance.
 
-DaisyNFS gets slightly lower throughput compared to Linux on the largefile
+DaisyNFS gets slightly lower throughput compared to Linux on the \cc{largefile}
 benchmark. The NFS client's behavior on
 this benchmark means it issues writes past the end of the file; the semantics of
 such a write are to fill the gap with zeros. DaisyNFS and Linux get good
@@ -116,7 +119,7 @@ concurrent, synchronous writes.
 \subsection{Scalability}
 
 The next experiment evaluates DaisyNFS's scalability by measuring the throughput
-when clients issue operations concurrently. The benchmark used is the smallfile
+when clients issue operations concurrently. The benchmark used is the \cc{smallfile}
 benchmark with a varying number of concurrent clients, all running in separate
 directories. Because this experiment runs on a physical disk, other threads have
 a chance to prepare transactions while the transaction system is committing to
@@ -132,8 +135,8 @@ allow any parallel disk access. The ``seq txn'' variant leaves the write-ahead
 log the same but changes the per-address locking in GoTxn to a \emph{global}
 transaction lock, preventing any transactions from running concurrently but
 allowing concurrency between logging and installation in the write-ahead log.
-(Mark Theng came up with the idea of comparing to this seq txn variant in his
-master's thesis~\cite{mtheng-meng}.)
+Mark Theng came up with the idea of comparing to this seq txn variant in his
+master's thesis~\cite{mtheng-meng}.
 
 \begin{figure}[ht]
   \centering
@@ -168,7 +171,8 @@ stop scaling due to lock contention; they are neither I/O bottlenecked nor are
 they using the entire CPU.\@ For example, with 30 clients Linux uses only 19\% CPU
 while DaisyNFS uses 19\% in userspace and an additional 8\% in the kernel; both
 numbers include the cost of the NFS client, which runs in the kernel. We
-confirmed that I/O is not a bottleneck with an analogous experiment run on an in-memory disk, shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
+confirmed that I/O is not a bottleneck with an analogous experiment run on an in-memory disk,
+whose results are shown in \cref{fig:eval:scale:ram}. DaisyNFS has a common
 lock for installing sub-block object writes into a full block, which all
 operations go through to commit. The Go mutex profile points to this lock as
 being the biggest source of contention in DaisyNFS for both the NVMe and
@@ -211,7 +215,7 @@ be received while another is being processed.
   {Performance across various file-system configurations. The smallfile
     benchmark is run with a single client (\cc{smallfile-1}) and also with 25
     parallel clients (\cc{smallfile-25}). The ``log bypass'' variant of Linux
-    uses the \cc{data=ordered} to write data directly rather than through the
+    uses the \cc{data=ordered} ext4 option to write data directly rather than through the
     journal. The ``seq txn'' variant of DaisyNFS has a global transaction lock
     while ``seq WAL'' adds additional locking to the write-ahead log.}
   \label{fig:bench-configs}
@@ -220,7 +224,7 @@ be received while another is being processed.
 The final set of experiments aims to understand the performance of DaisyNFS on
 the largefile and app benchmarks as well. We compare against the same variants
 of DaisyNFS with reduced concurrency, as well as against Linux with its
-log-bypass optimization (that is, \cc{data=journal} mode).
+log-bypass optimization (that is, mounting ext4 with its \cc{data=journal} option).
 The results are presented in \cref{fig:bench-configs},
 on both an NVMe disk and an in-memory disk. The results for the NVMe disk have
 most of the interesting trends, but there are a few interesting differences
@@ -238,9 +242,9 @@ whereas Linux only requires 6.5 writes on average; the total I/O is also larger,
 whereas DaisyNFS repeatedly writes to the same header blocks.
 
 The \cc{smallfile-1} benchmark is interesting because the client issues a single
-operation at a time, and yet seq WAL performs noticeably worse. This is because
-the write-ahead log is parallelizing logging writes and installing them to the
-disk (rather than alternating between logging and installation), and the disk is
+operation at a time, and yet seq WAL performs noticeably worse. This is because ordinarily
+the write-ahead log parallelizes logging writes and installing them to the
+disk (rather than alternating between logging and installation, as in seq WAL), and the disk is
 able to get better throughput by doing these concurrently.
 
 On the \cc{smallfile-25} benchmark DaisyNFS can coalesce concurrent operations
@@ -256,7 +260,7 @@ both systems. However, we can see that a global txn lock actually performs
 \emph{better} than the per-address locking, showing a case where with enough
 conflicts two-phase locking has some overhead compared to a simpler locking
 scheme. The seq WAL case achieves lower performance for similar reasons to
-smallfile-1, since it again alternates logging and installation rather than
+\cc{smallfile-1}, since it again alternates logging and installation rather than
 issues them concurrently.
 
 The \cc{app} benchmark is less heavy on writes, and its performance
@@ -266,9 +270,9 @@ Another comparison shown in the same figure is to Linux with its log bypass
 optimization (the default \cc{data=ordered} mode), where writes can be written
 directly to a file's data blocks rather than going through the journal. This optimization
 makes a difference only for asynchronous (``unstable'') NFS writes, since synchronous writes
-are journaled even with this option. The smallfile benchmark has only
+are journaled even with this option. The \cc{smallfile} benchmark has only
 synchronous writes, so unsurprisingly performance is the same, but on the
-largefile benchmark Linux with log bypass achieves 80\% higher throughput. An
+\cc{largefile} benchmark Linux with log bypass achieves 80\% higher throughput. An
 improvement of up to $2\times$ better throughput is expected here since unlike
 in all the other configurations, data writes are written only once rather than
 to both the journal and the data region, and the actual benefit is high since
@@ -276,11 +280,11 @@ the benchmark is dominated by disk writes. It's worth noting that even Linux
 does not saturate the disk, which can achieve 500 MB/s in sequential write
 throughput, due to the overhead of running over NFS.
 
-The log bypass optimization has been verified in prior work on
+The log-bypass optimization has been verified in prior work on
 DFSCQ~\cite{chen:dfscq}, a verified sequential file system. While the
 optimization is not out of reach for verification in Perennial, it does break
-the GoTxn abstraction boundary, since log bypass writes are not persisted
-together with other writes in a transaction. What is much more achievable is
+the GoTxn abstraction boundary, since log-bypass writes are not persisted
+together with other writes in a transaction. What is much more achievable in our design is
 transactions with asynchronous or deferred durability, where the writes are
 visible after commit but persisted only later. This optimization does not make
 much difference for the \cc{largefile} benchmark because the write size is
@@ -318,7 +322,7 @@ found no bugs after running all supported 2-operation tests.
 
 While other experiments in the evaluation interact with DaisyNFS via the Linux
 client, these tests interact with the server directly from a hand-written
-client. That client is then tested with symbolic execution over the entire server.
+client. That client is then tested with symbolic execution.
 This testing produces a wider range of requests than are possible via the Linux
 client. The process helped us find and fix several bugs in the unverified parts
 of DaisyNFS and in the specification itself, which are reported in
@@ -339,13 +343,14 @@ requests, and eventually the buffer was corrupted due to a concurrent request.
 We fixed the bug by copying from the RPC before passing the buffer to the Dafny
 code. The subtle aspect of this bug is that it is the ownership implicit in the
 Dafny specification that was violated by the surrounding code, not a
-straightforward precondition.
+straightforward precondition.  This was a tricky bug which Mark debugged; it
+helped to focus on the unverified code, but the invariant that it violated was
+quite subtle.
 
 Two of the specification bugs are particularly interesting. The bounded inode bug
 was due to an \cc{ino} argument of type \cc{Ino}; this type is a Dafny
 \emph{subset type}, thus adding an implicit precondition that \cc{ino <
-NUM_INODES}, which can be violated by the (unverified) Go code. The fix is to instead
-use a \cc{uint64} and check the bound in verified code. The RENAME bug was due
+NUM_INODES}, which was violated by the (unverified) Go code. The fix we implemented was to change the verified code to take a \cc{uint64} inode number and check the bound in verified code. The RENAME bug was due
 to having an incomplete specification (and implementation) that did not capture
 that RENAME should only overwrite when the source and destination are
 compatible.
@@ -396,7 +401,7 @@ worked, both to improve performance and to support more
 functionality. Some of the interesting changes are listed in
 \cref{fig:features}.  To improve performance, we switched to
 operating on the serialized representation of directories directly
-(decoding fields on demand and encoding in-place) and then added also
+(decoding fields on demand and encoding in-place) and then added
 multi-block directories.  We added support for attributes so that the file
 system stores the mode, uid/gid, and modification timestamp for files and directories.
 Finally, we implemented the freeing plan described
@@ -425,16 +430,17 @@ of sequential reasoning and proof automation.
 \label{fig:features}
 \end{figure}
 
-For the smallfile benchmark, it took some work to ensure that the Linux NFS
+For the \cc{smallfile} benchmark, it took some work to ensure that the Linux NFS
 client issued exactly four RPCs per iteration. What this involved was returning
 the correct ``weak cache-consistency'' data from all operations, so that the
 client reliably caches attribute information. The RFC says these post-operation
 attributes are optional but encouraged for the server, but without this
 information in practice the Linux client issues additional \cc{GETATTR} and
-\cc{ACCESS} RPCs, significantly slowing down DaisyNFS. A big part of the
-performance improvement while developing DaisyNFS involved returning more
-attribute information, and at the same time expanding the specifications to say
-the additional metadata is correct. These improvements were carried out in many
+\cc{ACCESS} RPCs in every iteration of the benchmark, significantly slowing down DaisyNFS.
+A big part of the
+performance improvement on this benchmark involved returning more
+attribute information (at the same time we did expand the specifications to say
+the additional metadata is correct). These improvements were carried out in many
 small steps, but they were similar to the incremental improvements above in
 terms of taking a small amount of time and few changes to lines of proof; most
 of the work went into figuring out what was missing in the implementation.
@@ -444,11 +450,11 @@ development. Three changes are worth noting. First, the write-ahead log was
 split into three components: the on-disk circular buffer, the in-memory data
 structure caching the log, and finally the rest of the code integrating these
 components. This organization become clear while writing the specification and
-thinking about the proof. The write-ahead log is the largest single library in
+thinking about the proof. The write-ahead log is the largest library in
 GoTxn, with the largest lines of code even after splitting off these two data
 structures, so factoring its complexity was essential to the proof. The second
-change was an optimization Mark Theng made to improve performance. Installation
-absorbed multiple writes to the same address before installing as a way of
+change was an optimization Mark Theng made to improve performance. Formerly installation
+absorbed multiple writes to the same address before installing, primarily as a way of
 simplifying the proof, but Mark found this hurt performance since typically absorption had already occurred earlier, and the process had a non-trivial CPU cost. He was able to
 eliminate it and fix the proof; notably this change incrementally changed an
 already-complete proof. Finally, the transactional part of GoTxn implemented
