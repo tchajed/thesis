@@ -142,7 +142,7 @@ that only returns a boolean on success and not also the previous value.
 
 Acquiring a lock is modeled as repeatedly using
 $\CAS \app l \app \goosekw{false} \app \goosekw{true}$ to
-atomically test that the lock is false and set it to \goosekw{true} if so, while release
+atomically test that whether the lock is free and set it to \goosekw{true} if so, while release
 stores \goosekw{false} to the lock. This implementation as a spin lock is merely an
 operational model that captures what the lock does: acquire blocks until the
 lock is free and sets it to locked, while release frees the lock. This code is
@@ -152,11 +152,22 @@ system.
 
 The specification for locks is a typical one for concurrent separation logic,
 based on associating a \emph{lock invariant} with each lock, which is a predicate that holds when the lock
-is free. Because this is a separation logic, we can also interpret the lock
+is free:
+\begin{mathpar}
+    \inferH{wp-newlock}{}%
+    {\hoare{P}{\goosedef{NewLock}}{\Ret \ell \islock{\ell}{P}}}
+
+    \inferH{wp-lock-acquire}{}%
+    {\hoare{\islock{\ell}{P}}{\goosedef{Acquire}(\ell)}{P}}
+
+    \inferH{wp-lock-release}{}%
+    {\hoare{P \sep \islock{\ell}{P}}{\goosedef{Release}(\ell)}{\TRUE}}
+\end{mathpar}
+Because this is a separation logic, we can also interpret the lock
 invariant as ownership over some data (for example, some region of memory); the
 lock mediates access to this ownership, handing it out when the lock is acquired
-and requiring it back when the lock is released. GooseLang has a proof that this
-specification holds for the spin-lock implementation given above.
+and requiring it back when the lock is released. GooseLang has a proof that the
+specification holds for the spin-lock implementation.
 
 Goose also supports Go's condition variables. As is standard, the idea is that
 there is some ``condition'' associated with each condition variable; one thread
@@ -191,8 +202,8 @@ Gallina (Coq's functional language) and GooseLang. Goose encodes
 higher-level primitives like field access on top of GooseLang primitives like
 tuples and contiguous memory.
 
-Struct types are represented using a combination of two Gallina types,
-$t \in \textdom{GooseType}$ gives the type of a struct, while
+Struct types are represented using a combination of two Gallina types:
+$t \in \textdom{GooseType}$ gives the type of a struct while
 $s \in \textdom{StructDecl}$ is an (anonymous) struct declaration that gives its
 field names and their types. The definitions of these two types are given in
 \cref{fig:goose:types}. The exact types are not important in the semantics,
@@ -249,7 +260,7 @@ To support this concurrency, Goose models a struct in memory with a
 flattened representation, with each base element in a separate memory
 cell. The flattening applies recursively to fields that are themselves
 structs, until a base literal is reached (like an integer or boolean);
-base elements are at most a machine word, but can be smaller. When
+base elements are at most a machine word in size. When
 allocating a new pointer, the semantics flattens composite values and
 stores the elements in a sequence of contiguous addresses.
 
@@ -287,8 +298,8 @@ iterating over all the fields and offsets.
 
 The Go language reference specifies that each field acts like an
 independent ``variable'' (which is stored in the GooseLang heap when it
-is mutable in Go), so this model should accurately reflect the
-specification. Moreover modeling structs as independent locations is
+is mutable in Go), so this model accurately reflects the
+language definition. Moreover modeling structs as independent locations is
 also justified as being similar to how the implementation works. Structs
 in memory are in reality represented by contiguous memory, and field
 access is implemented by computing a pointer from the base of the
@@ -310,15 +321,17 @@ equivalence breaks a large typed points-to into individual fields (with
 the values computed from $v$), while in the other direction it allows
 to prove a $\ell \mapsto_{\structType(s)} v$ by gathering up all the fields.
 
-The struct field points-to is indispensable in proofs, because the
-pattern of \cc{x.f} in Go when $x$ is a pointer is in fact a field
-load (in C, this would be written \cc{x->f}). The model
+The struct field points-to is indispensable in proofs, because it is common to
+write \cc{x.f} in Go when $x$ is a pointer (in C, this would be written \cc{x->f}). The model
 for loading a struct field is a function $\loadField(s, f) \app x$
 which is implemented in two steps, first computing the offset to field
 $f$ and then dereferencing the computed pointer (in both cases the struct descriptor $s$
 describes how to interpret field $f$). Having a field points-to gives
 a natural specification for this type of load:
-$\hoare{\ell \mapsto_{s.f} v}{\loadField(t, f) \app \ell}{\Ret{v} \ell \mapsto_{s.f} v}$.
+\begin{mathpar}
+\hoare{\ell \mapsto_{s.f} v}{\loadField(t, f) \app \ell}{\Ret{v} \ell
+  \mapsto_{s.f} v}
+\end{mathpar}
 
 The lemmas about breaking apart and recombining structs are all proven
 against a simpler model of structs that only requires flattening and
@@ -348,10 +361,9 @@ Go's built-in slice operations include bounds checks on all slice
 operations and panic if a memory access or sub-slice operation goes out
 of bounds.
 
-GooseLang has a primitive for contiguous memory, which Goose uses to model
+GooseLang has a primitive for allocating contiguous memory, which Goose uses to model
 the allocation underlying a slice (though these are not directly
-accessible to Go code, since they do not carry enough information for
-bounds checking). On top of these Goose models slices as a tuple of a base
+accessible to Go code). On top of these Goose models slices as a tuple of a base
 pointer, length, and capacity.
 
 The GooseLang slice model is directly inspired by the implementation of
@@ -377,16 +389,16 @@ Similarly \cc{s[i] = x} stores to the same location. Goose translates Go's
 \cc{len(s)} directly to $\len(s)$ and $\cc{cap(s)}$ to $\cap(s)$.
 
 The Go \cc{append} operation is the most sophisticated to model. The
-behavior of \cc{append(s, x)} where \cc{s: []T} and
-\cc{x: T} depends on whether there is extra capacity to store the
+behavior of \cc{append(s, x)} where \texttt{s:\;[]T} and
+\texttt{x:\;T} depends on whether there is extra capacity to store the
 new element \cc{x}. If there is capacity, then \cc{x} is stored
 there and the append returns a new slice with the same pointer but a
 larger length. If there is no capacity, then \cc{append} must
-allocate a new slice, copy the existing elements to it, and then store
+allocate a new array in memory, copy the existing elements to it, and then store
 \cc{x}. In the latter case \cc{append} returns a slice with a
 fresh pointer.
 
-The difficulty with Go slices arise when supporting subslicing. Consider
+The difficulty with Go slices arises when supporting subslicing. Consider
 \cc{s[:i]}, where \cc{i} is less than \cc{len(s)}.
 Clearly this slice should have the same pointer and length \cc{i},
 but what should its capacity be? Surprisingly, the capacity of this
@@ -418,9 +430,9 @@ that has an associated Gallina function $\mathtt{to\_val} : T \to \textdom{Val}$
 version is convenient in proofs and can be verified as a small extension to the
 untyped specification.
 
-The first predicate $\sliceRep(s, l)$ gives the abstract value of
-$s$, the list of values it contains, excluding additional capacity. It
-also represents ownership over all these elements, in terms of the
+The first predicate $\sliceRep(s, l)$ relates $s$ to the abstract value $l$ that
+it references. It
+also represents ownership over the slice's elements and its capacity, in terms of the
 underlying struct points-to facts. GooseLang's slice specifications use this
 predicate to describe loading and storing by index:
 \begin{mathpar}
@@ -488,12 +500,13 @@ possibilities that the proof engineer can choose between: either give up ownersh
 in exchange for $\cap(s[:i])$, or ignore the
 capacity of the subslice and keep
 $\sliceRep([i:], \drop(l, i))$. These are incomparable and
-unexpressed in the code: the decision is based on whether subsequently the program will
+unexpressed in the Go code being verified: the decision is based on whether subsequently the program will
 append to the slice prefix but stop using the old slice, or if it will use both
 $s[:i]$ and $s[i:]$.
 
-Concretely, GooseLang has two theorems for reasoning about taking a prefix of a
-slice. Both of these theorems require $i < \len(s)$.
+To support both ways that $s[:i]$ might be used, GooseLang has two theorems for
+reasoning about taking a prefix of a slice. Both of these theorems require
+$i < \len(s)$.
 \begin{mathpar}
   \inferH{slice-take-full}{}{%
 {\begin{array}{ll}
@@ -516,7 +529,7 @@ slice. Both of these theorems require $i < \len(s)$.
 The rule \ruleref{slice-take-full} captures that the program proof can get full ownership of
 $s[:i]$, in exchange for dropping any ownership over the rest of $s$.
 The second rule \ruleref{slice-split} instead allows the program proof to split $s$ into two
-parts at the $i$th index, but in exchange lose $\sliceCap(s[:i))$, the right
+parts at the $i$th index, but in exchange requires giving up $\sliceCap(s[:i))$, the right
 to append to the first half.
 
 There is one more fact that is sometimes useful, which is that
@@ -524,16 +537,21 @@ $\sliceCap(s) \dashv\vdash \sliceCap(s[i:])$ (this is somewhat intuitive;
 capacity is past the end of the array, so dropping elements from the front has
 no impact). As a corollary of \ruleref{slice-split}, the proof can also split full
 ownership of a slice into two (asymmetric) parts:
-\begin{align*}
+\begin{mathpar}
+  \inferH{slice-split-full}{}{
+{\begin{array}{ll}
   &\sliceFull(s, l) \dashv\vdash \\
   &\quad \sliceRep(s[:i], \take(l, i)) \sep {} \\
   &\quad \sliceFull(s[i:], \drop(l, i))
-\end{align*}
+\end{array}}
+}
+\end{mathpar}
 
 These two reasoning principles correspond to two ways to think about indexing:
 taking a prefix while using the original slice as capacity for the prefix (the
-first theorem), or splitting the slice into two parts (the second theorem and
-its corollary). It was interesting that we discovered these principles only
+first theorem, \ruleref{slice-take-full}), or splitting the slice into two parts
+(the second theorem \ruleref{slice-split} and
+its corollary \ruleref{slice-split-full}). It was interesting that we discovered these principles only
 while proving theorems about subslicing in GooseLang. Even as experienced Go
 developers, we had never thought about subslicing and appending in enough detail
 to appreciate this difference in ownership reasoning.
@@ -568,8 +586,8 @@ implementation both by running it on concrete examples (using the infrastructure
 described in \cref{sec:goose:testing}) and proving a specification for the
 various map operations. Both of these
 essentially rule out type errors,
-and the specification is a redundant check on the behavior. Both simple tests and verification
-cover easy mistakes like reading the oldest write to a key rather than
+and the specification is a redundant check on the behavior. Simple tests and verification
+rule out easy-to-make mistakes like reading the oldest write to a key rather than
 the latest, or duplicate keys during iteration (the implementation must
 skip over a key after observing it once).
 
@@ -585,7 +603,7 @@ Map values are not a visible notion to the Go code, since
 it always interacts with maps via their pointer, so the specifications
 all use $\mapRep(\ell, m) = \exists v.\, \ell \mapsto v * \mapVal(v, m)$. The
 indirection is important, since the Go map value
-\cc{m : map[uint64]V} is in fact a reference to a map that is
+\texttt{m:\;map[uint64]V} is in fact a reference to a map that is
 mutated in-place (unlike a slice, which has both pure data --- pointer,
 length, and capacity --- and heap data). Concurrency is simple for these
 specifications because Go's maps are not thread safe, so all the specifications
@@ -605,13 +623,13 @@ for k, v := range m {
   body(k, v)
 }
 \end{verbatim}
-
+%
 The model for this entire construct is given by $\cc{MapIter}(m, \textlog{body})$, where
 $m$ is a reference to the map and $body$ is an expression for the body of the
 loop. Goose translates generic loop bodies, so the Go code does not literally
 need to consist of a call to a separate function. Recall that the representation
 for a map is a list of all appended key-value pairs in reverse insertion order
-(puts do not delete old values). To iterate over the map's contents, the
+(insertions do not delete old values). To iterate over the map's contents, the
 implementation gets the next key-value pair, then deletes that key from the rest
 of the map before making a recursive call, avoiding iterating over old values
 that are no longer logically part of the map. The code for the model uses the
@@ -627,12 +645,12 @@ this). The model of maps puts the entire contents of a map in one heap location.
 In order to ensure iterator invalidation is undefined behavior, the model marks the map's
 reference as being read for the entire duration of iteration, using the
 $\goosekw{StartRead}$ and $\goosekw{FinishRead}$ GooseLang primitives at the
-beginning and end of $\cc{MapIter}$. If the map value in the heap is
+beginning and end of $\cc{MapIter}$, respectively. If the map value in the heap is
 $\nareading{n}{v}$, these operations increment and decrement
 (respectively) the reader count $n$, so that any writes within the body have
 undefined behavior.
 
-Iteration gets a \emph{higher-order} specification that assumes a specification
+Iteration has a \emph{higher-order} specification that assumes a specification
 for the body, showing it preserves a loop invariant $P$ over the part of the map
 consumed so far:
 \begin{mathpar}
@@ -662,6 +680,11 @@ over the map. This situation is unrealistic since a map with $2^{64}$ elements
 would take an unreasonable amount of memory, so the model \emph{assumes} that
 the map size stays below $2^{64}$. The specification for \cc{MapLen} is:
 \begin{mathpar}
-\infer{}{\hoare{\mapRep(\ell, m)}{\cc{MapLen}(\ell)}{\Ret{s} s = |m| * \mapRep(\ell, m)},}
+\infer{}{%
+\hoareV{\mapRep(\ell, m)}%
+{\cc{MapLen}(\ell)}%
+{\Ret{s} s = |m| * \mapRep(\ell, m)}%
+}
 \end{mathpar}
-which reflects the bounded-size assumption because $s$ is a 64-bit integer.
+The fact that the type of the return value $s$ is a 64-bit integer reflects the
+bounded-size assumption.

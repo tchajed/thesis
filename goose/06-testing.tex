@@ -4,7 +4,7 @@
 Goose is a trusted component in the entire verification process. For the
 overall system's proof to be sound, we rely on the model to produce all
 of the behaviors of the Go code; that is, the behaviors of the Go code
-(in practice, using the Go compiler) should be a subset of the behaviors
+(which depend on the Go compiler) should be a subset of the behaviors
 of its translated GooseLang (according to the Coq semantics). As long as
 this is case, the proof is sound in that if the modeled system always
 satisfies some property the code will, too.
@@ -76,8 +76,8 @@ it through the interpreter, checking that this produces $\goosetrue$ in
 GooseLang. While the interpreter is not extremely efficient, it is fast enough
 to run the tests in the test suite.
 
-The interpreter and test framework was designed and implemented by
+The GooseLang interpreter and test framework was designed and implemented by
 Sydney Gibson, and is described in greater detail in her master's
 thesis~\cite{gibsons-meng}. That thesis includes more details on evaluating the
 interpreter itself, for example documenting bugs caught by the test suite and
-other bugs that are now part of our regression tests.
+other bugs that are now part of Goose's regression tests.
