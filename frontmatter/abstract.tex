@@ -15,9 +15,9 @@ In particular, the file system is designed around a transaction system that
 addresses the core challenges of crashes and concurrency, so that the rest of
 the code can be verified with comparatively simpler sequential reasoning.
 
-An evaluation finds that the proof overhead is $2\times$ as many lines of proof
+An evaluation of proof overhead finds that verification required $2\times$ as many lines of proof
 as code for the sequential reasoning, compared to $20\times$ for the crash
-safety and concurrency proofs. DaisyNFS also achieves good performance compared
+safety and concurrency proofs. A performance evaluation finds that DaisyNFS achieves good performance compared
 to Linux NFS exporting ext4 over a range of benchmarks: at least 60\% the
 throughput even on the most challenging concurrent benchmarks, and 90\% on other
 workloads.
