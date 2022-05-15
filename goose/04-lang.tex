@@ -26,15 +26,15 @@ focuses on the low-level aspects of the language itself.
 \Cref{sec:goose:reasoning} discusses how Go features are modeled on top of
 GooseLang, and the reasoning principles for those models.
 
-The basic unit of GooseLang is the expression $e$, which supports recursive
-functions $\recfx$ and basic data types like tuples $(e_1, e_2)$. GooseLang has
+The basic unit of GooseLang is the expression $e$, which supports features such as recursive
+functions $\recfx$ and data types like tuples $(e_1, e_2)$. GooseLang has
 a semantics for these expressions in terms of the reduction relation
 $(\sigma, e) \reduces (\sigma', e')$ which says that $e$ reduces to (or executes
 to) $e'$ in the state $\sigma$, and the resulting state is $\sigma'$. This
 reduction relation is lifted to describe not just a single expression but to a
-whole \emph{threadpool}, a list of concurrently executing expressions. You
-can think of each expression as representing the computation of a single thread,
-and each reduction step as being running the thread for one transition. The
+whole \emph{threadpool}, a list of concurrently executing expressions. One
+can think of each expression in the threadpool as representing the computation of a single thread,
+and each reduction step as modeling running the thread for one transition. The
 semantics determines what primitive operations are considered atomic for the
 purpose of concurrent reasoning. For a reader unfamiliar with the lambda
 calculus and formal presentations of its syntax and semantics, one can find

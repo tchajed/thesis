@@ -28,8 +28,9 @@ It is easiest to understand this characterization in the context of concrete
 examples. Goose translates from Go code to a model in Coq. Both
 CFML~\cite{chargueraud:cfml} and hs-to-coq~\cite{spector-zabusky:hstocoq} work
 in a similar way, for OCaml and Haskell respectively.
-Fiat-Crypto~\cite{erbsen:fiat-crypto} prints a model of C code to a string that
-is compiled with a C compiler. Programs in Dafny~\cite{leino:dafny} are
+Fiat-Crypto~\cite{erbsen:fiat-crypto} prints a model of C code to a string with
+source code that
+is then compiled with a C compiler. Programs in Dafny~\cite{leino:dafny} are
 typically run using Dafny's built-in compiler (which has backends for C\#, Java,
 JavaScript, and Go at the time of this writing). Similarly, languages like Coq
 and \fstar have support for \emph{extraction} that translate functional programs
@@ -49,25 +50,25 @@ translation, using a tool called \cc{clightgen} to translate C code to an
 abstract syntax tree (AST) in Coq, which the user can then specify and verify in
 VST. However, it is then possible to run this AST through the CompCert verified
 compiler and produce assembly code (or more specifically, a model of assembly
-represented in Coq). The proof than covers this assembly model, which is
+represented in Coq). The proof is then over this assembly model, which is
 pretty-printed and compiled with an assembler to run it. While the user writes C
 code, this system only requires trusting the model of assembly. On the other
-hand, the performance of the code is determined by what features \cc{clightgen}
-supports and the quality of the CompCert compiler.
+hand, the performance of the code is determined by the quality of the CompCert compiler.
 
 Verified compilation is used in a way similar to VST in
 Vale~\cite{bond:vale,fromherz:vale-fstar}. Code is written in a specialized
 assembly-like language called Vale, with proof annotations. This is then
-compiled to Dafny or \fstar (Vale has two backends) where the proofs are carried
+compiled to Dafny or \fstar (Vale has backends for both) where the proofs are carried
 out before finally being printed back down to assembly. Vale supports verifying highly
 efficient assembly code, but this code pays a price in being harder to verify.
 
 Cogent~\cite{amani:cogent,oconnor:cogent-lang} also uses a form of verified
-compilation known as translation validation to make proofs easier without compromising on sounds. Code
+compilation known as translation validation to make proofs easier without compromising on soundness. Code
 written in the Cogent language (an imperative language with linear types) is
 translated to a model in Isabelle/HOL along with a functional specification for
 the code and a proof of correspondence. Thus the user can write proofs on top of
-the functional specification, but the proofs go down to an imperative model.
+the functional specification, but the proofs are about an imperative model of
+the code.
 
 \subsection{Modeling programming languages}
 
@@ -81,9 +82,9 @@ of the language features interact.
 Featherweight Go~\cite{griesemer:featherweight-go} gives a semantics to a core
 subset of Go, for the purpose of reasoning precisely about adding
 \emph{generics} to Go (this paper influenced the final design for Go's generics,
-which were added to Go 1.18 and released in 2022). The purpose of this paper is
+which were added to Go 1.18 and released in March 2022). The purpose of this paper is
 quite different from Goose, since it aims mainly to reason about Go's type
-system as a whole rather than model specific programs.
+system rather than model specific programs.
 
 CH20~\cite{krebbers:c-coq} is a fairly complete formalization of the C11 standard.
 CH20 defines C in operational and axiomatic styles, along with an executable

@@ -4,7 +4,9 @@ The goal of the translation is to model a Go program using GooseLang,
 which is a programming language defined in Coq for this purpose. That is,
 GooseLang is defined using expressions defined in Coq, equipped with a
 semantics also given in Coq. \Cref{fig:goose:overview} gives a graphical
-depiction of how Goose and GooseLang fit together. Since GooseLang programs support references
+depiction of how Goose and GooseLang fit together. \Cref{sec:goose:lang} gives a
+detailed and formal description of GooseLang.  Since GooseLang programs support
+references
 to model the Go heap, the semantics is written in terms of transitions
 of (expression, heap) pairs where the heap maps pointers to values. The
 intention of the translation is that the semantics of the translated
@@ -56,7 +58,7 @@ code, GooseLang comes with a specification for any primitive or function
 that the translated code might refer to, including libraries like slices
 used to model more sophisticated Go features. GooseLang has many
 ``pure'' operations that have no effect on the heap, due to many
-primitive data types and operations (for example, there are both 8-,
+primitive data types and operations (for example, there are 8-,
 32-, and 64-bit integers, and arithmetic and logical operations for
 each). The specifications for these operations are handled with a single
 lemma, which is applied automatically with a tactic \cc{wp_pures}.
@@ -73,12 +75,12 @@ has little impact on proofs.
 
 The translation process sometimes translates a Go operation to a sophisticated
 model in order to capture some corner-case behavior, for example in the model of
-slices described in \cref{sec:goose:slices}. This complex models don't have an
+slices described in \cref{sec:goose:slices}. These complex models don't have an
 undue affect on proofs as long as Goose's reasoning principles can abstract away
-the complexity for common cases. The subsequent sections in this chapter
-walk through several features of Go. Each section first describes a model that
+the complexity for common cases. \Cref{sec:goose:reasoning}
+walks through several features of Go. Each subsection first describes a model that
 implements the feature in GooseLang, which primarily aims to
-be faithful to Go. Next, the section describes reasoning principles we developed for that
+be faithful to Go. Next, the subsection describes reasoning principles we developed for that
 feature, in the form of separation logic assertions (for example, to
 represent a slice) and Hoare triples (for example, to specify the
 behavior of the \cc{append()} operation). The goal for the model is to capture

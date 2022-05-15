@@ -68,22 +68,23 @@ code from the compiler itself).
 
 \subsection{Why not C or Rust?}
 
-C is not too different from Go as a basis for Goose, as the aim would still be
-to support a useful subset with enough features to write efficient code. The main differences are
-the need to implement and verify manual memory management, and it would be more
-challenging to parse and type-check C code.
+C is not too different from Go as a basis for Goose, as long as the comparison
+is to a useful subset of C and not the entire language (as it is with Goose).
+The main differences are
+the need to implement and verify manual memory management for proofs on top, and
+that it would be more challenging to parse and type-check C code.
 
 Using Rust as a source language seems attractive but would likely not be much
-better than Go. One subtlety is that while the source code is type checked, the
+better than Go from a verification perspective. One subtlety is that while the source code is type checked, the
 model is an untyped program. It would be difficult to take advantage of the fact
 that the code is type-checked, and thus the proof engineer would anyway
-re-prove memory safety in the same way as Goose requires with Go. There would
-still remain the practical benefit of having memory safety checked by the Rust
-compiler, which is better at catching and reporting errors than carrying out the
-proof. Recent approaches for verifying Rust like
+re-prove memory safety in the same way as Goose requires with Go. Recent approaches for verifying Rust like
 RustHorn~\cite{matsushita:rusthorn} and
 RustHornBelt~\cite{matsushita:rusthornbelt} show promise for giving a model that
-benefits from Rust's unique type system guarantees.
+benefits from Rust's unique type system guarantees. There would
+still remain the practical benefit of Rust helping prevent memory safety and
+concurrency bugs, which is better for fixing the code than carrying out the
+proof and discovering issues during verification.
 
 Another difficulty with Rust would be the size and complexity of the language
 --- the subset supported might be restrictive enough that the experience no

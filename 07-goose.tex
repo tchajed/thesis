@@ -4,14 +4,14 @@ code in Go, uses the \cc{goose} translator to convert the code to a model in the
 assistant, then carries out the proof on top of the model in the Perennial
 logic. Goose encompasses
 the entire process: it includes the translation tool itself, the way it models Go
-code, and finally the reasoning principles for proving properties of translated
+code, and the reasoning principles for proving properties of translated
 Go. (We will also use ``Goose'' in some places to refer to the subset of Go
 supported by the translation tool.)
 
 Previously \cref{ch:txn} discussed the GoTxn proof. GoTxn is implemented in Go;
 Goose is the system that allows us to verify its implementation. The proof is
 carried out in the Perennial logic, described in \cref{ch:perennial}.
-Both the description and implementation of Perennial are language-independent.
+The description of Perennial is language-independent because the program logic can be used to reason about any programming language modeled in Coq.
 To verify GoTxn, we instantiate Perennial with GooseLang, the language that
 Goose provides to model Go code.
 
@@ -19,14 +19,14 @@ This description of Goose is written to be accessible to someone relatively new
 to verification or systems research. The hope is that others can learn from this
 approach to modeling and verifying code, and apply it to other languages and
 domains. Some familiarity reading programming language semantics will be helpful
-to appreciate \cref{sec:goose:lang}, but fully understanding this section is not
+to appreciate \cref{sec:goose:lang}, but fully understanding that section is not
 needed to understand the overall idea and reasoning principles in the other
 sections. \Cref{sec:goose:reasoning} gives specifications in separation logic,
 starting with enough introduction to understand their intuitive meaning.
 
 The chapter is intentionally fairly independent of the rest of the thesis, in
-case the reader is not interested in the specifics of the file system or the
-Perennial logic, and since there is no published paper describing the details of
+case the reader is not interested in the specifics of the Perennial logic or the file system,
+and since there is no published paper describing the details of
 how Goose works or its reasoning principles. Concurrency is an important part of
 the Goose model, though pleasantly enough it doesn't complicate the sequential
 parts of Goose. Crash-safety concerns do not show up here since crashes are
