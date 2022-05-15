@@ -8,13 +8,16 @@ Goose models, as well as reasoning principles developed on top to verify code
 that uses these features.
 
 Specifications in this section are part of the Perennial logic, described in
-detail in \cref{ch:perennial}. Perennial is based on separation logic. The basic
-specification of this logic is the triple
+detail in \cref{ch:perennial}. Perennial is based on separation logic, and only
+features of separation logic are needed to understand this section and not the
+rest of the Perennial logic. The basic
+specification in this logic is the \emph{Hoare triple}
 $\hoare{P}{\cc{f()}}{Q}$, which says that if \cc{f()} is run in a state
 satisfying the precondition $P$ and terminates, the final state will satisfy the
-postcondition $Q$. Separation logic additionally means that $P$ and $Q$ can
-describe only the state actually involved in \cc{f()}, implicitly stating other
-state is unmodified (supporting so-called ``small footprint'' specifications).
+postcondition $Q$. Separation logic additionally means the specification
+implicitly states other state is unmodified, supporting so-called
+``small-footprint'' specifications where $P$ and $Q$
+describe only the state actually involved in \cc{f()}.
 Assertions make use of the \emph{points-to assertion} $\ell \mapsto v$, which
 gives the value of one address in memory. For example, some basic specifications
 in separation logic are those for the load and store operations:
@@ -32,7 +35,7 @@ The specifications in this section can be appreciated with only basic
 familiarity with sequential separation logic. The model of pointers does handle
 some subtleties related to concurrency, but as explained in
 \cref{sec:goose:pointers} these are abstracted away for the purpose of proofs.
-None of the reasoning principles for Goose are specific to crash safety. All of these
+None of the reasoning principles for GooseLang are specific to crash safety. All of these
 specifications are actually proven in the Perennial logic and thus can be used
 as part of concurrency and crash safety proofs, as we did for GoTxn.
 
@@ -45,7 +48,7 @@ especially that it does not attempt to model recursion.
 Each struct declaration in Go is translated to a Coq definition that declares
 the struct fields, which is used by the GooseLang struct model (described in
 detail in \cref{sec:goose:structs}). Top-level constants are translated in a
-similar way to a Go function.
+similar way to how Go functions are translated.
 
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
