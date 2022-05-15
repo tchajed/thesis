@@ -53,15 +53,16 @@ similar way to how Go functions are translated.
 \subsection{Modeling pointers}%
 \label{sec:goose:pointers}
 
-The model of pointer loads and stores turns out to be slightly subtle because of
+The model of pointer loads and stores turns out to be subtle because of
 concurrency. In
 short, GooseLang disallows concurrent reads and writes to the same
-location by making such racy access undefined behavior. The way proofs are set
-up guarantees that any
-specification for a program implies that the
-program never exhibits undefined behavior. The hardware provides some
+location by making such racy access \emph{undefined behavior}. Any program verified
+with Goose must show that it never has this kind of undefined behavior. This
+restriction is intended to be more restrictive than the hardware and language
+guarantees regarding races. The hardware provides some
 guarantees, but they are typically weak: for example, it is common that
-different cores can observe the effect of a write at different times. Go's own
+different cores can observe the effect of a write at different times (for
+example, in x86-TSO~\cite{sewell:x86-tso}). Go's own
 memory model documentation specifies even weaker guarantees.  Rather than
 attempt to formalize Go's rules, the semantics side-steps the issue and makes
 any races undefined, which works for our intended use cases since the verified
@@ -79,7 +80,7 @@ semantics has a $\textdom{NonAtom}$ which can be
 $\nareading{n}{v}$ if there are $n$ readers and the value is $v$,
 or $\nawriting{v}$ if a thread is currently writing. For most
 pointers, stores are translated to a non-atomic store while loads are translated to
-GooseLang's atomic Load (concurrent loads to the same address are permitted in
+GooseLang's atomic \goosekw{Load} (concurrent loads to the same address are permitted in
 both Go and GooseLang). GooseLang has support for non-atomic
 reads as well in order to model map iteration.
 
@@ -95,16 +96,16 @@ $\goosekw{FinishRead}$; these increment and decrement the number of readers,
 respectively, so that multiple readers can run concurrently but any concurrent
 writer has undefined behavior.
 
-Next, Goose provides reasoning principles to abstract away this complexity while
+Goose provides reasoning principles to abstract away this complexity while
 verifying programs. Separation logic turns out to provide the right
-language to reason about racy access. When a thread owns
-$\ell \mapsto v$, the logic guarantees no other thread can have access to location
+framework to reason about racy access. When a thread owns
+$\ell \mapsto v$ in its precondition, the logic guarantees no other thread can have access to location
 $\ell$, so the specifications for reads and writes are unaffected by the
 operations being non-atomic. The only change is that the
-Read operation is no longer an atomic primitive but a function that
+$x \gets v$ store operation is no longer an atomic primitive but a function that
 takes two execution steps. In Iris this means that two threads cannot
-share memory with an invariant and must mediate access with a lock,
-which transfers ownership of the $\ell \mapsto v$ for multiple execution
+share a pointer with an invariant and must mediate access with a lock,
+which gives a thread ownership of the $\ell \mapsto v$ assertion for multiple execution
 steps.
 
 \subsection{Locks and condition variables}%
@@ -117,7 +118,7 @@ Locks (Go's \cc{*sync.Mutex} type) are not built-in to GooseLang but modeled
 using an implementation based on simpler primitives. Since locks are the
 only synchronization primitive, implementing them requires shared
 concurrent access, which ordinary pointers do not have in GooseLang.
-Instead, the language also includes a primitive atomic compare-and-swap
+Instead, the language also includes a primitive atomic compare-and-exchange
 operation that is only used to implement a model of locks. Similar primitives
 could be used to model Go's low-level atomic operations, like
 \cc{atomic.CompareAndSwapUint64} and \cc{atomic.LoadUint64}, but Goose does not
@@ -129,11 +130,11 @@ helper we define $\CAS$ (compare-and-swap), a variant of compare-and-exchange
 that only returns a boolean on success and not also the previous value.
 
 \begin{align*}
-  \CAS &\defeq \gooselambda{x, v1, v2} \pi_{2}\app \goosekw{CmpXchg}(x, v1, v2) \\
+  \CAS &\defeq \gooselambda{x, v_1, v_2} \pi_{2}\app \goosekw{CmpXchg}(x, v_1, v_2) \\
   \goosedef{NewLock} & \defeq \gooselambda{\_} \goosekw{ref} \app \goosekw{false} \\
   \Acquire &\defeq \gooselambda{l} \\
        &\goosekw{let}\app f = (\goosekw{rec}\: \textlog{tryAcquire}(\_) = \\
-       &\qquad \gooseif{\CAS \app l \app \goosekw{false} \app \goosekw{true}}%
+       &\qquad \gooseif{(\CAS \app l \app \goosekw{false} \app \goosekw{true})}%
          {()}{\textlog{tryAcquire} \app ()}) \app\goosekw{in} \\
        &f \app () \\
   \goosedef{Release} &\defeq \gooselambda{l} l \gets \goosekw{false} \\
@@ -141,8 +142,8 @@ that only returns a boolean on success and not also the previous value.
 
 Acquiring a lock is modeled as repeatedly using
 $\CAS \app l \app \goosekw{false} \app \goosekw{true}$ to
-atomically test that the lock is false and set it to true if so, while release
-stores false to the lock. This implementation as a spin lock is merely an
+atomically test that the lock is false and set it to \goosekw{true} if so, while release
+stores \goosekw{false} to the lock. This implementation as a spin lock is merely an
 operational model that captures what the lock does: acquire blocks until the
 lock is free and sets it to locked, while release frees the lock. This code is
 used to model Go's builtin \cc{*sync.Mutex}, which is implemented more
