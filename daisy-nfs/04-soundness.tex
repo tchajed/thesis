@@ -166,7 +166,7 @@ to the Dafny code in a slightly more subtle way.
   \begin{minted}[frame=lines]{csharp}
 class Filesys {
   // the external abstract state
-  ghost data: FilesysData;
+  ghost var data: FilesysData;
   var txs: TxnSystem;
 
   // abstraction relation that relates txs.disk to data
@@ -194,8 +194,8 @@ To describe how Dafny encodes this form of refinement, we start by describing it
 specification transition system in more formal detail. The specification
 transition system is
 a triple $S = (\Sigma, \Op, \delta)$ where $\sigma \in \Sigma$ is a set of states,
-$m \in \Op$ is a set of operations,\footnote{we use the metavariable $m$ to
-suggest that these are methods} and $\delta$ is a relation, where
+$m \in \Op$ is a set of operations,\footnote{We use the metavariable $m$ to
+suggest that these are methods.} and $\delta$ is a relation, where
 $\delta(\sigma, m, \sigma', v)$ is true when in state $\sigma$ operation $m$ can
 transition to $\sigma'$ and return $v$. To simplify the notation, the transition
 system has a special operation $\mathsf{crash} \in \Op$ to represent a crash transition.
